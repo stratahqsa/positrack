@@ -1,0 +1,31 @@
+# Secrets / tokens — NEVER commit
+*.env
+/tmp/yt*.env
+yt.env
+*.token
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Build artifacts
+dist/
+*.skill
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local engine cache (CLI shell only)
+yt_projects*.json
+
+# OMC build-process state (specs/plans kept on disk, not in product history)
+.omc/
