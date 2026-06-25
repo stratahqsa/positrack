@@ -18,9 +18,12 @@ Transports are wired in a later step; this module already resolves auth from
 either source so it is transport-ready.
 """
 import base64
+import contextlib
 import hashlib
+import logging
 import os
 import sys
+import time
 
 # Import the shared engine from ../core (sibling of mcp/).
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -97,6 +100,43 @@ def _token_fingerprint(ctx):
     return hashlib.sha256(("positrack|" + ctx.token).encode()).hexdigest()[:16]
 
 
+# ---------- per-token in-process cache (NOT a shared file; isolation by key) ----------
+# Keyed by a salted token fingerprint, so one user's cached projects can never be
+# served to another. Short TTL. This is the only cache; core always discovers live.
+_CACHE_TTL = float(os.environ.get("YT_CACHE_TTL", "1800"))
+_PROJECTS_CACHE = {}  # fingerprint -> (timestamp, data)
+
+def _cached_projects(ctx):
+    fp = _token_fingerprint(ctx)
+    ent = _PROJECTS_CACHE.get(fp)
+    now = time.time()
+    if ent and (now - ent[0]) < _CACHE_TTL:
+        return ent[1]
+    data = core.projects(ctx)
+    _PROJECTS_CACHE[fp] = (now, data)
+    return data
+
+
+# ---------- log redaction (defence in depth: never let a token reach a log) ----------
+class _RedactFilter(logging.Filter):
+    def filter(self, record):
+        try:
+            if isinstance(record.msg, str):
+                record.msg = core.redact(record.msg)
+            if record.args:
+                record.args = tuple(core.redact(a) if isinstance(a, str) else a for a in record.args)
+        except Exception:
+            pass
+        return True
+
+def _install_log_redaction():
+    f = _RedactFilter()
+    root = logging.getLogger()
+    root.addFilter(f)
+    for name in ("uvicorn", "uvicorn.access", "uvicorn.error", "fastmcp", "mcp"):
+        logging.getLogger(name).addFilter(f)
+
+
 # ---------- read tools ----------
 @mcp.tool
 def yt_whoami() -> dict:
@@ -107,7 +147,7 @@ def yt_whoami() -> dict:
 @mcp.tool
 def yt_projects() -> dict:
     """List all projects (short code, id, archived, name), with a non-admin fallback."""
-    return _run(lambda: {"projects": core.projects(_resolve_ctx())})
+    return _run(lambda: {"projects": _cached_projects(_resolve_ctx())})
 
 
 @mcp.tool
@@ -299,10 +339,42 @@ async def health(_request):
     return JSONResponse({"status": "ok", "service": "positrack-mcp"})
 
 
+def build_app():
+    """A single ASGI app serving BOTH transports plus /health, for the hosted
+    deployment: streamable HTTP at /mcp and SSE at /sse. The two FastMCP apps'
+    lifespans are composed so each transport's session manager starts correctly."""
+    from starlette.applications import Starlette
+    http_app = mcp.http_app(transport="http", path="/mcp")
+    sse_app = mcp.http_app(transport="sse", path="/sse")
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app):
+        async with http_app.lifespan(app):
+            async with sse_app.lifespan(app):
+                yield
+
+    # Merge both apps' routes (dedup the shared /health custom route by path).
+    routes, seen = [], set()
+    for r in list(http_app.routes) + list(sse_app.routes):
+        key = getattr(r, "path", getattr(r, "path_format", repr(r)))
+        if key in seen:
+            continue
+        seen.add(key)
+        routes.append(r)
+    return Starlette(routes=routes, lifespan=lifespan)
+
+
 def main():
-    # stdio by default (local: Claude Desktop/Code, Gemini CLI). HTTP/SSE transports
-    # for the hosted Railway deployment are wired in the next step.
-    mcp.run()
+    _install_log_redaction()
+    transport = os.environ.get("POSITRACK_TRANSPORT", "stdio").lower()
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "8000"))
+    if transport in ("http", "streamable-http", "streamable_http", "sse", "dual"):
+        import uvicorn
+        uvicorn.run(build_app(), host=host, port=port, log_level="info")
+    else:
+        # stdio (local: Claude Desktop/Code, Gemini CLI; token from $YT_TOKEN)
+        mcp.run()
 
 
 if __name__ == "__main__":
