@@ -1,0 +1,155 @@
+openapi: 3.1.0
+info:
+  title: Positrack — YouTrack Action (Posibolt)
+  description: >-
+    A ChatGPT Action for the Posibolt YouTrack instance. Each user authenticates
+    with THEIR OWN YouTrack permanent token (Authentication = API Key, Auth Type
+    Bearer). Reads are safe; writes (create/update/command/comment) prompt for
+    confirmation. This is the guaranteed, zero-server-storage path for ChatGPT
+    Plus; the per-user token is sent straight to YouTrack, never to a third party.
+  version: 1.0.0
+servers:
+  - url: https://support.posibolt.com
+security:
+  - bearerAuth: []
+paths:
+  /api/users/me:
+    get:
+      operationId: whoami
+      summary: Who am I (verify the token and see your identity).
+      x-openai-isConsequential: false
+      parameters:
+        - name: fields
+          in: query
+          schema: { type: string, default: "login,fullName,email" }
+      responses:
+        "200": { description: OK }
+  /api/issues:
+    get:
+      operationId: searchIssues
+      summary: Search issues with a YouTrack query (e.g. "project: P8 Type: Bug #Unresolved").
+      x-openai-isConsequential: false
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema: { type: string }
+        - name: fields
+          in: query
+          schema:
+            type: string
+            default: "idReadable,summary,resolved,customFields(name,value(name,login,fullName,minutes,presentation,text))"
+        - name: $top
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200": { description: OK }
+    post:
+      operationId: createIssue
+      summary: Create an issue. Confirm the payload with the user before sending.
+      x-openai-isConsequential: true
+      parameters:
+        - name: fields
+          in: query
+          schema: { type: string, default: "idReadable,summary" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project, summary]
+              properties:
+                project:
+                  type: object
+                  properties:
+                    id: { type: string, description: "Project internal id (from /api/admin/projects)" }
+                summary: { type: string }
+                description: { type: string }
+                customFields:
+                  type: array
+                  items: { type: object }
+      responses:
+        "200": { description: Created }
+  /api/issues/{issueId}:
+    post:
+      operationId: updateIssue
+      summary: Update an issue's summary/description/custom fields. Confirm first.
+      x-openai-isConsequential: true
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: fields
+          in: query
+          schema: { type: string, default: "idReadable" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                summary: { type: string }
+                description: { type: string }
+                customFields:
+                  type: array
+                  items: { type: object }
+      responses:
+        "200": { description: Updated }
+  /api/issues/{issueId}/comments:
+    post:
+      operationId: addComment
+      summary: Add a comment to an issue. Confirm first.
+      x-openai-isConsequential: true
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: fields
+          in: query
+          schema: { type: string, default: "id" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+      responses:
+        "200": { description: Commented }
+  /api/commands:
+    post:
+      operationId: applyCommand
+      summary: >-
+        Apply a YouTrack command (e.g. "state Testing assignee jsmith") to issues —
+        the workflow-safe way to change state/assignee/priority/sprint. Confirm first.
+      x-openai-isConsequential: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query, issues]
+              properties:
+                query: { type: string, example: "state Testing" }
+                issues:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      idReadable: { type: string }
+                comment: { type: string }
+      responses:
+        "200": { description: Applied }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Your own YouTrack permanent token (perm-...). Set in ChatGPT as API Key, Auth Type Bearer."
