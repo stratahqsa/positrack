@@ -1,0 +1,23 @@
+{
+  "name": "groworx",
+  "owner": {
+    "name": "Groworx / Posibolt",
+    "email": "mohamed@groworx.com"
+  },
+  "metadata": {
+    "description": "Groworx / Posibolt internal AI skills — starting with Positrack, the cross-platform YouTrack assistant."
+  },
+  "plugins": [
+    {
+      "name": "positrack",
+      "source": "./skill/positrack",
+      "description": "Talk to Posibolt's YouTrack in plain English — search, reports, weekly briefings, create/update tickets, the knowledge base, and team-continuity tools — with preview->commit write safety and capture-nudging. Same engine that powers the Positrack CLI and MCP server; runs on each user's own token, nothing hardcoded.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Groworx / Posibolt"
+      },
+      "category": "productivity",
+      "tags": ["youtrack", "posibolt", "project-management", "tickets", "briefing", "mcp"]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "positrack",
+  "version": "1.0.0",
+  "description": "Positrack — talk to Posibolt's YouTrack in plain English: search, reports, weekly briefings, create/update/comment/log/attach, knowledge base, and team-continuity tools, with preview->commit write safety and capture-nudging. Runs on the caller's own token; nothing hardcoded.",
+  "author": {
+    "name": "Groworx / Posibolt",
+    "email": "mohamed@groworx.com"
+  },
+  "homepage": "https://github.com/groworx/positrack",
+  "license": "MIT",
+  "keywords": ["youtrack", "posibolt", "project-management", "tickets", "briefing"]
+}
