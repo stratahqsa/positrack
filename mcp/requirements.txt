@@ -1,0 +1,5 @@
+# Positrack MCP server dependencies.
+# FastMCP is PINNED to an exact version: the dual-transport mount (streamable
+# HTTP + SSE) and the explicit /health route are version-sensitive, so any bump
+# must re-run the Step-6 dual-transport smoke test before release.
+fastmcp==3.4.2
