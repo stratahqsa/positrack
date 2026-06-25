@@ -1,0 +1,1 @@
+ERROR: no token. Set $YT_TOKEN or put 'YT_TOKEN=perm-...' in /tmp/yt.env (chmod 600). Generate one in YouTrack: profile menu -> Account Security -> New permanent token (scope: YouTrack).
