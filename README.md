@@ -70,6 +70,13 @@ See [docs/MAINTENANCE.md](docs/MAINTENANCE.md) for the engine-sync gate, redeplo
 
 See `docs/` for the verified, per-tool setup.
 
+## Contributing
+
+Anyone can contribute — **fork → branch → pull request**, and a maintainer merges it.
+CI runs the tests on every PR, so a green PR is safe to merge. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the dev setup and the one rule to know
+(re-sync the vendored skill copies if you touch the engine).
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

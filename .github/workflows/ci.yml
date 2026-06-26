@@ -1,0 +1,35 @@
+name: CI
+
+# Runs on every pull request and every push to master. Branch protection requires
+# the "test" job to pass before a PR can be merged — so green = safe to merge.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r mcp/requirements.txt pytest
+
+      - name: Engine-sync gate (vendored skill copies must match core/ + cli/)
+        run: bash scripts/check_sync.sh
+
+      - name: Tests (live/network tests auto-skip without YT_TOKEN)
+        run: python -m pytest tests/ -q
+
+      - name: Byte-compile engine on Python 3.9 (stdlib-only floor)
+        run: |
+          python -c "import sys; print('compiled OK on', sys.version)"
+          python -m py_compile core/ytcore.py cli/yt.py
