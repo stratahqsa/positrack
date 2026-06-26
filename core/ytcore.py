@@ -65,6 +65,8 @@ FRIENDLY = {
          "An admin token, or the item's owner, may be required — this is expected, not a bug.",
     404: "not found — double-check the issue/project/article ID.",
     429: "rate-limited by YouTrack — wait a moment and retry.",
+    400: "that query or field looks invalid for this project (often a field the "
+         "project doesn't have) — run `describe` to see its real fields/values.",
 }
 
 # ---------- transport ----------
@@ -249,6 +251,32 @@ def build_cf(ctx, short, fields):
         entries.append(cf_entry(name, fs[name], value))
     return entries
 
+# ---------- at-a-glance visuals (dependency-free; render in any client) ----------
+def bar(n, maxn, width=14):
+    """A Unicode bar for n out of maxn — screen-shareable, renders anywhere a
+    monospaced/markdown block does. Empty string when there's nothing to scale to."""
+    if not isinstance(n, int) or n < 0 or not maxn or maxn <= 0:
+        return ""
+    filled = max(0, min(width, int(round(width * n / maxn))))
+    return "█" * filled + "░" * (width - filled)
+
+def _cell(v):
+    """Render a count cell: None (query rejected) -> em dash; -1 (transient) -> ellipsis."""
+    if v is None:
+        return "—"
+    if v == -1:
+        return "…"
+    return v
+
+def count_soft(ctx, query):
+    """count() but tolerant: returns None when YouTrack rejects the query (e.g. a
+    field a project doesn't have), so one bad cell never aborts a whole report."""
+    try:
+        return count(ctx, query)
+    except YTError:
+        return None
+
+
 # ---------- identity & context ----------
 def whoami(ctx):
     return GET(ctx, "/api/users/me?fields=login,fullName,email")
@@ -292,14 +320,21 @@ def report(ctx, rtype, project="", location="", days=7, sprint="", limit=50):
     proj = project or None
     if rtype == "health":
         targets = [proj] if proj else [p["shortName"] for p in projects(ctx) if not p.get("archived")]
-        rows = []
+        raw = []
         for s in targets:
-            rows.append([s, count(ctx, f"project: {s}"), count(ctx, f"project: {s} #Unresolved"),
-                         count(ctx, f"project: {s} #Unresolved has: -{{Estimate}}"),
-                         count(ctx, f"project: {s} #Unresolved #Unassigned"),
-                         count(ctx, f"project: {s} #Unresolved updated: * .. {{minus 30d}}")])
+            raw.append([s,
+                        count_soft(ctx, f"project: {s}"),
+                        count_soft(ctx, f"project: {s} #Unresolved"),
+                        count_soft(ctx, f"project: {s} #Unresolved has: -{{Estimate}}"),
+                        count_soft(ctx, f"project: {s} #Unresolved #Unassigned"),
+                        count_soft(ctx, f"project: {s} #Unresolved updated: * .. {{minus 30d}}")])
+        opens = [r[2] for r in raw if isinstance(r[2], int) and r[2] >= 0]
+        maxopen = max(opens) if opens else 0
+        rows = [[r[0], _cell(r[1]), _cell(r[2]), _cell(r[3]), _cell(r[4]), _cell(r[5]), bar(r[2], maxopen)]
+                for r in raw]
         return [{"kind": "raw", "s": "# Board health\n"},
-                {"kind": "table", "headers": ["Proj", "Total", "Open", "Open-unest", "Open-unassg", "Stale>30d"],
+                {"kind": "table",
+                 "headers": ["Proj", "Total", "Open", "Open-unest", "Open-unassg", "Stale>30d", "Open ▕"],
                  "rows": rows}]
     if rtype == "activity":
         s = scope.strip()
@@ -346,6 +381,45 @@ def report(ctx, rtype, project="", location="", days=7, sprint="", limit=50):
         blocks.append(_issue_block(q_old, ["id", "summary", "State", "Assignee", "age"],
                                    get_issues(ctx, q_old, limit=12)))
         return blocks
+    if rtype == "myday":
+        # The caller's personal view: what's theirs, what's gone stale (needs a
+        # quick status), what's in progress. Powers the "your day" + stale-nudge
+        # + the self-updating-board batch. `for: me` works across their projects.
+        open_mine = count_soft(ctx, f"{scope}#Unresolved for: me")
+        stale_q = search_query(f"#Unresolved for: me updated: * .. {{minus {days}d}} sort by: updated asc",
+                               project, location)
+        prog_q = search_query("#Unresolved for: me sort by: updated desc", project, location)
+        stale = get_issues(ctx, stale_q, limit=15)
+        prog = get_issues(ctx, prog_q, limit=15)
+        return [{"kind": "raw", "s": f"# Your day — {_cell(open_mine)} open · {len(stale)} stale (>{days}d)\n"},
+                {"kind": "raw", "s": "\n## Stale — needs a quick status from you"},
+                _issue_block(stale_q, ["id", "project", "summary", "State", "age"], stale),
+                {"kind": "raw", "s": "\n## In progress (you)"},
+                _issue_block(prog_q, ["id", "project", "summary", "State", "age"], prog)]
+    if rtype == "hygiene":
+        # Turns "the board is messy" into a scored, finishable cleanup quest.
+        # Hygiene% = share of open work touched in the last 30 days (stale = untouched).
+        # The buckets (stale / unassigned / unestimated) are the quest items to clear.
+        targets = [proj] if proj else [p["shortName"] for p in projects(ctx) if not p.get("archived")]
+        rows, attention = [], 0
+        for s in targets:
+            op = count_soft(ctx, f"project: {s} #Unresolved")
+            st = count_soft(ctx, f"project: {s} #Unresolved updated: * .. {{minus 30d}}")
+            un = count_soft(ctx, f"project: {s} #Unresolved #Unassigned")
+            ue = count_soft(ctx, f"project: {s} #Unresolved has: -{{Estimate}}")
+            o = op if isinstance(op, int) and op > 0 else 0
+            stale = st if isinstance(st, int) and st >= 0 else 0
+            score = round(100 * (o - stale) / o) if o else 100
+            for x in (st, un, ue):
+                if isinstance(x, int) and x > 0:
+                    attention += x
+            rows.append([s, _cell(op), _cell(st), _cell(un), _cell(ue), f"{score}%", bar(score, 100)])
+        return [{"kind": "raw", "s": "# Board hygiene\n"},
+                {"kind": "table",
+                 "headers": ["Proj", "Open", "Stale", "Unassigned", "No-est", "Hygiene", "▕"],
+                 "rows": rows},
+                {"kind": "raw", "s": f"\n**{attention} item(s) need attention (stale / unassigned / "
+                                     f"unestimated) — clear them to push hygiene toward 100%.**"}]
     # stale / unestimated / unassigned / epics / mywork / sprint
     qmap = {
         "stale":       f"#Unresolved updated: * .. {{minus {days}d}} sort by: updated asc",
@@ -434,9 +508,15 @@ def load(ctx, project):
     c = Counter()
     for it in issues:
         c[vname(cf_map(it).get("Assignee")) or "(unassigned)"] += 1
-    return {"project": project, "open": len(issues), "by_owner": c.most_common(25)}
+    owners = c.most_common(25)
+    maxn = owners[0][1] if owners else 0
+    by_owner = [[who, n, bar(n, maxn)] for who, n in owners]
+    return {"project": project, "open": len(issues), "by_owner": by_owner}
 
-def reassign(ctx, from_user, to_user, project="", comment="", commit=False):
+def reassign(ctx, from_user, to_user, project="", comment="", commit=False, instance_wide=False):
+    if not project and not instance_wide:
+        raise YTError(None, "reassign needs a project scope (high blast radius otherwise). "
+                            "Pass a project, or set instance_wide=True / --instance-wide to override.")
     scope = f"project: {project} " if project else ""
     issues = get_issues(ctx, f"{scope}#Unresolved Assignee: {from_user}", fields="idReadable,summary", limit=500)
     ids = [it["idReadable"] for it in issues]

@@ -56,6 +56,44 @@ an active capture partner — when the conversation surfaces something trackable
 offer in ONE short line to log it: a decision → a comment (yt_comment); a bug →
 yt_create; a commitment → a ticket; "it's done" / "we're blocked" → yt_cmd to
 move or flag it. Make capture a single confirm-and-go, and never nag twice.
+
+SHOW IT VISUALLY (by default): for counts, board health, workload and trends
+(yt_report health, yt_load, yt_report activity), present a simple CHART the user
+can screen-share in a standup — a bar-chart artifact/visual when your client can
+render one, otherwise the inline Unicode bars already included in the data. Lead
+with the visual and a one-line takeaway, not a wall of numbers.
+
+YOUR DAY + THE SELF-UPDATING BOARD (for people who hate updating tools): when a
+developer starts a session or asks "what's on my plate", run yt_report type=myday
+and lead with it. Then make updating EFFORTLESS — don't ask them to fill anything
+in. Instead DRAFT the likely updates and let them approve:
+ * Stale items (no update in days) → offer a one-tap status: "still on it / blocked
+   / done?" and apply it with yt_cmd / yt_log on a yes.
+ * Work that clearly happened (they mention finishing something, or a commit
+   references the issue) → propose the state move + time log as a single batch and
+   ask "approve these N updates?" — apply with yt_cmd once they confirm.
+The goal: the board maintains itself from what they already did; they only rubber-
+stamp a pre-filled change. Generate a standup ("yesterday/today/blockers") from
+yt_report myday when asked. Never nag; one short, friendly prompt, then drop it.
+
+MAKE CLEANUP A GAME (the board is messy — turn fixing it into a dopamine loop):
+ * yt_report hygiene gives a 0-100 score + the buckets to clear. Present it as a
+   PROGRESS BAR with a finishable goal ("IS hygiene 58% — 12 items to 100%"). The
+   Zeigarnik effect + goal-gradient make an unfinished bar pull people to finish it.
+ * CELEBRATE every fix immediately: when something is resolved/triaged/assigned,
+   acknowledge the bump ("nice — that's 3 off the board, hygiene 58% → 64%"). The
+   small immediate reward is what builds the habit.
+ * Note STREAKS lightly ("3rd day with a clean board") and use the FRESH-START effect
+   on Mondays / new sprints ("new sprint, clean slate — here's the week's target").
+ * Lead a briefing with ONE surprising, useful nugget (a variable reward) so opening
+   it always pays off. Keep it celebratory and collective — never a personal ranking
+   or surveillance.
+
+CUSTOM BRIEFINGS (each leader makes their own): briefings are defined in plain
+English, not configured in code. When a leader describes what they want ("every
+Monday: IS resolved last week, anything blocked >3 days, who's overloaded, top 3
+risks"), REMEMBER that recipe for them and reuse it on "run my briefing". Back the
+sections with their own YouTrack saved queries (yt_saved) where they have them.
 """
 
 mcp = FastMCP(name="Positrack", instructions=INSTRUCTIONS)
@@ -208,8 +246,11 @@ def yt_history(issue: str, limit: int = 20) -> dict:
 def yt_report(type: str, project: str = "", location: str = "", days: int = 7,
               sprint: str = "", limit: int = 50) -> dict:
     """Run a canned report. `type` is one of: health, activity, briefing, stale,
-    unestimated, unassigned, epics, mywork, sprint. Returns structured blocks
-    (headings, tables, and issue lists)."""
+    unestimated, unassigned, epics, mywork, sprint, myday, hygiene. `myday` is the
+    caller's personal view (open / stale-needs-status / in-progress). `hygiene` scores
+    each project's board cleanliness (% touched in 30d) + the stale/unassigned/
+    unestimated buckets to clear — use it to run the cleanup quest. Returns structured
+    blocks (headings, tables, issue lists)."""
     return _run(lambda: {"type": type, "blocks": core.report(_resolve_ctx(), type, project=project,
                                                               location=location, days=days,
                                                               sprint=sprint, limit=limit)})
@@ -321,11 +362,12 @@ def yt_attach(issue: str, file_name: str, content_b64: str, commit: bool = False
 
 @mcp.tool
 def yt_reassign(from_user: str, to_user: str, project: str = "", comment: str = "",
-                commit: bool = False) -> dict:
+                commit: bool = False, instance_wide: bool = False) -> dict:
     """Bulk-move a person's open issues to a new owner (continuity through departures),
-    via the Commands API. commit=False lists the affected issues WITHOUT moving them;
-    confirm the from/to and scope, then commit=True. Prefer scoping with `project`."""
-    return _run(lambda: core.reassign(_resolve_ctx(), from_user, to_user, project, comment, commit))
+    via the Commands API. A `project` scope is REQUIRED unless instance_wide=True
+    (instance-wide is high blast radius — only with explicit user intent). commit=False
+    lists the affected issues WITHOUT moving them; confirm the from/to and scope, then commit=True."""
+    return _run(lambda: core.reassign(_resolve_ctx(), from_user, to_user, project, comment, commit, instance_wide))
 
 
 @mcp.tool
