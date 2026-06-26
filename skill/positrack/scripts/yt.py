@@ -136,6 +136,7 @@ def cmd_setup(ctx, a):
     if a.projects: prof["projects"] = [p.strip() for p in a.projects.split(",") if p.strip()]
     if a.role: prof["role"] = a.role
     if a.base: prof["base"] = a.base.rstrip("/")
+    if a.briefing: prof["briefing"] = a.briefing
     os.makedirs(os.path.dirname(PROFILE_PATH), exist_ok=True)
     json.dump(prof, open(PROFILE_PATH, "w"), indent=2)
     print(f"Saved profile to {PROFILE_PATH}:\n" + json.dumps(prof, indent=2))
@@ -327,7 +328,9 @@ def build_parser():
 
     s = sub.add_parser("setup")
     s.add_argument("--location", default=""); s.add_argument("--projects", default="")
-    s.add_argument("--role", default=""); s.add_argument("--base", default=""); s.set_defaults(fn=cmd_setup)
+    s.add_argument("--role", default=""); s.add_argument("--base", default="")
+    s.add_argument("--briefing", default="", help="plain-English recipe for your custom briefing")
+    s.set_defaults(fn=cmd_setup)
 
     s = sub.add_parser("describe"); s.add_argument("--project", default=""); s.set_defaults(fn=cmd_describe)
     s = sub.add_parser("count"); s.add_argument("query"); s.set_defaults(fn=cmd_count)
@@ -341,7 +344,7 @@ def build_parser():
 
     s = sub.add_parser("report")
     s.add_argument("type", choices=["health", "activity", "briefing", "stale", "unestimated",
-                                    "unassigned", "epics", "mywork", "sprint", "myday"])
+                                    "unassigned", "epics", "mywork", "sprint", "myday", "hygiene"])
     s.add_argument("--project", default=""); s.add_argument("--location", default="")
     s.add_argument("--days", type=int, default=7); s.add_argument("--sprint", default="")
     s.add_argument("--limit", type=int, default=50); s.set_defaults(fn=cmd_report)

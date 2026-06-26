@@ -154,6 +154,19 @@ def test_report_myday_structure(monkeypatch):
     assert blocks[2]["columns"] == ["id", "project", "summary", "State", "age"]
 
 
+def test_report_hygiene_structure(monkeypatch):
+    ctx = yt.Ctx("perm-x")
+    # op=10 (plain open), st=3 (touched <30d), un=2, ue=2 -> hygiene 70%
+    monkeypatch.setattr(yt, "count_soft",
+                        lambda c, q: 3 if "updated" in q else (2 if ("Unassigned" in q or "Estimate" in q) else 10))
+    blocks = yt.report(ctx, "hygiene", project="IS")
+    assert blocks[0]["s"].startswith("# Board hygiene")
+    tbl = blocks[1]
+    assert tbl["kind"] == "table" and tbl["headers"][5] == "Hygiene"
+    assert tbl["rows"][0][0] == "IS" and tbl["rows"][0][5] == "70%"
+    assert "need attention" in blocks[2]["s"]
+
+
 def test_ctx_requires_token():
     try:
         yt.Ctx("")

@@ -75,6 +75,25 @@ in. Instead DRAFT the likely updates and let them approve:
 The goal: the board maintains itself from what they already did; they only rubber-
 stamp a pre-filled change. Generate a standup ("yesterday/today/blockers") from
 yt_report myday when asked. Never nag; one short, friendly prompt, then drop it.
+
+MAKE CLEANUP A GAME (the board is messy — turn fixing it into a dopamine loop):
+ * yt_report hygiene gives a 0-100 score + the buckets to clear. Present it as a
+   PROGRESS BAR with a finishable goal ("IS hygiene 58% — 12 items to 100%"). The
+   Zeigarnik effect + goal-gradient make an unfinished bar pull people to finish it.
+ * CELEBRATE every fix immediately: when something is resolved/triaged/assigned,
+   acknowledge the bump ("nice — that's 3 off the board, hygiene 58% → 64%"). The
+   small immediate reward is what builds the habit.
+ * Note STREAKS lightly ("3rd day with a clean board") and use the FRESH-START effect
+   on Mondays / new sprints ("new sprint, clean slate — here's the week's target").
+ * Lead a briefing with ONE surprising, useful nugget (a variable reward) so opening
+   it always pays off. Keep it celebratory and collective — never a personal ranking
+   or surveillance.
+
+CUSTOM BRIEFINGS (each leader makes their own): briefings are defined in plain
+English, not configured in code. When a leader describes what they want ("every
+Monday: IS resolved last week, anything blocked >3 days, who's overloaded, top 3
+risks"), REMEMBER that recipe for them and reuse it on "run my briefing". Back the
+sections with their own YouTrack saved queries (yt_saved) where they have them.
 """
 
 mcp = FastMCP(name="Positrack", instructions=INSTRUCTIONS)
@@ -227,10 +246,11 @@ def yt_history(issue: str, limit: int = 20) -> dict:
 def yt_report(type: str, project: str = "", location: str = "", days: int = 7,
               sprint: str = "", limit: int = 50) -> dict:
     """Run a canned report. `type` is one of: health, activity, briefing, stale,
-    unestimated, unassigned, epics, mywork, sprint, myday. `myday` is the caller's
-    personal view (open / stale-needs-status / in-progress) — use it for "your day"
-    and the self-updating-board nudge. Returns structured blocks (headings, tables,
-    issue lists)."""
+    unestimated, unassigned, epics, mywork, sprint, myday, hygiene. `myday` is the
+    caller's personal view (open / stale-needs-status / in-progress). `hygiene` scores
+    each project's board cleanliness (% touched in 30d) + the stale/unassigned/
+    unestimated buckets to clear — use it to run the cleanup quest. Returns structured
+    blocks (headings, tables, issue lists)."""
     return _run(lambda: {"type": type, "blocks": core.report(_resolve_ctx(), type, project=project,
                                                               location=location, days=days,
                                                               sprint=sprint, limit=limit)})

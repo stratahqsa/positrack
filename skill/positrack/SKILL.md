@@ -217,6 +217,42 @@ right so the standup is right.
 Keep all of this to **one short, friendly prompt** — never nag, and drop it if they
 pass. The aim is that the board maintains itself from what they already did.
 
+## The cleanup quest — make fixing a messy board feel good
+
+The board is messy today. Don't present that as a chore — present it as a
+**finishable game with a progress bar**, and reward every fix. This is the engine
+that gets a reluctant team to actually clean up.
+
+```
+python3 scripts/yt.py report hygiene              # score per project + what's to clean
+python3 scripts/yt.py report hygiene --project IS
+```
+
+- **Show a progress bar with a goal.** "IS hygiene **58%** — 12 items to 100%." An
+  unfinished bar pulls people to finish it (Zeigarnik / goal-gradient).
+- **Celebrate every fix immediately.** When something gets resolved, assigned or
+  estimated: "Nice — 3 off the board, hygiene **58% → 64%.**" The small instant
+  reward is what builds the habit.
+- **Streaks & fresh starts, lightly.** "3rd day with a clean board." On Mondays / new
+  sprints: "new sprint, clean slate — here's the week's target."
+- **Keep it collective and kind** — a team climbing a number together, never a
+  personal ranking or a surveillance vibe.
+
+## Custom briefings — every leader makes their own (in plain English)
+
+Briefings are defined by *talking*, not configured in code. When a leader describes
+what they want, **remember it** and reuse it:
+
+- They say: "Every Monday give me IS resolved last week, anything blocked > 3 days,
+  who's overloaded, and the top 3 risks." → save that recipe (e.g.
+  `setup --briefing "..."`, or just remember it for them) and run it on "my briefing".
+- Back each section with their **own YouTrack saved queries** (`saved`) where they
+  have them — so their briefing reflects how *they* slice the board.
+- Offer to **schedule** it (e.g. a Monday-08:00 digest) so it arrives unprompted.
+
+A good briefing leads with one **surprising, useful nugget** (a ticket reopened 3×,
+a quietly-growing backlog) so opening it always pays off.
+
 ## Knowledge base (articles)
 
 The instance has a real Knowledge Base (`/articles`) across projects (PX, P8, IS,

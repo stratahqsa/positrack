@@ -396,6 +396,30 @@ def report(ctx, rtype, project="", location="", days=7, sprint="", limit=50):
                 _issue_block(stale_q, ["id", "project", "summary", "State", "age"], stale),
                 {"kind": "raw", "s": "\n## In progress (you)"},
                 _issue_block(prog_q, ["id", "project", "summary", "State", "age"], prog)]
+    if rtype == "hygiene":
+        # Turns "the board is messy" into a scored, finishable cleanup quest.
+        # Hygiene% = share of open work touched in the last 30 days (stale = untouched).
+        # The buckets (stale / unassigned / unestimated) are the quest items to clear.
+        targets = [proj] if proj else [p["shortName"] for p in projects(ctx) if not p.get("archived")]
+        rows, attention = [], 0
+        for s in targets:
+            op = count_soft(ctx, f"project: {s} #Unresolved")
+            st = count_soft(ctx, f"project: {s} #Unresolved updated: * .. {{minus 30d}}")
+            un = count_soft(ctx, f"project: {s} #Unresolved #Unassigned")
+            ue = count_soft(ctx, f"project: {s} #Unresolved has: -{{Estimate}}")
+            o = op if isinstance(op, int) and op > 0 else 0
+            stale = st if isinstance(st, int) and st >= 0 else 0
+            score = round(100 * (o - stale) / o) if o else 100
+            for x in (st, un, ue):
+                if isinstance(x, int) and x > 0:
+                    attention += x
+            rows.append([s, _cell(op), _cell(st), _cell(un), _cell(ue), f"{score}%", bar(score, 100)])
+        return [{"kind": "raw", "s": "# Board hygiene\n"},
+                {"kind": "table",
+                 "headers": ["Proj", "Open", "Stale", "Unassigned", "No-est", "Hygiene", "▕"],
+                 "rows": rows},
+                {"kind": "raw", "s": f"\n**{attention} item(s) need attention (stale / unassigned / "
+                                     f"unestimated) — clear them to push hygiene toward 100%.**"}]
     # stale / unestimated / unassigned / epics / mywork / sprint
     qmap = {
         "stale":       f"#Unresolved updated: * .. {{minus {days}d}} sort by: updated asc",
