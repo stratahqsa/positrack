@@ -68,9 +68,11 @@ def _resolve_ctx():
     base = os.environ.get("YT_BASE") or core.DEFAULT_BASE
     token = None
     try:
-        from fastmcp.server.dependencies import get_http_headers
-        headers = get_http_headers() or {}
-        auth = headers.get("authorization") or headers.get("Authorization")
+        # get_http_headers() filters out Authorization by default, so read the
+        # request directly (Starlette headers are case-insensitive).
+        from fastmcp.server.dependencies import get_http_request
+        request = get_http_request()
+        auth = request.headers.get("authorization")
         if auth and auth.strip().lower().startswith("bearer "):
             token = auth.strip()[7:].strip()
     except Exception:
