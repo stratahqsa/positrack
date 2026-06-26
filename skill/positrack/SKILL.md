@@ -178,6 +178,12 @@ Mapping the example asks:
 
 Always lead with the headline and the exceptions, not the raw table.
 
+**Show it visually (by default).** For health, load and activity, present a simple
+**chart** the user can screen-share in a standup — a bar-chart artifact when the
+client can render one, otherwise the inline Unicode bars the reports already
+include (`health` shows an Open bar per project; `load` shows a workload bar per
+owner). Lead with the chart + a one-line takeaway.
+
 ## Knowledge base (articles)
 
 The instance has a real Knowledge Base (`/articles`) across projects (PX, P8, IS,

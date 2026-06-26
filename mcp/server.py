@@ -56,6 +56,12 @@ an active capture partner — when the conversation surfaces something trackable
 offer in ONE short line to log it: a decision → a comment (yt_comment); a bug →
 yt_create; a commitment → a ticket; "it's done" / "we're blocked" → yt_cmd to
 move or flag it. Make capture a single confirm-and-go, and never nag twice.
+
+SHOW IT VISUALLY (by default): for counts, board health, workload and trends
+(yt_report health, yt_load, yt_report activity), present a simple CHART the user
+can screen-share in a standup — a bar-chart artifact/visual when your client can
+render one, otherwise the inline Unicode bars already included in the data. Lead
+with the visual and a one-line takeaway, not a wall of numbers.
 """
 
 mcp = FastMCP(name="Positrack", instructions=INSTRUCTIONS)
@@ -321,11 +327,12 @@ def yt_attach(issue: str, file_name: str, content_b64: str, commit: bool = False
 
 @mcp.tool
 def yt_reassign(from_user: str, to_user: str, project: str = "", comment: str = "",
-                commit: bool = False) -> dict:
+                commit: bool = False, instance_wide: bool = False) -> dict:
     """Bulk-move a person's open issues to a new owner (continuity through departures),
-    via the Commands API. commit=False lists the affected issues WITHOUT moving them;
-    confirm the from/to and scope, then commit=True. Prefer scoping with `project`."""
-    return _run(lambda: core.reassign(_resolve_ctx(), from_user, to_user, project, comment, commit))
+    via the Commands API. A `project` scope is REQUIRED unless instance_wide=True
+    (instance-wide is high blast radius — only with explicit user intent). commit=False
+    lists the affected issues WITHOUT moving them; confirm the from/to and scope, then commit=True."""
+    return _run(lambda: core.reassign(_resolve_ctx(), from_user, to_user, project, comment, commit, instance_wide))
 
 
 @mcp.tool

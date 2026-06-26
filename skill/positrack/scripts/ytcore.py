@@ -65,6 +65,8 @@ FRIENDLY = {
          "An admin token, or the item's owner, may be required — this is expected, not a bug.",
     404: "not found — double-check the issue/project/article ID.",
     429: "rate-limited by YouTrack — wait a moment and retry.",
+    400: "that query or field looks invalid for this project (often a field the "
+         "project doesn't have) — run `describe` to see its real fields/values.",
 }
 
 # ---------- transport ----------
@@ -249,6 +251,32 @@ def build_cf(ctx, short, fields):
         entries.append(cf_entry(name, fs[name], value))
     return entries
 
+# ---------- at-a-glance visuals (dependency-free; render in any client) ----------
+def bar(n, maxn, width=14):
+    """A Unicode bar for n out of maxn — screen-shareable, renders anywhere a
+    monospaced/markdown block does. Empty string when there's nothing to scale to."""
+    if not isinstance(n, int) or n < 0 or not maxn or maxn <= 0:
+        return ""
+    filled = max(0, min(width, int(round(width * n / maxn))))
+    return "█" * filled + "░" * (width - filled)
+
+def _cell(v):
+    """Render a count cell: None (query rejected) -> em dash; -1 (transient) -> ellipsis."""
+    if v is None:
+        return "—"
+    if v == -1:
+        return "…"
+    return v
+
+def count_soft(ctx, query):
+    """count() but tolerant: returns None when YouTrack rejects the query (e.g. a
+    field a project doesn't have), so one bad cell never aborts a whole report."""
+    try:
+        return count(ctx, query)
+    except YTError:
+        return None
+
+
 # ---------- identity & context ----------
 def whoami(ctx):
     return GET(ctx, "/api/users/me?fields=login,fullName,email")
@@ -292,14 +320,21 @@ def report(ctx, rtype, project="", location="", days=7, sprint="", limit=50):
     proj = project or None
     if rtype == "health":
         targets = [proj] if proj else [p["shortName"] for p in projects(ctx) if not p.get("archived")]
-        rows = []
+        raw = []
         for s in targets:
-            rows.append([s, count(ctx, f"project: {s}"), count(ctx, f"project: {s} #Unresolved"),
-                         count(ctx, f"project: {s} #Unresolved has: -{{Estimate}}"),
-                         count(ctx, f"project: {s} #Unresolved #Unassigned"),
-                         count(ctx, f"project: {s} #Unresolved updated: * .. {{minus 30d}}")])
+            raw.append([s,
+                        count_soft(ctx, f"project: {s}"),
+                        count_soft(ctx, f"project: {s} #Unresolved"),
+                        count_soft(ctx, f"project: {s} #Unresolved has: -{{Estimate}}"),
+                        count_soft(ctx, f"project: {s} #Unresolved #Unassigned"),
+                        count_soft(ctx, f"project: {s} #Unresolved updated: * .. {{minus 30d}}")])
+        opens = [r[2] for r in raw if isinstance(r[2], int) and r[2] >= 0]
+        maxopen = max(opens) if opens else 0
+        rows = [[r[0], _cell(r[1]), _cell(r[2]), _cell(r[3]), _cell(r[4]), _cell(r[5]), bar(r[2], maxopen)]
+                for r in raw]
         return [{"kind": "raw", "s": "# Board health\n"},
-                {"kind": "table", "headers": ["Proj", "Total", "Open", "Open-unest", "Open-unassg", "Stale>30d"],
+                {"kind": "table",
+                 "headers": ["Proj", "Total", "Open", "Open-unest", "Open-unassg", "Stale>30d", "Open ▕"],
                  "rows": rows}]
     if rtype == "activity":
         s = scope.strip()
@@ -434,9 +469,15 @@ def load(ctx, project):
     c = Counter()
     for it in issues:
         c[vname(cf_map(it).get("Assignee")) or "(unassigned)"] += 1
-    return {"project": project, "open": len(issues), "by_owner": c.most_common(25)}
+    owners = c.most_common(25)
+    maxn = owners[0][1] if owners else 0
+    by_owner = [[who, n, bar(n, maxn)] for who, n in owners]
+    return {"project": project, "open": len(issues), "by_owner": by_owner}
 
-def reassign(ctx, from_user, to_user, project="", comment="", commit=False):
+def reassign(ctx, from_user, to_user, project="", comment="", commit=False, instance_wide=False):
+    if not project and not instance_wide:
+        raise YTError(None, "reassign needs a project scope (high blast radius otherwise). "
+                            "Pass a project, or set instance_wide=True / --instance-wide to override.")
     scope = f"project: {project} " if project else ""
     issues = get_issues(ctx, f"{scope}#Unresolved Assignee: {from_user}", fields="idReadable,summary", limit=500)
     ids = [it["idReadable"] for it in issues]

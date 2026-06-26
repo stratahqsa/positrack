@@ -273,7 +273,7 @@ def cmd_orphans(ctx, a):
     print("\n".join(block_strings(core.orphans(ctx, a.project, a.limit))))
 
 def cmd_reassign(ctx, a):
-    r = core.reassign(ctx, a.from_user, a.to_user, a.project, a.comment, a.commit)
+    r = core.reassign(ctx, a.from_user, a.to_user, a.project, a.comment, a.commit, a.instance_wide)
     print(f"## reassign {r['count']} open issue(s) from `{a.from_user}` → `{a.to_user}`"
           f"{' (COMMIT)' if a.commit else ' (PREVIEW — add --commit to apply)'}\n")
     for it in r["preview"]:
@@ -289,7 +289,7 @@ def cmd_load(ctx, a):
     proj = a.project or (PROFILE.get("projects") or [None])[0]
     r = core.load(ctx, proj or "")
     print(f"# Open-work concentration — {r['project']} ({r['open']} open)\n")
-    print(md_table([[who, n] for who, n in r["by_owner"]], ["Owner", "Open issues"]))
+    print(md_table([[who, n, b] for who, n, b in r["by_owner"]], ["Owner", "Open issues", "Load ▕"]))
 
 def cmd_articles(ctx, a):
     r = core.articles(ctx, a.query, a.limit)
@@ -378,6 +378,7 @@ def build_parser():
 
     s = sub.add_parser("reassign"); s.add_argument("from_user"); s.add_argument("to_user")
     s.add_argument("--project", default=""); s.add_argument("--comment", default="")
+    s.add_argument("--instance-wide", dest="instance_wide", action="store_true")
     s.add_argument("--commit", action="store_true"); s.set_defaults(fn=cmd_reassign)
 
     s = sub.add_parser("load"); s.add_argument("--project", default=""); s.set_defaults(fn=cmd_load)

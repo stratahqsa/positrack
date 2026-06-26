@@ -115,6 +115,32 @@ def test_yterror_carries_structured_fields_and_redacts_raw():
     assert str(e) == "no permission"
 
 
+# ---------- visuals (bar / cell) ----------
+def test_bar():
+    assert yt.bar(5, 10, width=10) == "█████░░░░░"
+    assert yt.bar(0, 10, width=10) == "░" * 10
+    assert yt.bar(10, 10, width=10) == "█" * 10
+    assert yt.bar(3, 0) == ""        # no scale -> empty
+    assert yt.bar(None, 10) == ""    # missing value -> empty
+    assert yt.bar(-1, 10) == ""      # transient sentinel -> empty
+
+
+def test_cell():
+    assert yt._cell(None) == "—"
+    assert yt._cell(-1) == "…"
+    assert yt._cell(5) == 5
+
+
+def test_reassign_requires_scope():
+    # The high-blast-radius guard must fire BEFORE any network call.
+    ctx = yt.Ctx("perm-dummy")
+    try:
+        yt.reassign(ctx, "a@x.com", "b")
+        assert False, "expected YTError (no project, not instance_wide)"
+    except yt.YTError as e:
+        assert e.status_code is None and "project scope" in e.friendly_message
+
+
 def test_ctx_requires_token():
     try:
         yt.Ctx("")

@@ -107,7 +107,8 @@ LIVE_CASES = [
     ("projects", ["projects"], True),
     ("search_p8_bugs", ["search", "Type: Bug #Unresolved", "--project", "P8",
                         "--columns", "id,summary,State,Assignee", "--limit", "10"], True),
-    ("report_health_p8", ["report", "health", "--project", "P8"], True),
+    # NOTE: `report health` is intentionally NOT a parity case anymore — it now adds a
+    # visual Open bar column and degrades a missing-field 400 to "—" instead of aborting.
     ("report_activity_sa", ["report", "activity", "--days", "7"], True),
     ("boards", ["boards"], True),
     ("tags", ["tags"], True),
