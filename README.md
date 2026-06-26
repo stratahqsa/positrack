@@ -28,7 +28,21 @@ stdlib-only, nothing hardcoded — projects/fields/states are discovered live):
 
 ## Quickstart
 
-_Filled in at v1.0.0 (see `docs/INSTALL_*.md`)._
+**Live MCP server:** `https://positrack.up.railway.app/mcp` (streamable HTTP) · health: `/health`
+
+Each user authenticates with **their own** YouTrack permanent token (YouTrack → profile
+avatar → Account Security → New permanent token, scope YouTrack).
+
+- **Claude (skill — richest):** `/plugin marketplace add stratahqsa/positrack` then
+  `/plugin install positrack@groworx`. → [docs/INSTALL_CLAUDE.md](docs/INSTALL_CLAUDE.md)
+- **ChatGPT (Plus, full read+write):** a Custom GPT Action (`docs/chatgpt-action-openapi.yaml`)
+  or the Developer-Mode MCP connector. → [docs/INSTALL_CHATGPT.md](docs/INSTALL_CHATGPT.md)
+- **Gemini CLI (live):**
+  `gemini mcp add --transport http --header "Authorization: Bearer <token>" positrack https://positrack.up.railway.app/mcp`
+  → [docs/INSTALL_GEMINI.md](docs/INSTALL_GEMINI.md)
+- **CLI (local):** `export YT_TOKEN=perm-… && python3 cli/yt.py whoami`
+
+See [docs/MAINTENANCE.md](docs/MAINTENANCE.md) for the engine-sync gate, redeploys, and token rotation.
 
 ## Which tool can do what
 

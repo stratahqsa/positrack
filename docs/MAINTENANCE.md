@@ -56,13 +56,13 @@ mount (`/mcp` + `/sse`) and `/health` route are version-sensitive, so re-run the
 smoke test after **any** FastMCP bump:
 
 ```bash
-curl -fsS https://<railway-app>/health                 # {"status":"ok",...}
-curl -fsS -X POST https://<railway-app>/mcp \
+curl -fsS https://positrack.up.railway.app/health                 # {"status":"ok",...}
+curl -fsS -X POST https://positrack.up.railway.app/mcp \
   -H 'Accept: application/json, text/event-stream' \
   -H 'Authorization: Bearer perm-...' \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'   # streamable HTTP (recommended)
-curl -fsS https://<railway-app>/sse -H 'Authorization: Bearer perm-...'  # SSE alive
+curl -fsS https://positrack.up.railway.app/sse -H 'Authorization: Bearer perm-...'  # SSE alive
 ```
 
 Streamable HTTP at `/mcp` is the recommended connect URL; `/sse` is kept for

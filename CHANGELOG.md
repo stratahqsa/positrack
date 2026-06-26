@@ -3,7 +3,7 @@
 All notable changes to Positrack are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](https://semver.org/).
 
-## [1.0.0] - unreleased
+## [1.0.0] - 2026-06-26
 
 ### Added
 - Initial Positrack repo: one shared engine (`core/ytcore.py`) feeding two channels —

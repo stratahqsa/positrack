@@ -21,7 +21,7 @@ lead/admin token) — that's expected, not a bug.
 ### A1. Install from the plugin marketplace (one-time per user)
 
 ```
-/plugin marketplace add <org>/positrack
+/plugin marketplace add stratahqsa/positrack
 /plugin install positrack@groworx
 ```
 
@@ -89,10 +89,10 @@ MCP server instead. Same engine as the CLI and skill — 24 tools (16 read, 8 wr
 2. Set the URL to the deployed server (streamable HTTP, recommended):
 
    ```
-   https://<railway-app>/mcp
+   https://positrack.up.railway.app/mcp
    ```
 
-   (An SSE endpoint at `https://<railway-app>/sse` is also available for older
+   (An SSE endpoint at `https://positrack.up.railway.app/sse` is also available for older
    connector paths.)
 3. For per-user auth, the connector passes your token as a header:
 

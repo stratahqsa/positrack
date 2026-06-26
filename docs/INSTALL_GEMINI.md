@@ -42,12 +42,12 @@ npm install -g @google/gemini-cli
 
 Your YouTrack token rides in the `Authorization` header — read fresh per request,
 never stored or logged by the server. Replace `<YT token>` with your `perm-...`
-token and `<railway-app>` with the deployed app host.
+token and `positrack.up.railway.app` with the deployed app host.
 
 ```bash
 gemini mcp add --transport http \
   --header "Authorization: Bearer <YT token>" \
-  positrack https://<railway-app>/mcp
+  positrack https://positrack.up.railway.app/mcp
 ```
 
 `/mcp` is the recommended **streamable HTTP** endpoint. (An `/sse` endpoint exists
@@ -89,7 +89,7 @@ hand instead — same result:
 {
   "mcpServers": {
     "positrack": {
-      "httpUrl": "https://<railway-app>/mcp",
+      "httpUrl": "https://positrack.up.railway.app/mcp",
       "headers": {
         "Authorization": "Bearer <YT token>"
       }

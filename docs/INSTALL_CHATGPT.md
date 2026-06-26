@@ -63,8 +63,8 @@ it's available, but there's a catch on auth — see the note at the end.
 1. ChatGPT → **Settings** → **Apps & Connectors** → **Advanced** → enable
    **Developer mode (beta)**.
 2. **Create app** (custom connector).
-3. **MCP Server URL:** `https://<railway-app>/mcp` (streamable HTTP, recommended),
-   or `https://<railway-app>/sse` (SSE).
+3. **MCP Server URL:** `https://positrack.up.railway.app/mcp` (streamable HTTP, recommended),
+   or `https://positrack.up.railway.app/sse` (SSE).
 4. **Authentication:** ChatGPT only offers **No-Auth**, **OAuth**, or **Mixed** —
    it **cannot** pass a custom `Authorization` header. Since Positrack needs each
    user's own token, this path requires the server's **OAuth** flow.
