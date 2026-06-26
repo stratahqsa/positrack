@@ -30,8 +30,23 @@ stdlib-only, nothing hardcoded — projects/fields/states are discovered live):
 
 **Live MCP server:** `https://positrack.up.railway.app/mcp` (streamable HTTP) · health: `/health`
 
-Each user authenticates with **their own** YouTrack permanent token (YouTrack → profile
-avatar → Account Security → New permanent token, scope YouTrack).
+### Step 1 — Get your YouTrack token (everyone does this once)
+
+Each user authenticates with **their own** token — it carries only *your* permissions, which
+is the whole safety model. Never share it or paste it into the skill/repo.
+
+1. Log in to **https://support.posibolt.com** with **your own** user.
+2. Click your **avatar** in the **bottom-left** menu, then click **Profile**.
+3. Open the **Account Security** tab.
+4. Under permanent tokens, click **New token…**, give it a name (e.g. `Positrack`), leave the
+   scope as **YouTrack**, and save.
+5. **Copy the token immediately** — it starts with `perm-` and is shown **only once**. If you
+   lose it, just generate a new one.
+
+Keep it somewhere private (a password manager). You'll paste it into whichever tool you use
+below. Rotate it if it's ever exposed; revoke it from this same screen when you leave.
+
+### Step 2 — Connect your tool
 
 - **Claude (skill — richest):** `/plugin marketplace add stratahqsa/positrack` then
   `/plugin install positrack@groworx`. → [docs/INSTALL_CLAUDE.md](docs/INSTALL_CLAUDE.md)
