@@ -141,6 +141,19 @@ def test_reassign_requires_scope():
         assert e.status_code is None and "project scope" in e.friendly_message
 
 
+def test_report_myday_structure(monkeypatch):
+    # myday composes proven primitives; verify its block shape with the network stubbed.
+    ctx = yt.Ctx("perm-x")
+    monkeypatch.setattr(yt, "count_soft", lambda c, q: 7)
+    monkeypatch.setattr(yt, "get_issues",
+                        lambda c, q, **k: [{"idReadable": "IS-1", "summary": "x", "customFields": [], "created": 1}])
+    blocks = yt.report(ctx, "myday", days=5)
+    assert [b["kind"] for b in blocks] == ["raw", "raw", "search", "raw", "search"]
+    assert "Your day" in blocks[0]["s"] and "7 open" in blocks[0]["s"]
+    assert "Stale" in blocks[1]["s"]
+    assert blocks[2]["columns"] == ["id", "project", "summary", "State", "age"]
+
+
 def test_ctx_requires_token():
     try:
         yt.Ctx("")

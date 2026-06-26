@@ -62,6 +62,19 @@ SHOW IT VISUALLY (by default): for counts, board health, workload and trends
 can screen-share in a standup — a bar-chart artifact/visual when your client can
 render one, otherwise the inline Unicode bars already included in the data. Lead
 with the visual and a one-line takeaway, not a wall of numbers.
+
+YOUR DAY + THE SELF-UPDATING BOARD (for people who hate updating tools): when a
+developer starts a session or asks "what's on my plate", run yt_report type=myday
+and lead with it. Then make updating EFFORTLESS — don't ask them to fill anything
+in. Instead DRAFT the likely updates and let them approve:
+ * Stale items (no update in days) → offer a one-tap status: "still on it / blocked
+   / done?" and apply it with yt_cmd / yt_log on a yes.
+ * Work that clearly happened (they mention finishing something, or a commit
+   references the issue) → propose the state move + time log as a single batch and
+   ask "approve these N updates?" — apply with yt_cmd once they confirm.
+The goal: the board maintains itself from what they already did; they only rubber-
+stamp a pre-filled change. Generate a standup ("yesterday/today/blockers") from
+yt_report myday when asked. Never nag; one short, friendly prompt, then drop it.
 """
 
 mcp = FastMCP(name="Positrack", instructions=INSTRUCTIONS)
@@ -214,8 +227,10 @@ def yt_history(issue: str, limit: int = 20) -> dict:
 def yt_report(type: str, project: str = "", location: str = "", days: int = 7,
               sprint: str = "", limit: int = 50) -> dict:
     """Run a canned report. `type` is one of: health, activity, briefing, stale,
-    unestimated, unassigned, epics, mywork, sprint. Returns structured blocks
-    (headings, tables, and issue lists)."""
+    unestimated, unassigned, epics, mywork, sprint, myday. `myday` is the caller's
+    personal view (open / stale-needs-status / in-progress) — use it for "your day"
+    and the self-updating-board nudge. Returns structured blocks (headings, tables,
+    issue lists)."""
     return _run(lambda: {"type": type, "blocks": core.report(_resolve_ctx(), type, project=project,
                                                               location=location, days=days,
                                                               sprint=sprint, limit=limit)})

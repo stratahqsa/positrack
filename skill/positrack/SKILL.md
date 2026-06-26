@@ -184,6 +184,39 @@ client can render one, otherwise the inline Unicode bars the reports already
 include (`health` shows an Open bar per project; `load` shows a workload bar per
 owner). Lead with the chart + a one-line takeaway.
 
+## Your day & keeping your own board honest (especially for developers)
+
+Developers don't avoid the board because they're lazy — they avoid it because
+updating is friction with no payoff *to them*. So flip it: do the work for them
+and give them a one-tap approve.
+
+**"What's on my plate / your day."** Run `report myday` — it returns their open
+work, the **stale** items that need a quick status, and what's in progress. Lead
+with it (as a visual/board-pulse when you can render one), not a wall of tickets.
+
+```
+python3 scripts/yt.py report myday              # open · stale (needs status) · in progress
+python3 scripts/yt.py report myday --days 5      # tighter "stale" window for active work
+```
+
+**The self-updating board (the big one).** Never ask a dev to fill in a form.
+Instead *draft* the likely updates and let them rubber-stamp:
+- A **stale** item (no update in N days) → "IS-201 hasn't moved in 8 days — still on
+  it, blocked, or done?" → apply with `cmd` on their answer.
+- Work that **clearly happened** (they say "finished the sync fix", or a commit
+  references the issue) → propose the move **and** the time log as one batch:
+  "Mark IS-219 Fixed and log 90m — approve?" → apply with `cmd` / `log` once.
+- Offer **"approve all"** when there are several. The board ends up current and
+  they typed almost nothing.
+
+**Write their standup.** When asked (or each morning), turn `report myday` +
+recent activity into a ready-to-paste **Yesterday / Today / Blockers**. Devs hate
+writing standups; if you write it from their real work, they'll keep the board
+right so the standup is right.
+
+Keep all of this to **one short, friendly prompt** — never nag, and drop it if they
+pass. The aim is that the board maintains itself from what they already did.
+
 ## Knowledge base (articles)
 
 The instance has a real Knowledge Base (`/articles`) across projects (PX, P8, IS,

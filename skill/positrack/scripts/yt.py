@@ -341,7 +341,7 @@ def build_parser():
 
     s = sub.add_parser("report")
     s.add_argument("type", choices=["health", "activity", "briefing", "stale", "unestimated",
-                                    "unassigned", "epics", "mywork", "sprint"])
+                                    "unassigned", "epics", "mywork", "sprint", "myday"])
     s.add_argument("--project", default=""); s.add_argument("--location", default="")
     s.add_argument("--days", type=int, default=7); s.add_argument("--sprint", default="")
     s.add_argument("--limit", type=int, default=50); s.set_defaults(fn=cmd_report)

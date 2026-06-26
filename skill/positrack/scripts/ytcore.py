@@ -381,6 +381,21 @@ def report(ctx, rtype, project="", location="", days=7, sprint="", limit=50):
         blocks.append(_issue_block(q_old, ["id", "summary", "State", "Assignee", "age"],
                                    get_issues(ctx, q_old, limit=12)))
         return blocks
+    if rtype == "myday":
+        # The caller's personal view: what's theirs, what's gone stale (needs a
+        # quick status), what's in progress. Powers the "your day" + stale-nudge
+        # + the self-updating-board batch. `for: me` works across their projects.
+        open_mine = count_soft(ctx, f"{scope}#Unresolved for: me")
+        stale_q = search_query(f"#Unresolved for: me updated: * .. {{minus {days}d}} sort by: updated asc",
+                               project, location)
+        prog_q = search_query("#Unresolved for: me sort by: updated desc", project, location)
+        stale = get_issues(ctx, stale_q, limit=15)
+        prog = get_issues(ctx, prog_q, limit=15)
+        return [{"kind": "raw", "s": f"# Your day — {_cell(open_mine)} open · {len(stale)} stale (>{days}d)\n"},
+                {"kind": "raw", "s": "\n## Stale — needs a quick status from you"},
+                _issue_block(stale_q, ["id", "project", "summary", "State", "age"], stale),
+                {"kind": "raw", "s": "\n## In progress (you)"},
+                _issue_block(prog_q, ["id", "project", "summary", "State", "age"], prog)]
     # stale / unestimated / unassigned / epics / mywork / sprint
     qmap = {
         "stale":       f"#Unresolved updated: * .. {{minus {days}d}} sort by: updated asc",
