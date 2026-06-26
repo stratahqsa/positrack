@@ -115,6 +115,58 @@ def test_yterror_carries_structured_fields_and_redacts_raw():
     assert str(e) == "no permission"
 
 
+# ---------- visuals (bar / cell) ----------
+def test_bar():
+    assert yt.bar(5, 10, width=10) == "█████░░░░░"
+    assert yt.bar(0, 10, width=10) == "░" * 10
+    assert yt.bar(10, 10, width=10) == "█" * 10
+    assert yt.bar(3, 0) == ""        # no scale -> empty
+    assert yt.bar(None, 10) == ""    # missing value -> empty
+    assert yt.bar(-1, 10) == ""      # transient sentinel -> empty
+
+
+def test_cell():
+    assert yt._cell(None) == "—"
+    assert yt._cell(-1) == "…"
+    assert yt._cell(5) == 5
+
+
+def test_reassign_requires_scope():
+    # The high-blast-radius guard must fire BEFORE any network call.
+    ctx = yt.Ctx("perm-dummy")
+    try:
+        yt.reassign(ctx, "a@x.com", "b")
+        assert False, "expected YTError (no project, not instance_wide)"
+    except yt.YTError as e:
+        assert e.status_code is None and "project scope" in e.friendly_message
+
+
+def test_report_myday_structure(monkeypatch):
+    # myday composes proven primitives; verify its block shape with the network stubbed.
+    ctx = yt.Ctx("perm-x")
+    monkeypatch.setattr(yt, "count_soft", lambda c, q: 7)
+    monkeypatch.setattr(yt, "get_issues",
+                        lambda c, q, **k: [{"idReadable": "IS-1", "summary": "x", "customFields": [], "created": 1}])
+    blocks = yt.report(ctx, "myday", days=5)
+    assert [b["kind"] for b in blocks] == ["raw", "raw", "search", "raw", "search"]
+    assert "Your day" in blocks[0]["s"] and "7 open" in blocks[0]["s"]
+    assert "Stale" in blocks[1]["s"]
+    assert blocks[2]["columns"] == ["id", "project", "summary", "State", "age"]
+
+
+def test_report_hygiene_structure(monkeypatch):
+    ctx = yt.Ctx("perm-x")
+    # op=10 (plain open), st=3 (touched <30d), un=2, ue=2 -> hygiene 70%
+    monkeypatch.setattr(yt, "count_soft",
+                        lambda c, q: 3 if "updated" in q else (2 if ("Unassigned" in q or "Estimate" in q) else 10))
+    blocks = yt.report(ctx, "hygiene", project="IS")
+    assert blocks[0]["s"].startswith("# Board hygiene")
+    tbl = blocks[1]
+    assert tbl["kind"] == "table" and tbl["headers"][5] == "Hygiene"
+    assert tbl["rows"][0][0] == "IS" and tbl["rows"][0][5] == "70%"
+    assert "need attention" in blocks[2]["s"]
+
+
 def test_ctx_requires_token():
     try:
         yt.Ctx("")

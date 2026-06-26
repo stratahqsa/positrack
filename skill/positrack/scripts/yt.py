@@ -136,6 +136,7 @@ def cmd_setup(ctx, a):
     if a.projects: prof["projects"] = [p.strip() for p in a.projects.split(",") if p.strip()]
     if a.role: prof["role"] = a.role
     if a.base: prof["base"] = a.base.rstrip("/")
+    if a.briefing: prof["briefing"] = a.briefing
     os.makedirs(os.path.dirname(PROFILE_PATH), exist_ok=True)
     json.dump(prof, open(PROFILE_PATH, "w"), indent=2)
     print(f"Saved profile to {PROFILE_PATH}:\n" + json.dumps(prof, indent=2))
@@ -273,7 +274,7 @@ def cmd_orphans(ctx, a):
     print("\n".join(block_strings(core.orphans(ctx, a.project, a.limit))))
 
 def cmd_reassign(ctx, a):
-    r = core.reassign(ctx, a.from_user, a.to_user, a.project, a.comment, a.commit)
+    r = core.reassign(ctx, a.from_user, a.to_user, a.project, a.comment, a.commit, a.instance_wide)
     print(f"## reassign {r['count']} open issue(s) from `{a.from_user}` → `{a.to_user}`"
           f"{' (COMMIT)' if a.commit else ' (PREVIEW — add --commit to apply)'}\n")
     for it in r["preview"]:
@@ -289,7 +290,7 @@ def cmd_load(ctx, a):
     proj = a.project or (PROFILE.get("projects") or [None])[0]
     r = core.load(ctx, proj or "")
     print(f"# Open-work concentration — {r['project']} ({r['open']} open)\n")
-    print(md_table([[who, n] for who, n in r["by_owner"]], ["Owner", "Open issues"]))
+    print(md_table([[who, n, b] for who, n, b in r["by_owner"]], ["Owner", "Open issues", "Load ▕"]))
 
 def cmd_articles(ctx, a):
     r = core.articles(ctx, a.query, a.limit)
@@ -327,7 +328,9 @@ def build_parser():
 
     s = sub.add_parser("setup")
     s.add_argument("--location", default=""); s.add_argument("--projects", default="")
-    s.add_argument("--role", default=""); s.add_argument("--base", default=""); s.set_defaults(fn=cmd_setup)
+    s.add_argument("--role", default=""); s.add_argument("--base", default="")
+    s.add_argument("--briefing", default="", help="plain-English recipe for your custom briefing")
+    s.set_defaults(fn=cmd_setup)
 
     s = sub.add_parser("describe"); s.add_argument("--project", default=""); s.set_defaults(fn=cmd_describe)
     s = sub.add_parser("count"); s.add_argument("query"); s.set_defaults(fn=cmd_count)
@@ -341,7 +344,7 @@ def build_parser():
 
     s = sub.add_parser("report")
     s.add_argument("type", choices=["health", "activity", "briefing", "stale", "unestimated",
-                                    "unassigned", "epics", "mywork", "sprint"])
+                                    "unassigned", "epics", "mywork", "sprint", "myday", "hygiene"])
     s.add_argument("--project", default=""); s.add_argument("--location", default="")
     s.add_argument("--days", type=int, default=7); s.add_argument("--sprint", default="")
     s.add_argument("--limit", type=int, default=50); s.set_defaults(fn=cmd_report)
@@ -378,6 +381,7 @@ def build_parser():
 
     s = sub.add_parser("reassign"); s.add_argument("from_user"); s.add_argument("to_user")
     s.add_argument("--project", default=""); s.add_argument("--comment", default="")
+    s.add_argument("--instance-wide", dest="instance_wide", action="store_true")
     s.add_argument("--commit", action="store_true"); s.set_defaults(fn=cmd_reassign)
 
     s = sub.add_parser("load"); s.add_argument("--project", default=""); s.set_defaults(fn=cmd_load)

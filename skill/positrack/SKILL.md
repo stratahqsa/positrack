@@ -178,6 +178,81 @@ Mapping the example asks:
 
 Always lead with the headline and the exceptions, not the raw table.
 
+**Show it visually (by default).** For health, load and activity, present a simple
+**chart** the user can screen-share in a standup — a bar-chart artifact when the
+client can render one, otherwise the inline Unicode bars the reports already
+include (`health` shows an Open bar per project; `load` shows a workload bar per
+owner). Lead with the chart + a one-line takeaway.
+
+## Your day & keeping your own board honest (especially for developers)
+
+Developers don't avoid the board because they're lazy — they avoid it because
+updating is friction with no payoff *to them*. So flip it: do the work for them
+and give them a one-tap approve.
+
+**"What's on my plate / your day."** Run `report myday` — it returns their open
+work, the **stale** items that need a quick status, and what's in progress. Lead
+with it (as a visual/board-pulse when you can render one), not a wall of tickets.
+
+```
+python3 scripts/yt.py report myday              # open · stale (needs status) · in progress
+python3 scripts/yt.py report myday --days 5      # tighter "stale" window for active work
+```
+
+**The self-updating board (the big one).** Never ask a dev to fill in a form.
+Instead *draft* the likely updates and let them rubber-stamp:
+- A **stale** item (no update in N days) → "IS-201 hasn't moved in 8 days — still on
+  it, blocked, or done?" → apply with `cmd` on their answer.
+- Work that **clearly happened** (they say "finished the sync fix", or a commit
+  references the issue) → propose the move **and** the time log as one batch:
+  "Mark IS-219 Fixed and log 90m — approve?" → apply with `cmd` / `log` once.
+- Offer **"approve all"** when there are several. The board ends up current and
+  they typed almost nothing.
+
+**Write their standup.** When asked (or each morning), turn `report myday` +
+recent activity into a ready-to-paste **Yesterday / Today / Blockers**. Devs hate
+writing standups; if you write it from their real work, they'll keep the board
+right so the standup is right.
+
+Keep all of this to **one short, friendly prompt** — never nag, and drop it if they
+pass. The aim is that the board maintains itself from what they already did.
+
+## The cleanup quest — make fixing a messy board feel good
+
+The board is messy today. Don't present that as a chore — present it as a
+**finishable game with a progress bar**, and reward every fix. This is the engine
+that gets a reluctant team to actually clean up.
+
+```
+python3 scripts/yt.py report hygiene              # score per project + what's to clean
+python3 scripts/yt.py report hygiene --project IS
+```
+
+- **Show a progress bar with a goal.** "IS hygiene **58%** — 12 items to 100%." An
+  unfinished bar pulls people to finish it (Zeigarnik / goal-gradient).
+- **Celebrate every fix immediately.** When something gets resolved, assigned or
+  estimated: "Nice — 3 off the board, hygiene **58% → 64%.**" The small instant
+  reward is what builds the habit.
+- **Streaks & fresh starts, lightly.** "3rd day with a clean board." On Mondays / new
+  sprints: "new sprint, clean slate — here's the week's target."
+- **Keep it collective and kind** — a team climbing a number together, never a
+  personal ranking or a surveillance vibe.
+
+## Custom briefings — every leader makes their own (in plain English)
+
+Briefings are defined by *talking*, not configured in code. When a leader describes
+what they want, **remember it** and reuse it:
+
+- They say: "Every Monday give me IS resolved last week, anything blocked > 3 days,
+  who's overloaded, and the top 3 risks." → save that recipe (e.g.
+  `setup --briefing "..."`, or just remember it for them) and run it on "my briefing".
+- Back each section with their **own YouTrack saved queries** (`saved`) where they
+  have them — so their briefing reflects how *they* slice the board.
+- Offer to **schedule** it (e.g. a Monday-08:00 digest) so it arrives unprompted.
+
+A good briefing leads with one **surprising, useful nugget** (a ticket reopened 3×,
+a quietly-growing backlog) so opening it always pays off.
+
 ## Knowledge base (articles)
 
 The instance has a real Knowledge Base (`/articles`) across projects (PX, P8, IS,

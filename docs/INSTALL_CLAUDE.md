@@ -68,15 +68,26 @@ local to you.
 
 ### A3. Verify
 
+Easiest: just ask Claude **"Positrack: who am I in YouTrack?"** — it runs the skill
+for you. To check from a shell instead, use the path that matches where you are:
+
 ```
+# from a clone of this repo (repo root):
+python3 cli/yt.py whoami
+# or inside the installed skill directory (~/.claude/skills/positrack):
 python3 scripts/yt.py whoami
 ```
 
-If that returns your YouTrack identity, you're connected. Try a real query:
+If that returns your YouTrack identity, you're connected.
 
-```
-python3 scripts/yt.py report mywork
-```
+### Try these 3 first (the stuff the web UI can't do in one breath)
+
+Ask Claude, in plain English:
+- **"Give me a 5-line weekly briefing on my projects."**  ← cross-project, decision-ready
+- **"Where is work over-concentrated on one person in P8?"**  ← workload chart
+- **"What's stuck or unassigned this week?"**
+
+Lead with those, not single-ticket lookups — that's where Positrack clearly beats clicking.
 
 ---
 
