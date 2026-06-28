@@ -428,7 +428,7 @@ def _build_oauth_provider():
     # e.g. HUB_SCOPES="openid offline_access <youtrack-service-uuid> 0-0-0-0-0"
     scopes = (os.environ.get("HUB_SCOPES") or "openid offline_access").split()
     from fastmcp.server.auth import OIDCProxy
-    return OIDCProxy(
+    provider = OIDCProxy(
         config_url=config_url,
         client_id=client_id,
         client_secret=client_secret,
@@ -438,6 +438,16 @@ def _build_oauth_provider():
         extra_authorize_params={"access_type": "offline"},   # Hub: ask for a refresh token
         jwt_signing_key=os.environ.get("FASTMCP_JWT_SIGNING_KEY") or None,
     )
+    # required_scopes does double duty in OIDCProxy: it both (a) advertises the scopes
+    # the client must request UPSTREAM — so Hub mints a token YouTrack REST accepts, which
+    # needs the YouTrack/Hub service UUIDs — and (b) gates every DOWNSTREAM MCP call. But
+    # Hub echoes only standard OIDC scopes (openid/offline_access) in the issued token; the
+    # service-id "scopes" are granted as resource access, not as scope claims. Enforcing
+    # them downstream makes every authenticated /cmcp call fail 403 insufficient_scope —
+    # ChatGPT connects but sees zero tools. The advertised/upstream set is preserved in
+    # _default_scope_str, so relax ONLY the downstream gate (auth itself is still enforced).
+    provider.required_scopes = []
+    return provider
 
 
 def build_app():
