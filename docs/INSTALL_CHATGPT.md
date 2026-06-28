@@ -52,28 +52,64 @@ safety net.
 
 ---
 
-## Option 2 — Remote MCP connector via Developer Mode
+## Option 2 — Remote MCP connector via Developer Mode (OAuth)
 
 This connects ChatGPT directly to the deployed **Positrack MCP server** (all 24
-tools, with the engine's preview→commit safety). It's a cleaner experience when
-it's available, but there's a catch on auth — see the note at the end.
+tools, with the engine's preview→commit safety). ChatGPT's MCP connector can't
+pass a custom `Authorization` header — it only does **OAuth** — so Positrack runs
+an OAuth flow that logs you in with your **own** Posibolt Hub account and forwards
+your access to YouTrack. You never paste a token; nothing shared is stored.
 
-**Steps:**
+> **Use the `/cmcp` URL, not `/mcp`.** `/mcp` is the raw-token endpoint for clients
+> that *can* send a header (Claude, Gemini CLI). ChatGPT uses the OAuth-protected
+> **`/cmcp`** endpoint.
+
+**Steps (per user):**
 
 1. ChatGPT → **Settings** → **Apps & Connectors** → **Advanced** → enable
    **Developer mode (beta)**.
 2. **Create app** (custom connector).
-3. **MCP Server URL:** `https://positrack.up.railway.app/mcp` (streamable HTTP, recommended),
-   or `https://positrack.up.railway.app/sse` (SSE).
-4. **Authentication:** ChatGPT only offers **No-Auth**, **OAuth**, or **Mixed** —
-   it **cannot** pass a custom `Authorization` header. Since Positrack needs each
-   user's own token, this path requires the server's **OAuth** flow.
-5. Connect. Read tools run freely; each **write** tool prompts you per call to
-   confirm before it commits.
+3. **MCP Server URL:** `https://positrack.up.railway.app/cmcp`
+4. **Authentication:** choose **OAuth**. Leave the advanced Auth/Token/Registration
+   URL fields **blank** — ChatGPT discovers them automatically from the server
+   (it registers itself via Dynamic Client Registration). If you'd previously
+   typed anything there, clear it.
+5. **Create**, then **Connect** → you're redirected to **Posibolt Hub** to log in
+   and approve. After consent you land back in ChatGPT, connected.
+6. Read tools run freely; each **write** tool prompts you per call to confirm
+   before it commits.
 
-> **Auth status:** Positrack's OAuth flow for the MCP server is a follow-up.
-> **Until OAuth ships, use Option 1** — it gives you full read+write on Plus
-> today with zero server-side token storage.
+> If the connect fails immediately with no Hub login page, the server hasn't been
+> configured yet — see **Server setup** below (a one-time admin step), or just use
+> **Option 1**, which always works on Plus.
+
+### Server setup (one-time, by a Posibolt Hub admin)
+
+OAuth needs a client registered in Hub. This is done **once** for everyone.
+
+1. In Hub (`https://support.posibolt.com/hub`) you need **Low-level Admin Write**.
+   Go to the administration area → **Services** → **New Service**.
+2. Give it a name (e.g. "Positrack ChatGPT"), set a **Home URL**, **Create**.
+3. On the service's settings:
+   - Copy its **ID** (this is the OAuth `client_id`).
+   - Set a **Secret** (the `client_secret`) — click **Change** to generate one.
+   - Under **Redirect URIs**, add exactly:
+     `https://positrack.up.railway.app/auth/callback`
+   - Enable the **Authorization Code** flow; require **PKCE** if offered.
+4. Note the **YouTrack service ID** from the **Services** list (a different UUID) —
+   the access token must carry it for YouTrack REST calls to work.
+5. Set these env vars on the Railway service and redeploy:
+
+   ```
+   HUB_CLIENT_ID=<the Positrack service ID from step 3>
+   HUB_CLIENT_SECRET=<the secret from step 3>
+   OAUTH_PUBLIC_URL=https://positrack.up.railway.app
+   HUB_SCOPES=openid offline_access <youtrack-service-uuid> 0-0-0-0-0
+   FASTMCP_JWT_SIGNING_KEY=<a long random string>   # keeps sessions valid across redeploys
+   ```
+
+   With those unset, the server simply runs without OAuth (Option 1 / Claude /
+   Gemini are unaffected). `0-0-0-0-0` is Hub's own service id; keep it in scope.
 
 **Managed seats:** on a managed **Business/Enterprise** workspace, an admin may
 have **Developer Mode disabled** — then Option 2 won't appear. An individual

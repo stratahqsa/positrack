@@ -6,16 +6,34 @@ YouTrack instance. Same engine as the CLI and the Claude skill — never forked.
 
 ## Auth model (per-user, never shared)
 
-Every call uses the **caller's own** YouTrack permanent token. Nothing is baked in.
+Every call acts with the **caller's own** YouTrack access. Nothing is baked in.
+`_resolve_ctx()` resolves the token in three coexisting ways:
 
-- **Remote (HTTP):** the token rides in the request header
-  `Authorization: Bearer perm-…`, read fresh per request, turned into a
-  `ytcore.Ctx`, and **never stored or logged**.
-- **Local (stdio):** the token comes from the user's own `$YT_TOKEN`.
+1. **OAuth (HTTP, `/cmcp`):** for clients that can't send a custom header
+   (ChatGPT). The server fronts **Posibolt Hub** as an OAuth proxy
+   (`OIDCProxy`): the user logs in via Hub, and Hub's access token is forwarded to
+   YouTrack. Opt-in via env (see below); off by default.
+2. **Raw bearer (HTTP, `/mcp` + `/sse`):** the token rides in
+   `Authorization: Bearer perm-…`, read fresh per request — used by the Claude
+   custom connector and Gemini CLI.
+3. **Local (stdio):** the token comes from the user's own `$YT_TOKEN`.
 
-A `403` means the token lacks permission — expected, not a bug (use a lead/admin
-token for admin-only features). Write tools default to `commit=false` and return a
-non-mutating **preview**; only `commit=true` applies.
+Tokens are **never stored or logged**. A `403` means the token lacks permission —
+expected, not a bug (use a lead/admin token for admin-only features). Write tools
+default to `commit=false` and return a non-mutating **preview**; only `commit=true`
+applies.
+
+### Endpoints
+
+| Path | Auth | Clients |
+|------|------|---------|
+| `/mcp` | raw `Authorization: Bearer` header | Claude connector, Gemini CLI |
+| `/sse` | raw header (legacy SSE) | older connectors |
+| `/cmcp` | **OAuth** (Hub login, DCR + PKCE) | ChatGPT Developer Mode |
+| `/health` | none | health check |
+
+`/cmcp` and the OAuth routes (`/authorize`, `/token`, `/register`,
+`/auth/callback`, `/.well-known/oauth-*`) only appear when OAuth env is set.
 
 ## Tools
 
@@ -54,11 +72,31 @@ curl -fsS http://127.0.0.1:8080/health
 **Railway:**
 1. Point a Railway service at this repo with **Dockerfile path** `mcp/Dockerfile`
    (root build context), or `railway up` from the repo root.
-2. Set the env var `YT_BASE=https://support.posibolt.com` (the only env needed).
+2. Set the env var `YT_BASE=https://support.posibolt.com`.
    **Do NOT set YT_TOKEN** — tokens are per-user (header), never an env secret.
 3. Railway injects `$PORT`; the server binds it automatically.
-4. Health check path: `/health`. Connect URL for clients: `https://<app>.up.railway.app/mcp`
-   (streamable HTTP) or `…/sse` (SSE).
+4. Health check path: `/health`. Connect URL for header-based clients:
+   `https://<app>.up.railway.app/mcp` (streamable HTTP) or `…/sse` (SSE).
+
+### Optional: enable OAuth for ChatGPT
+
+ChatGPT can't send a custom header, so it uses the OAuth-protected `/cmcp`
+endpoint backed by Posibolt Hub. Register a Hub OAuth service (admin; redirect
+URI `https://<app>.up.railway.app/auth/callback`) and set:
+
+```
+HUB_CLIENT_ID=<Hub service id>
+HUB_CLIENT_SECRET=<Hub service secret>
+OAUTH_PUBLIC_URL=https://<app>.up.railway.app          # root origin, no path
+HUB_SCOPES=openid offline_access <youtrack-service-uuid> 0-0-0-0-0
+FASTMCP_JWT_SIGNING_KEY=<long random string>           # stable sessions across redeploys
+# optional: HUB_OIDC_CONFIG_URL (defaults to $YT_BASE/hub/.well-known/openid-configuration)
+# optional: OAUTH_MCP_PATH (defaults to /cmcp)
+```
+
+With these unset the server runs exactly as before (no OAuth surface). Full
+walk-through: [`docs/INSTALL_CHATGPT.md`](../docs/INSTALL_CHATGPT.md). The
+ChatGPT connect URL is then `https://<app>.up.railway.app/cmcp`.
 
 ## Transport note
 

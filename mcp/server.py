@@ -99,22 +99,39 @@ sections with their own YouTrack saved queries (yt_saved) where they have them.
 mcp = FastMCP(name="Positrack", instructions=INSTRUCTIONS)
 
 
-# ---------- per-call auth resolution (header for remote, env for local) ----------
+# ---------- per-call auth resolution (OAuth → header → env) ----------
 def _resolve_ctx():
     """Build a fresh ytcore.Ctx from the per-request token. Never cached, never
-    logged. Prefers the HTTP Authorization header; falls back to $YT_TOKEN."""
+    logged. Resolution order, so all three client styles coexist:
+      1. OAuth (ChatGPT via Posibolt Hub): FastMCP has already authenticated the
+         caller; the verified access token IS the upstream Hub token, which the
+         YouTrack REST API accepts as a bearer. Forward THAT.
+      2. Raw `Authorization: Bearer` header (Claude custom connector, Gemini CLI —
+         they can send the user's own perm-token directly).
+      3. Local stdio: $YT_TOKEN."""
     base = os.environ.get("YT_BASE") or core.DEFAULT_BASE
     token = None
+    # 1. OAuth-authenticated caller (only on the OAuth-protected endpoint). The
+    # FastMCP AccessToken.token resolves to the upstream Hub access token.
     try:
-        # get_http_headers() filters out Authorization by default, so read the
-        # request directly (Starlette headers are case-insensitive).
-        from fastmcp.server.dependencies import get_http_request
-        request = get_http_request()
-        auth = request.headers.get("authorization")
-        if auth and auth.strip().lower().startswith("bearer "):
-            token = auth.strip()[7:].strip()
+        from fastmcp.server.dependencies import get_access_token
+        at = get_access_token()
+        if at is not None and getattr(at, "token", None):
+            token = at.token.strip()
     except Exception:
-        pass  # not in an HTTP request context (e.g. stdio)
+        pass  # no auth context (legacy header path or stdio)
+    # 2. Raw bearer header. get_http_headers() filters out Authorization by
+    # default, so read the request directly (Starlette headers are case-insensitive).
+    if not token:
+        try:
+            from fastmcp.server.dependencies import get_http_request
+            request = get_http_request()
+            auth = request.headers.get("authorization")
+            if auth and auth.strip().lower().startswith("bearer "):
+                token = auth.strip()[7:].strip()
+        except Exception:
+            pass  # not in an HTTP request context (e.g. stdio)
+    # 3. Local stdio.
     if not token:
         env = os.environ.get("YT_TOKEN")
         token = env.strip() if env else None
@@ -383,21 +400,83 @@ async def health(_request):
     return JSONResponse({"status": "ok", "service": "positrack-mcp"})
 
 
+def _build_oauth_provider():
+    """Build the OIDCProxy that lets ChatGPT log in via Posibolt Hub, or return
+    None when not configured (then the server runs exactly as before: raw-bearer
+    pass-through, no OAuth surface at all).
+
+    Why a proxy: ChatGPT's MCP connector cannot send a custom Authorization
+    header — it only does OAuth — and it needs Dynamic Client Registration, which
+    Hub does NOT offer. The OIDCProxy bridges that: it speaks DCR + discovery
+    metadata to ChatGPT, logs the user in against Hub upstream (one pre-registered
+    Hub client), and forwards Hub's access token onward. Hub access tokens are
+    opaque (not JWTs), so we authenticate via the id_token (verify_id_token=True);
+    FastMCP still exposes the upstream Hub access token to the tools, and the
+    YouTrack REST API accepts that token as a bearer (provided the YouTrack
+    service id is in the requested scope — see HUB_SCOPES below)."""
+    client_id = os.environ.get("HUB_CLIENT_ID")
+    client_secret = os.environ.get("HUB_CLIENT_SECRET")
+    public_url = os.environ.get("OAUTH_PUBLIC_URL")  # root origin, e.g. https://positrack.up.railway.app
+    if not (client_id and client_secret and public_url):
+        return None
+    base = os.environ.get("YT_BASE") or core.DEFAULT_BASE
+    config_url = (os.environ.get("HUB_OIDC_CONFIG_URL")
+                  or base.rstrip("/") + "/hub/.well-known/openid-configuration")
+    # Hub scopes are service IDs plus OIDC scopes. For YouTrack REST to accept the
+    # token, the YouTrack *service* UUID must be in scope (find it on Hub's
+    # Services page); include the Hub service id 0-0-0-0-0 and openid/offline_access.
+    # e.g. HUB_SCOPES="openid offline_access <youtrack-service-uuid> 0-0-0-0-0"
+    scopes = (os.environ.get("HUB_SCOPES") or "openid offline_access").split()
+    from fastmcp.server.auth import OIDCProxy
+    return OIDCProxy(
+        config_url=config_url,
+        client_id=client_id,
+        client_secret=client_secret,
+        base_url=public_url,
+        verify_id_token=True,                                # Hub access tokens are opaque → verify the id_token
+        required_scopes=scopes,
+        extra_authorize_params={"access_type": "offline"},   # Hub: ask for a refresh token
+        jwt_signing_key=os.environ.get("FASTMCP_JWT_SIGNING_KEY") or None,
+    )
+
+
 def build_app():
-    """A single ASGI app serving BOTH transports plus /health, for the hosted
-    deployment: streamable HTTP at /mcp and SSE at /sse. The two FastMCP apps'
-    lifespans are composed so each transport's session manager starts correctly."""
+    """A single ASGI app serving the transports plus /health, for the hosted
+    deployment: streamable HTTP at /mcp and SSE at /sse (both raw-bearer
+    pass-through). The two FastMCP apps' lifespans are composed so each transport's
+    session manager starts correctly.
+
+    When OAuth is configured (see _build_oauth_provider), a SECOND FastMCP
+    instance — same 24 tools via mount() — is served OAuth-protected at /cmcp for
+    ChatGPT, and its whole app (auth middleware + OAuth/.well-known routes) is
+    mounted at root, matched LAST so the legacy /mcp, /sse and /health win first.
+    This keeps the existing Claude/Gemini raw-bearer flows 100% unchanged."""
     from starlette.applications import Starlette
+    from starlette.routing import Mount
     http_app = mcp.http_app(transport="http", path="/mcp")
     sse_app = mcp.http_app(transport="sse", path="/sse")
+    lifespan_apps = [http_app, sse_app]
+    extra_routes = []
+
+    oauth = _build_oauth_provider()
+    if oauth is not None:
+        oauth_path = os.environ.get("OAUTH_MCP_PATH", "/cmcp")
+        mcp_oauth = FastMCP(name="Positrack", instructions=INSTRUCTIONS, auth=oauth)
+        mcp_oauth.mount(mcp)  # live-link the same 24 tools (sync, no duplication)
+        oauth_app = mcp_oauth.http_app(transport="http", path=oauth_path)
+        lifespan_apps.append(oauth_app)
+        extra_routes.append(Mount("/", app=oauth_app))
+        logging.getLogger("positrack").info("OAuth enabled: ChatGPT endpoint at %s%s", public_url_log(), oauth_path)
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
-        async with http_app.lifespan(app):
-            async with sse_app.lifespan(app):
-                yield
+        async with contextlib.AsyncExitStack() as stack:
+            for a in lifespan_apps:
+                await stack.enter_async_context(a.lifespan(app))
+            yield
 
-    # Merge both apps' routes (dedup the shared /health custom route by path).
+    # Merge the legacy apps' routes (dedup the shared /health custom route by path),
+    # then append the OAuth app as a root mount (kept whole, so its middleware lives).
     routes, seen = [], set()
     for r in list(http_app.routes) + list(sse_app.routes):
         key = getattr(r, "path", getattr(r, "path_format", repr(r)))
@@ -405,7 +484,13 @@ def build_app():
             continue
         seen.add(key)
         routes.append(r)
+    routes.extend(extra_routes)
     return Starlette(routes=routes, lifespan=lifespan)
+
+
+def public_url_log():
+    """Best-effort public origin for a friendly startup log line (never secret)."""
+    return os.environ.get("OAUTH_PUBLIC_URL", "")
 
 
 def main():
