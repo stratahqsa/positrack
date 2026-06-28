@@ -1,5 +1,15 @@
 # Install Positrack for Claude
 
+> ### 👉 Easiest path: a **custom connector over OAuth — no token** (see [MANUAL.md](./MANUAL.md))
+> On **claude.ai**, go to **Customize → Connectors → Add connector → Add custom
+> connector**, name it `Positrack`, set the URL to
+> `https://positrack.up.railway.app/cmcp`, leave the OAuth fields blank, **Add**, then
+> **Connect** and sign in to Posibolt. You get all 24 tools, you act as **yourself**, and
+> there's **no token to manage**. This is the recommended path for most people.
+>
+> Paths A (the skill) and B (header token) below are still supported — use them if you
+> want the local skill or prefer a permanent token.
+
 Positrack gives Claude a talk-to-it front-end for Posibolt's YouTrack
 (`https://support.posibolt.com`): ask in plain English, get briefings, and
 create/update tickets — with **preview → confirm → commit** safety on every write.

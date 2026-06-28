@@ -1,5 +1,15 @@
 # Install Positrack for ChatGPT
 
+> ### 👉 Most people should follow the [**dummy-proof manual → MANUAL.md**](./MANUAL.md)
+> It walks the **recommended OAuth connector** path (no token, ~6 clicks) with
+> screenshots. Use **Option 2 (MCP connector)** below — it works on **every** model.
+>
+> ⚠️ **Option 1 (Custom GPT Action) is now LEGACY / not recommended.** ChatGPT's
+> *reasoning* models silently refuse to call Custom-GPT Actions, and you can't control
+> which model a teammate is on, so the Action path breaks unpredictably. It's kept here
+> for reference only. The **connector (Option 2)** is the reliable path and what
+> MANUAL.md uses.
+
 **Good news, corrected for 2026:** ChatGPT **Plus** (the individual plan) can run
 Positrack with **full read AND write**. The old "writes need Business/Enterprise"
 guidance is outdated — that's an org-workspace admin restriction, not a Plus limit.
