@@ -400,6 +400,31 @@ async def health(_request):
     return JSONResponse({"status": "ok", "service": "positrack-mcp"})
 
 
+def _make_client_storage():
+    """Persistent storage for OAuth Dynamic-Client-Registration records, so client
+    registrations SURVIVE redeploys/restarts. Without this, FastMCP keeps DCR clients
+    in memory only, so every Railway redeploy wipes them and EVERY connected ChatGPT/
+    Claude user breaks with "Client Not Registered" until they recreate the connector —
+    unacceptable for a many-user rollout. Backed by a Railway volume (mount a volume at
+    the parent of OAUTH_CLIENT_STORE_DIR, default /data/oauth-clients). Falls back to
+    in-memory (returns None) when no writable volume is present, so local/dev is unchanged."""
+    store_dir = os.environ.get("OAUTH_CLIENT_STORE_DIR", "/data/oauth-clients")
+    parent = os.path.dirname(store_dir.rstrip("/")) or "/"
+    log = logging.getLogger("positrack")
+    if not (os.path.isdir(parent) and os.access(parent, os.W_OK)):
+        log.warning("OAuth client storage: %s is not a writable mount; using in-memory "
+                    "(DCR clients will NOT survive restarts — mount a volume to persist).", parent)
+        return None
+    try:
+        os.makedirs(store_dir, exist_ok=True)
+        from key_value.aio.stores.disk import DiskStore
+        log.info("OAuth client storage: persistent at %s (survives redeploys)", store_dir)
+        return DiskStore(directory=store_dir)
+    except Exception as e:  # pragma: no cover - defensive: never let storage break boot
+        log.warning("OAuth client storage: disk init failed (%r); in-memory fallback", e)
+        return None
+
+
 def _build_oauth_provider():
     """Build the OIDCProxy that lets ChatGPT log in via Posibolt Hub, or return
     None when not configured (then the server runs exactly as before: raw-bearer
@@ -437,6 +462,7 @@ def _build_oauth_provider():
         required_scopes=scopes,
         extra_authorize_params={"access_type": "offline"},   # Hub: ask for a refresh token
         jwt_signing_key=os.environ.get("FASTMCP_JWT_SIGNING_KEY") or None,
+        client_storage=_make_client_storage(),               # persist DCR clients across redeploys
     )
     # required_scopes does double duty in OIDCProxy: it both (a) advertises the scopes
     # the client must request UPSTREAM — so Hub mints a token YouTrack REST accepts, which
