@@ -239,21 +239,31 @@ def yt_projects() -> dict:
 
 @mcp.tool
 def yt_describe(project: str) -> dict:
-    """Describe a project: its custom fields, their types, and key enum/state values."""
+    """Describe a Posibolt project's custom fields and their EXACT allowed values
+    (states, types, Scope values like 'PHASE 1', etc.). Call this FIRST whenever a
+    request names a field value in words (e.g. 'Phase 1', 'in testing', 'epics') so you
+    can build a correct query with the exact spelling. Project: a short name like PXB1."""
     return _run(lambda: core.describe(_resolve_ctx(), project))
 
 
 @mcp.tool
 def yt_count(query: str) -> dict:
-    """Return the issue count for a YouTrack query string."""
+    """Count Posibolt YouTrack issues matching a query — use for "how many …" questions
+    about tickets/epics/bugs in any Posibolt project (not web search). `query` is
+    YouTrack query syntax, e.g. 'project: IS #Unresolved'."""
     return _run(lambda: {"query": query, "count": core.count(_resolve_ctx(), query)})
 
 
 @mcp.tool
 def yt_search(query: str, project: str = "", location: str = "", columns: str = "", limit: int = 50) -> dict:
-    """Search issues. `query` is YouTrack query syntax; `project`/`location` add scope.
-    Returns the resolved query and full issue objects (plus projected `rows` if
-    `columns` is a comma-separated list like 'id,summary,State,Assignee')."""
+    """List or search Posibolt YouTrack issues — epics, bugs, tasks, stories — in any
+    project (PXB1, P8, IS, SUP, GCC, …). USE THIS (never web search) for ANY "list /
+    show / find / how many … in <project>" request about Posibolt tickets, epics, or
+    work items. `query` is YouTrack query syntax, e.g.
+    'project: PXB1 Type: Epic Scope: {PHASE 1} #Unresolved'. If unsure of a project's
+    exact field values, call yt_describe FIRST. Returns the resolved query + full issue
+    objects (and a projected `rows` table when `columns` is a list like
+    'id,summary,State,Assignee')."""
     def go():
         ctx = _resolve_ctx()
         scoped = core.search_query(query, project, location)
@@ -279,7 +289,8 @@ def _project_row(it, cols):
 
 @mcp.tool
 def yt_get(issue: str) -> dict:
-    """Get one issue: fields, links, recent comments, age, estimate-vs-spent."""
+    """Get one Posibolt YouTrack ticket by id (e.g. PXB1-1189, IS-184): fields, links,
+    recent comments, age, estimate-vs-spent. Use for "show me / how far is <ticket>"."""
     return _run(lambda: core.get_issue(_resolve_ctx(), issue))
 
 
