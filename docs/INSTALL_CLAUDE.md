@@ -4,7 +4,7 @@
 > On **claude.ai**, go to **Customize → Connectors → Add connector → Add custom
 > connector**, name it `Positrack`, set the URL to
 > `https://positrack.up.railway.app/cmcp`, leave the OAuth fields blank, **Add**, then
-> **Connect** and sign in to Posibolt. You get all 24 tools, you act as **yourself**, and
+> **Connect** and sign in to Posibolt. You get all 25 tools, you act as **yourself**, and
 > there's **no token to manage**. This is the recommended path for most people.
 >
 > Paths A (the skill) and B (header token) below are still supported — use them if you
@@ -104,7 +104,7 @@ Lead with those, not single-ticket lookups — that's where Positrack clearly be
 ## Path B — MCP custom connector (shared engine)
 
 Prefer not to install the skill locally? Point Claude at the deployed Positrack
-MCP server instead. Same engine as the CLI and skill — 24 tools (16 read, 8 write).
+MCP server instead. Same engine as the CLI and skill — 25 tools (17 read, 8 write).
 
 1. Open **Settings → Connectors** and choose **Add custom connector**.
 2. Set the URL to the deployed server (streamable HTTP, recommended):

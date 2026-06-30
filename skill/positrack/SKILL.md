@@ -160,6 +160,25 @@ python3 scripts/yt.py report mywork                               # the caller's
 python3 scripts/yt.py boards --project P8                         # real agile boards + their live sprints
 ```
 
+**Time / hours spent by person — use `worklog`, never the Spent-time + Assignee shortcut.**
+For "time spent by employee", "who logged hours", "effort per person", or a sprint
+time breakdown, run `worklog` (it reads the actual work-item entries, each attributed
+to **who logged it**):
+
+```
+python3 scripts/yt.py worklog --project PXB1 --sprint beta1-19    # true logged time per person
+python3 scripts/yt.py worklog --project IS --since 2026-06-01 --until 2026-06-30
+python3 scripts/yt.py worklog --author jsmith --sprint beta1-19   # one person
+python3 scripts/yt.py worklog --project P8 --group-by type        # or by type/project/issue
+# (equivalently: report timespent --project PXB1 --sprint beta1-19)
+```
+
+Do **NOT** answer time-by-person by searching issues and summing the issue **Spent
+time** field grouped by **Assignee** — that field is a per-issue rollup, so it
+misattributes work after a reassignment and dumps epic-level logging onto the epic's
+owner. The numbers look authoritative and are wrong. `worklog` is the only correct
+source.
+
 Mapping the example asks:
 - **"Tell me what happened this week in location SA"** → `report activity
   --location SA --days 7`; then summarise: what shipped, what's new, where it

@@ -204,6 +204,13 @@ def parse_period(s):
         total += int(num) * {"w": 2400, "d": 480, "h": 60, "m": 1}[unit]
     return total or None
 
+def fmt_minutes(m):
+    """Render a minute total as 'Hh Mm' (e.g. 110 -> '1h 50m'), matching how
+    YouTrack presents Spent time. Used for true-logged-time sums where the API
+    gives raw minutes but no presentation string."""
+    m = int(m or 0)
+    return f"{m // 60}h {m % 60}m"
+
 def cf_entry(name, ftype, value):
     """Correctly-typed customFields entry. NOTE: for State / Assignee / Priority /
     Sprint transitions, prefer the Commands API (`run_command`) — it respects the
@@ -420,6 +427,18 @@ def report(ctx, rtype, project="", location="", days=7, sprint="", limit=50):
                  "rows": rows},
                 {"kind": "raw", "s": f"\n**{attention} item(s) need attention (stale / unassigned / "
                                      f"unestimated) — clear them to push hygiene toward 100%.**"}]
+    if rtype == "timespent":
+        # TRUE logged time by person — from work items, attributed to who LOGGED
+        # each entry (not the issue's current assignee). Fixes reassignment and
+        # epic-level misattribution that an Assignee + Spent-time rollup gets wrong.
+        data = time_spent(ctx, project=project, location=location, sprint=sprint, group_by="author")
+        label = (f"sprint {sprint}" if sprint else None) or (proj or location or "(whole instance)")
+        rows = [[g["key"], g["entries"], g["issues"], g["presentation"], g["bar"]] for g in data["groups"]]
+        rows.append(["**Total**", data["count"], "", f"**{data['total']}**", ""])
+        return [{"kind": "raw", "s": f"# Time spent by person — {label}\n"},
+                {"kind": "raw", "s": f"_True logged time across {data['count']} work-item entries, "
+                                     f"attributed to who LOGGED each one (not the current assignee)._\n"},
+                {"kind": "table", "headers": ["Person", "Entries", "Issues", "Time", "▕"], "rows": rows}]
     # stale / unestimated / unassigned / epics / mywork / sprint
     qmap = {
         "stale":       f"#Unresolved updated: * .. {{minus {days}d}} sort by: updated asc",
@@ -512,6 +531,97 @@ def load(ctx, project):
     maxn = owners[0][1] if owners else 0
     by_owner = [[who, n, bar(n, maxn)] for who, n in owners]
     return {"project": project, "open": len(issues), "by_owner": by_owner}
+
+# ---------- true logged time (per-author, from work items — NOT the assignee proxy) ----------
+# The issue-level "Spent time" field is a per-issue rollup keyed to nothing but the
+# issue; grouping it by the current Assignee misattributes work after a reassignment
+# and lumps epic-level logging onto the epic's owner. The /api/workItems endpoint
+# returns each time entry with its OWN author, date and issue, so summing it gives
+# the real "who logged how much" — which is what people mean by time-by-person.
+WORKITEM_FIELDS = ("id,date,duration(minutes,presentation),author(login,fullName),"
+                   "creator(login,fullName),type(name),text,issue(idReadable,project(shortName))")
+
+def work_items(ctx, query="", author="", start="", end="", limit=20000, top=300):
+    """Page through /api/workItems (time-tracking entries) across issues.
+    `query` is an issue search query (e.g. 'project: PXB1 Sprints: {beta1-19}');
+    `author` filters by who logged it (login/ringId/'me'); `start`/`end` are
+    YYYY-MM-DD bounds on the entry date. Returns raw work-item dicts."""
+    base = [f"fields={urllib.parse.quote(WORKITEM_FIELDS)}", f"$top={top}"]
+    if query:  base.append("query=" + urllib.parse.quote(query))
+    if author: base.append("author=" + urllib.parse.quote(author))
+    if start:  base.append("startDate=" + urllib.parse.quote(start))
+    if end:    base.append("endDate=" + urllib.parse.quote(end))
+    out, skip = [], 0
+    while True:
+        page = GET(ctx, "/api/workItems?" + "&".join(base + [f"$skip={skip}"]))
+        out.extend(page)
+        if len(page) < top or (limit and len(out) >= limit):
+            break
+        skip += len(page)
+    return out[:limit] if limit else out
+
+def _wi_norm(w):
+    """Flatten one raw work item to the fields we report on."""
+    dur = w.get("duration") or {}
+    iss = w.get("issue") or {}
+    au = w.get("author") or {}
+    return {"issue": iss.get("idReadable", ""),
+            "project": (iss.get("project") or {}).get("shortName", ""),
+            "login": au.get("login", ""),
+            "author": au.get("fullName") or au.get("login") or "(unknown)",
+            "minutes": int(dur.get("minutes") or 0),
+            "type": (w.get("type") or {}).get("name", "") or "(none)",
+            "date": w.get("date"),
+            "text": w.get("text") or ""}
+
+_WI_KEY = {"author": lambda it: it["author"] or "(unknown)",
+           "type":    lambda it: it["type"] or "(none)",
+           "project": lambda it: it["project"] or "(none)",
+           "issue":   lambda it: it["issue"] or "(none)"}
+
+def aggregate_work(items, group_by="author"):
+    """Pure: roll normalized work items up by author/type/project/issue. Returns
+    {group_by, count, total_minutes, total, groups:[{key,minutes,presentation,
+    entries,issues,bar}]} sorted by time desc. No network."""
+    keyfn = _WI_KEY.get(group_by, _WI_KEY["author"])
+    agg = {}  # key -> [minutes, entries, {issues}]
+    for it in items:
+        e = agg.setdefault(keyfn(it), [0, 0, set()])
+        e[0] += it["minutes"]; e[1] += 1; e[2].add(it["issue"])
+    ordered = sorted(agg.items(), key=lambda kv: kv[1][0], reverse=True)
+    maxmin = ordered[0][1][0] if ordered else 0
+    groups = [{"key": k, "minutes": v[0], "presentation": fmt_minutes(v[0]),
+               "entries": v[1], "issues": len(v[2]), "bar": bar(v[0], maxmin)}
+              for k, v in ordered]
+    total = sum(it["minutes"] for it in items)
+    return {"group_by": group_by, "count": len(items), "total_minutes": total,
+            "total": fmt_minutes(total), "groups": groups}
+
+def _wi_query(query="", project="", location="", sprint=""):
+    q = scope_clause(project, location)
+    if sprint:
+        q += "Sprints: {%s} " % sprint    # sprint names often contain spaces/dashes
+    if query:
+        q += query
+    return q.strip()
+
+def time_spent(ctx, query="", project="", location="", sprint="", author="",
+               start="", end="", group_by="author", limit=20000, with_items=False):
+    """True logged-time breakdown. Resolves scope (project/location/sprint + free
+    query) into an issue query, pulls the matching work items, and aggregates by
+    `group_by` (author|type|project|issue). `start`/`end` (YYYY-MM-DD) optionally
+    restrict to entries logged in a window. Set with_items=True to also return the
+    flattened entries."""
+    scoped = _wi_query(query, project, location, sprint)
+    items = [_wi_norm(w) for w in work_items(ctx, query=scoped, author=author,
+                                             start=start, end=end, limit=limit)]
+    out = aggregate_work(items, group_by)
+    out["scope"] = scoped
+    if start or end:
+        out["window"] = {"start": start or None, "end": end or None}
+    if with_items:
+        out["items"] = items
+    return out
 
 def reassign(ctx, from_user, to_user, project="", comment="", commit=False, instance_wide=False):
     if not project and not instance_wide:

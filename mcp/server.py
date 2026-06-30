@@ -58,6 +58,17 @@ value X isn't used for the field", you used the wrong spelling/casing — call
 or hand back a half-answer. Map common words: "epics" → `Type: Epic`; "unresolved" /
 "open" → `#Unresolved`; "mine" → `for: me`; "this week" → `updated: {This week}`.
 
+TIME / HOURS BY PERSON (use the right source — this is easy to get WRONG): for any
+"time spent / hours by employee", "who logged time", "effort per person", or a
+sprint time breakdown, call `yt_worklog` (or `yt_report timespent`). It reads the
+actual work-item entries, each attributed to who LOGGED it. NEVER answer this by
+listing issues and summing the issue-level 'Spent time' field grouped by Assignee:
+that field is a per-issue rollup, so grouping it by the current assignee
+misattributes time after any reassignment and lumps epic-level logging onto the
+epic's owner — confidently wrong numbers. Scope yt_worklog by project/location/
+sprint (+ optional `author`, or `since`/`until` for a date window) and present it
+as a horizontal bar chart with the total.
+
 AUTH & PERMISSIONS: every call uses the caller's OWN YouTrack token (an
 `Authorization: Bearer` header remotely, or $YT_TOKEN locally). A 403 means the
 token lacks permission for that action — that is EXPECTED, not a bug; suggest a
@@ -304,11 +315,14 @@ def yt_history(issue: str, limit: int = 20) -> dict:
 def yt_report(type: str, project: str = "", location: str = "", days: int = 7,
               sprint: str = "", limit: int = 50) -> dict:
     """Run a canned report. `type` is one of: health, activity, briefing, stale,
-    unestimated, unassigned, epics, mywork, sprint, myday, hygiene. `myday` is the
-    caller's personal view (open / stale-needs-status / in-progress). `hygiene` scores
-    each project's board cleanliness (% touched in 30d) + the stale/unassigned/
-    unestimated buckets to clear — use it to run the cleanup quest. Returns structured
-    blocks (headings, tables, issue lists)."""
+    unestimated, unassigned, epics, mywork, sprint, myday, hygiene, timespent.
+    `myday` is the caller's personal view (open / stale-needs-status / in-progress).
+    `hygiene` scores each project's board cleanliness (% touched in 30d) + the
+    stale/unassigned/unestimated buckets to clear — use it to run the cleanup quest.
+    `timespent` is TRUE logged-time by person for a scope/sprint (from work items,
+    attributed to who LOGGED it) — for any time-by-person question prefer this or
+    `yt_worklog`, and NEVER hand-sum the issue 'Spent time' field by Assignee.
+    Returns structured blocks (headings, tables, issue lists)."""
     return _run(lambda: {"type": type, "blocks": core.report(_resolve_ctx(), type, project=project,
                                                               location=location, days=days,
                                                               sprint=sprint, limit=limit)})
@@ -338,6 +352,28 @@ def yt_orphans(project: str = "", limit: int = 50) -> dict:
 def yt_load(project: str) -> dict:
     """Open-work concentration per owner for a project (single-point-of-failure view)."""
     return _run(lambda: core.load(_resolve_ctx(), project))
+
+
+@mcp.tool
+def yt_worklog(query: str = "", project: str = "", location: str = "", sprint: str = "",
+               author: str = "", since: str = "", until: str = "", group_by: str = "author") -> dict:
+    """TRUE logged time — the CORRECT source for "time/hours spent by employee",
+    "who logged time", or effort-based workload. Reads YouTrack work items (each
+    entry carries its OWN author, issue and date) and aggregates them, so time is
+    attributed to who LOGGED it — NOT the issue's current Assignee. ALWAYS use this
+    (or `yt_report timespent`) for time-by-person; do NOT sum the issue-level
+    'Spent time' field grouped by Assignee — that misattributes work after a
+    reassignment and lumps epic-level logging onto the epic's owner.
+
+    Scope with `project` / `location` / `sprint` and/or a free YouTrack `query`
+    (e.g. a sprint plus 'Type: Bug'); `author` narrows to one person (login or
+    'me'); `since`/`until` (YYYY-MM-DD) restrict to entries LOGGED in that window
+    (omit for all time on the scoped issues); `group_by` is author|type|project|issue.
+    Returns the total and per-group minutes, an 'Hh Mm' presentation, entry &
+    issue counts, and chart-ready bars — render it as a horizontal bar chart."""
+    return _run(lambda: core.time_spent(_resolve_ctx(), query=query, project=project,
+                                        location=location, sprint=sprint, author=author,
+                                        start=since, end=until, group_by=group_by))
 
 
 @mcp.tool
@@ -524,7 +560,7 @@ def build_app():
     session manager starts correctly.
 
     When OAuth is configured (see _build_oauth_provider), a SECOND FastMCP
-    instance — same 24 tools via mount() — is served OAuth-protected at /cmcp for
+    instance — same 25 tools via mount() — is served OAuth-protected at /cmcp for
     ChatGPT, and its whole app (auth middleware + OAuth/.well-known routes) is
     mounted at root, matched LAST so the legacy /mcp, /sse and /health win first.
     This keeps the existing Claude/Gemini raw-bearer flows 100% unchanged."""
@@ -539,7 +575,7 @@ def build_app():
     if oauth is not None:
         oauth_path = os.environ.get("OAUTH_MCP_PATH", "/cmcp")
         mcp_oauth = FastMCP(name="Positrack", instructions=INSTRUCTIONS, auth=oauth)
-        mcp_oauth.mount(mcp)  # live-link the same 24 tools (sync, no duplication)
+        mcp_oauth.mount(mcp)  # live-link the same 25 tools (sync, no duplication)
         oauth_app = mcp_oauth.http_app(transport="http", path=oauth_path)
         lifespan_apps.append(oauth_app)
         extra_routes.append(Mount("/", app=oauth_app))

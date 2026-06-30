@@ -65,7 +65,7 @@ Then inside the session:
 /mcp
 ```
 
-You should see **positrack** listed as **CONNECTED** with its 24 tools (16 read,
+You should see **positrack** listed as **CONNECTED** with its 25 tools (17 read,
 8 write).
 
 ### 4. Try a read

@@ -118,7 +118,7 @@ Start a **new chat** and try:
    **Allow Access**.
 
 ### Step 4 — Done
-The connector shows **Disconnect** and **“Other tools 24.”** All 24 Positrack tools are
+The connector shows **Disconnect** and **“Other tools 25.”** All 25 Positrack tools are
 loaded immediately.
 
 > 📷 **What you'll see:** the Positrack connector page listing `Yt whoami`, `Yt search`,

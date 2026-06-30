@@ -167,6 +167,77 @@ def test_report_hygiene_structure(monkeypatch):
     assert "need attention" in blocks[2]["s"]
 
 
+# ---------- true logged time (work items) ----------
+def test_fmt_minutes():
+    assert yt.fmt_minutes(0) == "0h 0m"
+    assert yt.fmt_minutes(30) == "0h 30m"
+    assert yt.fmt_minutes(110) == "1h 50m"
+    assert yt.fmt_minutes(10910) == "181h 50m"   # the screenshot's QX Lead total
+    assert yt.fmt_minutes(None) == "0h 0m"
+
+
+def test_wi_norm_full_and_empty():
+    w = {"duration": {"minutes": 90, "presentation": "1h 30m"},
+         "issue": {"idReadable": "PXB1-5", "project": {"shortName": "PXB1"}},
+         "author": {"login": "qx", "fullName": "QX Lead"},
+         "type": {"name": "Development"}, "date": 1700000000000, "text": "did x"}
+    n = yt._wi_norm(w)
+    assert n["issue"] == "PXB1-5" and n["project"] == "PXB1"
+    assert n["login"] == "qx" and n["author"] == "QX Lead"
+    assert n["minutes"] == 90 and n["type"] == "Development"
+    # missing pieces degrade gracefully (no KeyError, sensible placeholders)
+    e = yt._wi_norm({})
+    assert e["minutes"] == 0 and e["author"] == "(unknown)" and e["type"] == "(none)" and e["issue"] == ""
+
+
+def test_aggregate_work_by_author_sorted_and_summed():
+    items = [
+        {"author": "QX Lead", "type": "Dev", "project": "PXB1", "issue": "PXB1-1", "minutes": 100},
+        {"author": "QX Lead", "type": "QA",  "project": "PXB1", "issue": "PXB1-2", "minutes": 50},
+        {"author": "Ajnas O", "type": "Dev", "project": "PXB1", "issue": "PXB1-1", "minutes": 200},
+    ]
+    r = yt.aggregate_work(items, "author")
+    assert r["count"] == 3 and r["total_minutes"] == 350 and r["total"] == "5h 50m"
+    g = r["groups"]
+    assert [x["key"] for x in g] == ["Ajnas O", "QX Lead"]          # by time desc
+    assert g[0]["minutes"] == 200 and g[0]["presentation"] == "3h 20m"
+    assert g[1]["entries"] == 2 and g[1]["issues"] == 2             # 2 entries across 2 issues
+    assert g[0]["bar"] and not g[1]["bar"].startswith("█" * 14)     # top bar fuller than the rest
+
+
+def test_aggregate_work_empty_and_group_by_issue():
+    assert yt.aggregate_work([], "author") == {
+        "group_by": "author", "count": 0, "total_minutes": 0, "total": "0h 0m", "groups": []}
+    items = [{"author": "a", "type": "Dev", "project": "P", "issue": "P-1", "minutes": 60},
+             {"author": "b", "type": "Dev", "project": "P", "issue": "P-1", "minutes": 30}]
+    r = yt.aggregate_work(items, "issue")
+    assert r["groups"][0]["key"] == "P-1" and r["groups"][0]["minutes"] == 90 and r["groups"][0]["entries"] == 2
+
+
+def test_wi_query_composition():
+    assert yt._wi_query(sprint="beta1-19", project="PXB1") == "project: PXB1 Sprints: {beta1-19}"
+    assert yt._wi_query(query="Type: Bug", project="P8") == "project: P8 Type: Bug"
+    assert yt._wi_query(location="SA") == "Location: SA"
+    assert yt._wi_query() == ""
+
+
+def test_report_timespent_structure(monkeypatch):
+    # timespent must read work items (not issues) and attribute by logger; stub the fetch.
+    ctx = yt.Ctx("perm-x")
+    fake = [
+        {"author": {"fullName": "QX Lead"}, "duration": {"minutes": 100}, "issue": {"idReadable": "PXB1-1"}, "type": {"name": "Dev"}},
+        {"author": {"fullName": "Ajnas O"}, "duration": {"minutes": 200}, "issue": {"idReadable": "PXB1-2"}, "type": {"name": "Dev"}},
+    ]
+    monkeypatch.setattr(yt, "work_items", lambda c, **k: fake)
+    blocks = yt.report(ctx, "timespent", project="PXB1", sprint="beta1-19")
+    assert blocks[0]["s"].startswith("# Time spent by person — sprint beta1-19")
+    assert "who LOGGED" in blocks[1]["s"]
+    tbl = blocks[2]
+    assert tbl["kind"] == "table" and tbl["headers"] == ["Person", "Entries", "Issues", "Time", "▕"]
+    assert tbl["rows"][0][0] == "Ajnas O"                           # sorted desc by time
+    assert tbl["rows"][-1][0] == "**Total**" and tbl["rows"][-1][3] == "**5h 0m**"
+
+
 def test_ctx_requires_token():
     try:
         yt.Ctx("")

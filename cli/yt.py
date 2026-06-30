@@ -292,6 +292,18 @@ def cmd_load(ctx, a):
     print(f"# Open-work concentration — {r['project']} ({r['open']} open)\n")
     print(md_table([[who, n, b] for who, n, b in r["by_owner"]], ["Owner", "Open issues", "Load ▕"]))
 
+def cmd_worklog(ctx, a):
+    r = core.time_spent(ctx, query=a.query, project=a.project, location=a.location,
+                        sprint=a.sprint, author=a.author, start=a.since, end=a.until,
+                        group_by=a.group_by)
+    label = (f"sprint {a.sprint}" if a.sprint else None) or (a.project or a.location or "(whole instance)")
+    win = ""
+    if r.get("window"):
+        win = f"  [{r['window'].get('start') or '…'} .. {r['window'].get('end') or '…'}]"
+    print(f"# Time spent by {r['group_by']} — {label}{win}  ({r['count']} entries · {r['total']} total)\n")
+    rows = [[g["key"], g["entries"], g["issues"], g["presentation"], g["bar"]] for g in r["groups"]]
+    print(md_table(rows, [r["group_by"].capitalize(), "Entries", "Issues", "Time", "▕"]))
+
 def cmd_articles(ctx, a):
     r = core.articles(ctx, a.query, a.limit)
     print(f"# {r['total']} knowledge-base article(s)" + (f" matching '{a.query}'" if a.query else "") + "\n")
@@ -344,7 +356,8 @@ def build_parser():
 
     s = sub.add_parser("report")
     s.add_argument("type", choices=["health", "activity", "briefing", "stale", "unestimated",
-                                    "unassigned", "epics", "mywork", "sprint", "myday", "hygiene"])
+                                    "unassigned", "epics", "mywork", "sprint", "myday", "hygiene",
+                                    "timespent"])
     s.add_argument("--project", default=""); s.add_argument("--location", default="")
     s.add_argument("--days", type=int, default=7); s.add_argument("--sprint", default="")
     s.add_argument("--limit", type=int, default=50); s.set_defaults(fn=cmd_report)
@@ -385,6 +398,15 @@ def build_parser():
     s.add_argument("--commit", action="store_true"); s.set_defaults(fn=cmd_reassign)
 
     s = sub.add_parser("load"); s.add_argument("--project", default=""); s.set_defaults(fn=cmd_load)
+
+    s = sub.add_parser("worklog")
+    s.add_argument("--query", default=""); s.add_argument("--project", default="")
+    s.add_argument("--location", default=""); s.add_argument("--sprint", default="")
+    s.add_argument("--author", default=""); s.add_argument("--since", default="")
+    s.add_argument("--until", default="")
+    s.add_argument("--group-by", dest="group_by", default="author",
+                   choices=["author", "type", "project", "issue"])
+    s.set_defaults(fn=cmd_worklog)
 
     s = sub.add_parser("articles"); s.add_argument("--query", default="")
     s.add_argument("--limit", type=int, default=40); s.set_defaults(fn=cmd_articles)

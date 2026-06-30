@@ -64,7 +64,7 @@ safety net.
 
 ## Option 2 — Remote MCP connector via Developer Mode (OAuth)
 
-This connects ChatGPT directly to the deployed **Positrack MCP server** (all 24
+This connects ChatGPT directly to the deployed **Positrack MCP server** (all 25
 tools, with the engine's preview→commit safety). ChatGPT's MCP connector can't
 pass a custom `Authorization` header — it only does **OAuth** — so Positrack runs
 an OAuth flow that logs you in with your **own** Posibolt Hub account and forwards

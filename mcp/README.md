@@ -37,10 +37,10 @@ applies.
 
 ## Tools
 
-16 reads (`yt_whoami, yt_projects, yt_describe, yt_count, yt_search, yt_get,
-yt_history, yt_report, yt_boards, yt_users, yt_orphans, yt_load, yt_articles,
-yt_article, yt_tags, yt_saved`) and 8 writes (`yt_create, yt_update, yt_cmd,
-yt_comment, yt_log, yt_attach, yt_reassign, yt_article_create`).
+17 reads (`yt_whoami, yt_projects, yt_describe, yt_count, yt_search, yt_get,
+yt_history, yt_report, yt_boards, yt_users, yt_orphans, yt_load, yt_worklog,
+yt_articles, yt_article, yt_tags, yt_saved`) and 8 writes (`yt_create, yt_update,
+yt_cmd, yt_comment, yt_log, yt_attach, yt_reassign, yt_article_create`).
 
 ## Run locally
 
