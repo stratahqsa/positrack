@@ -1,0 +1,40 @@
+import * as React from "react";
+import { UserX, AlertTriangle, FileWarning } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import type { Epic } from "@/lib/types";
+import { epicFlags, overspend, mdUnit } from "@/lib/format";
+
+/**
+ * RED flag chips for an epic row. Only renders flags derivable per-epic in the
+ * snapshot: unowned, overshoot (with magnitude), missing estimate.
+ */
+export function FlagChips({ epic }: { epic: Epic }) {
+  const f = epicFlags(epic);
+  if (!f.red) {
+    return (
+      <span className="text-[11px] text-faint" aria-label="No flags">
+        —
+      </span>
+    );
+  }
+  const over = overspend(epic);
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {f.overshoot ? (
+        <Badge variant="warn" title={`Over by ${mdUnit(over)}`}>
+          <AlertTriangle className="size-3" /> +{mdUnit(over)}
+        </Badge>
+      ) : null}
+      {f.unowned ? (
+        <Badge variant="danger" title="No assignee">
+          <UserX className="size-3" /> unowned
+        </Badge>
+      ) : null}
+      {f.missingEst ? (
+        <Badge variant="info" title="No estimate on stories/epic">
+          <FileWarning className="size-3" /> no est
+        </Badge>
+      ) : null}
+    </div>
+  );
+}

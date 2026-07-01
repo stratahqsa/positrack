@@ -1,24 +1,17 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import "./globals.css";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "POSX Control Tower",
   description: "PXB1 Beta Phase 1 — live project control tower",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          fontFamily:
-            "-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
-          background: "#0b1120",
-          color: "#e2e8f0",
-        }}
-      >
-        {children}
-      </body>
+    <html lang="en" className="dark">
+      <body className="min-h-screen bg-bg text-fg antialiased">{children}</body>
     </html>
   );
 }
