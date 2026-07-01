@@ -238,6 +238,55 @@ def test_report_timespent_structure(monkeypatch):
     assert tbl["rows"][-1][0] == "**Total**" and tbl["rows"][-1][3] == "**5h 0m**"
 
 
+def test_split_by_type_propagated():
+    # The propagation workflow writes "Propagated from Bug ..." into the work-item
+    # TEXT (type is usually empty), so match on that — not the type.
+    items = [
+        {"author": "a", "type": "Development", "text": "", "minutes": 60, "issue": "P-1"},
+        {"author": "a", "type": "(none)", "text": "Propagated from Bug PXB1-3079", "minutes": 60, "issue": "P-2"},
+        {"author": "b", "type": "", "text": "Propagated from Bug PXB1-3080", "minutes": 30, "issue": "P-3"},
+        {"author": "b", "type": "QA", "text": "manual test run", "minutes": 15, "issue": "P-4"},
+    ]
+    kept, dropped = yt._split_by_type(items)                      # exclude_propagated default True
+    assert [it["issue"] for it in kept] == ["P-1", "P-4"]
+    assert len(dropped) == 2 and sum(d["minutes"] for d in dropped) == 90
+    assert yt._split_by_type(items, exclude_propagated=False)[1] == []
+    _, dropped3 = yt._split_by_type(items, exclude_propagated=False, exclude_types=["qa"])
+    assert [d["issue"] for d in dropped3] == ["P-4"]
+
+
+def _wi(author, minutes, issue, type_name=None, text=""):
+    return {"author": {"fullName": author}, "duration": {"minutes": minutes},
+            "issue": {"idReadable": issue}, "type": ({"name": type_name} if type_name else None), "text": text}
+
+
+def test_time_spent_excludes_propagated(monkeypatch):
+    ctx = yt.Ctx("perm-x")
+    fake = [
+        _wi("Sarjith", 100, "PXB1-9", "Development"),
+        _wi("Sarjith", 300, "PXB1-1599", None, "Propagated from Bug PXB1-3079"),
+        _wi("Aleena", 60, "PXB1-3", "Development"),
+    ]
+    monkeypatch.setattr(yt, "work_items", lambda c, **k: fake)
+    d = yt.time_spent(ctx, project="PXB1", sprint="beta1-19")     # default: drop propagated
+    assert d["count"] == 2 and d["total"] == "2h 40m"
+    assert d["groups"][0]["key"] == "Sarjith" and d["groups"][0]["presentation"] == "1h 40m"
+    assert d["excluded"] == {"entries": 1, "minutes": 300, "total": "5h 0m"}
+    d2 = yt.time_spent(ctx, project="PXB1", exclude_propagated=False)
+    assert d2["count"] == 3 and d2["total"] == "7h 40m" and "excluded" not in d2
+    assert d2["groups"][0]["presentation"] == "6h 40m"           # Sarjith inflated by the propagated copy
+
+
+def test_report_timespent_notes_exclusion(monkeypatch):
+    ctx = yt.Ctx("perm-x")
+    fake = [_wi("Sarjith", 100, "PXB1-9", "Development"),
+            _wi("Sarjith", 300, "PXB1-1599", None, "Propagated from Bug PXB1-3079")]
+    monkeypatch.setattr(yt, "work_items", lambda c, **k: fake)
+    blocks = yt.report(ctx, "timespent", project="PXB1", sprint="beta1-19")
+    assert "Excluded 5h 0m of workflow-propagated" in blocks[1]["s"]
+    assert blocks[2]["rows"][-1][3] == "**1h 40m**"              # total is direct time only
+
+
 def test_ctx_requires_token():
     try:
         yt.Ctx("")

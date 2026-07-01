@@ -170,8 +170,17 @@ python3 scripts/yt.py worklog --project PXB1 --sprint beta1-19    # true logged 
 python3 scripts/yt.py worklog --project IS --since 2026-06-01 --until 2026-06-30
 python3 scripts/yt.py worklog --author jsmith --sprint beta1-19   # one person
 python3 scripts/yt.py worklog --project P8 --group-by type        # or by type/project/issue
+python3 scripts/yt.py worklog --project PXB1 --sprint beta1-19 --include-propagated
 # (equivalently: report timespent --project PXB1 --sprint beta1-19)
 ```
+
+**Propagated time is excluded by default.** Some teams run a workflow that copies a
+bug's spent time onto its parent Story/Epic when the bug is fixed — each copy is a
+work item marked "Propagated from Bug PXB1-…" in its text, so the same hours get
+counted 2–3×. `worklog` drops those by default so only DIRECT logged time counts,
+and reports how much it excluded; pass `--include-propagated` to count them, or
+`--exclude-types "Name"` to drop specific work-item types. Run `--group-by type`
+to see the types in play.
 
 Do **NOT** answer time-by-person by searching issues and summing the issue **Spent
 time** field grouped by **Assignee** — that field is a per-issue rollup, so it

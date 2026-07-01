@@ -435,9 +435,14 @@ def report(ctx, rtype, project="", location="", days=7, sprint="", limit=50):
         label = (f"sprint {sprint}" if sprint else None) or (proj or location or "(whole instance)")
         rows = [[g["key"], g["entries"], g["issues"], g["presentation"], g["bar"]] for g in data["groups"]]
         rows.append(["**Total**", data["count"], "", f"**{data['total']}**", ""])
+        note = ("_True logged time across %d work-item entries, attributed to who LOGGED each one "
+                "(not the current assignee)._\n" % data["count"])
+        ex = data.get("excluded")
+        if ex:
+            note += ("_Excluded %s of workflow-propagated 'Propagated from Bug' time (%d entries that copy a "
+                     "bug's time onto its parent) so only DIRECT logged time counts._\n" % (ex["total"], ex["entries"]))
         return [{"kind": "raw", "s": f"# Time spent by person — {label}\n"},
-                {"kind": "raw", "s": f"_True logged time across {data['count']} work-item entries, "
-                                     f"attributed to who LOGGED each one (not the current assignee)._\n"},
+                {"kind": "raw", "s": note},
                 {"kind": "table", "headers": ["Person", "Entries", "Issues", "Time", "▕"], "rows": rows}]
     # stale / unestimated / unassigned / epics / mywork / sprint
     qmap = {
@@ -605,18 +610,49 @@ def _wi_query(query="", project="", location="", sprint=""):
         q += query
     return q.strip()
 
+# Some teams run a workflow that copies a bug's spent time onto its parent Story
+# and Epic when the bug is fixed. Each copy is a real work item whose TEXT reads
+# "Propagated from Bug PXB1-…" (its type is usually empty), so the same hours get
+# counted 2-3x and inflate a person's true logged time. Exclude those by default:
+# the person's direct entry on the bug itself is a separate work item and stays.
+PROPAGATED_HINT = "propagat"   # marker lives in the work-item TEXT, not the type
+
+def _is_propagated(it):
+    """True if a work item is a workflow-propagated copy (its text/type carries the
+    'Propagated from Bug' marker)."""
+    return PROPAGATED_HINT in ((it.get("text") or "") + " " + (it.get("type") or "")).lower()
+
+def _split_by_type(items, exclude_propagated=True, exclude_types=None):
+    """Pure: partition normalized work items into (kept, dropped). Drops propagated
+    copies (when exclude_propagated) plus any entry whose type exactly matches one of
+    exclude_types (case-insensitive). No network."""
+    names = {t.strip().lower() for t in (exclude_types or []) if t and t.strip()}
+    kept, dropped = [], []
+    for it in items:
+        drop = (exclude_propagated and _is_propagated(it)) or ((it.get("type") or "").strip().lower() in names)
+        (dropped if drop else kept).append(it)
+    return kept, dropped
+
 def time_spent(ctx, query="", project="", location="", sprint="", author="",
-               start="", end="", group_by="author", limit=20000, with_items=False):
+               start="", end="", group_by="author", limit=20000,
+               exclude_propagated=True, exclude_types=None, with_items=False):
     """True logged-time breakdown. Resolves scope (project/location/sprint + free
     query) into an issue query, pulls the matching work items, and aggregates by
     `group_by` (author|type|project|issue). `start`/`end` (YYYY-MM-DD) optionally
-    restrict to entries logged in a window. Set with_items=True to also return the
-    flattened entries."""
+    restrict to entries logged in a window. By default DROPS workflow-propagated
+    entries (type contains 'propagat', e.g. 'Propagated from Bug') so only DIRECT
+    logged time counts — pass exclude_propagated=False to include them, or
+    exclude_types=[...] to drop additional named types. Set with_items=True to also
+    return the kept entries."""
     scoped = _wi_query(query, project, location, sprint)
-    items = [_wi_norm(w) for w in work_items(ctx, query=scoped, author=author,
-                                             start=start, end=end, limit=limit)]
+    raw = [_wi_norm(w) for w in work_items(ctx, query=scoped, author=author,
+                                           start=start, end=end, limit=limit)]
+    items, dropped = _split_by_type(raw, exclude_propagated, exclude_types)
     out = aggregate_work(items, group_by)
     out["scope"] = scoped
+    if dropped:
+        dmin = sum(it["minutes"] for it in dropped)
+        out["excluded"] = {"entries": len(dropped), "minutes": dmin, "total": fmt_minutes(dmin)}
     if start or end:
         out["window"] = {"start": start or None, "end": end or None}
     if with_items:

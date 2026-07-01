@@ -293,14 +293,19 @@ def cmd_load(ctx, a):
     print(md_table([[who, n, b] for who, n, b in r["by_owner"]], ["Owner", "Open issues", "Load ▕"]))
 
 def cmd_worklog(ctx, a):
+    ex_types = [t.strip() for t in (a.exclude_types or "").split(",") if t.strip()]
     r = core.time_spent(ctx, query=a.query, project=a.project, location=a.location,
                         sprint=a.sprint, author=a.author, start=a.since, end=a.until,
-                        group_by=a.group_by)
+                        group_by=a.group_by, exclude_propagated=not a.include_propagated,
+                        exclude_types=ex_types)
     label = (f"sprint {a.sprint}" if a.sprint else None) or (a.project or a.location or "(whole instance)")
     win = ""
     if r.get("window"):
         win = f"  [{r['window'].get('start') or '…'} .. {r['window'].get('end') or '…'}]"
     print(f"# Time spent by {r['group_by']} — {label}{win}  ({r['count']} entries · {r['total']} total)\n")
+    ex = r.get("excluded")
+    if ex:
+        print(f"_excluded {ex['total']} of propagated 'Propagated from Bug' time ({ex['entries']} entries)_\n")
     rows = [[g["key"], g["entries"], g["issues"], g["presentation"], g["bar"]] for g in r["groups"]]
     print(md_table(rows, [r["group_by"].capitalize(), "Entries", "Issues", "Time", "▕"]))
 
@@ -406,6 +411,10 @@ def build_parser():
     s.add_argument("--until", default="")
     s.add_argument("--group-by", dest="group_by", default="author",
                    choices=["author", "type", "project", "issue"])
+    s.add_argument("--include-propagated", dest="include_propagated", action="store_true",
+                   help="count workflow-propagated entries (default: exclude them, direct time only)")
+    s.add_argument("--exclude-types", dest="exclude_types", default="",
+                   help="comma-separated work-item type names to also drop")
     s.set_defaults(fn=cmd_worklog)
 
     s = sub.add_parser("articles"); s.add_argument("--query", default="")
