@@ -32,6 +32,16 @@ export function hm(minutes: number): string {
   return `${m}m`;
 }
 
+/**
+ * Overspend magnitude as an honest label: hours/minutes under a day, man-days
+ * at/above a day — so a real overshoot never rounds to a misleading "0d".
+ */
+export function overspendLabel(minutes: number): string {
+  if (minutes <= 0) return "0m";
+  if (minutes < MAN_DAY_MINUTES) return hm(minutes);
+  return mdUnit(minutes);
+}
+
 /** Epoch ms → "12 Feb 2026". */
 export function fmtDate(ms: number | null | undefined): string {
   if (!ms) return "—";

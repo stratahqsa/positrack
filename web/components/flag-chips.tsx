@@ -2,7 +2,7 @@ import * as React from "react";
 import { UserX, AlertTriangle, FileWarning } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Epic } from "@/lib/types";
-import { epicFlags, overspend, mdUnit } from "@/lib/format";
+import { epicFlags, overspend, overspendLabel } from "@/lib/format";
 
 /**
  * RED flag chips for an epic row. Only renders flags derivable per-epic in the
@@ -21,8 +21,8 @@ export function FlagChips({ epic }: { epic: Epic }) {
   return (
     <div className="flex flex-wrap items-center gap-1">
       {f.overshoot ? (
-        <Badge variant="warn" title={`Over by ${mdUnit(over)}`}>
-          <AlertTriangle className="size-3" /> +{mdUnit(over)}
+        <Badge variant="warn" title={`Over by ${overspendLabel(over)}`}>
+          <AlertTriangle className="size-3" /> +{overspendLabel(over)}
         </Badge>
       ) : null}
       {f.unowned ? (

@@ -4,7 +4,7 @@ import * as React from "react";
 import { ListChecks, UserX, AlertTriangle, FileWarning } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Epic } from "@/lib/types";
-import { epicFlags, overspend, md, mdUnit } from "@/lib/format";
+import { epicFlags, overspend, md, overspendLabel } from "@/lib/format";
 import { IssueLink } from "@/components/issue-link";
 import { Card } from "@/components/ui/card";
 
@@ -22,7 +22,7 @@ function reasonChips(epic: Epic) {
   const chips: { label: string; className: string }[] = [];
   if (f.overshoot)
     chips.push({
-      label: `over by ${mdUnit(overspend(epic))}`,
+      label: `over by ${overspendLabel(overspend(epic))}`,
       className: "bg-warn/12 text-warn ring-warn/25",
     });
   if (f.unowned)
