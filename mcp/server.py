@@ -319,7 +319,9 @@ def yt_history(issue: str, limit: int = 20) -> dict:
 def yt_report(type: str, project: str = "", location: str = "", days: int = 7,
               sprint: str = "", limit: int = 50) -> dict:
     """Run a canned report. `type` is one of: health, activity, briefing, stale,
-    unestimated, unassigned, epics, mywork, sprint, myday, hygiene, timespent.
+    unestimated, unassigned, epics, mywork, sprint, myday, hygiene, timespent, effort.
+    `effort` is the POSX Control Tower PXB1 Phase-1 Effort Report (prefer the dedicated
+    `yt_effort` tool for project/scope/cutoff control).
     `myday` is the caller's personal view (open / stale-needs-status / in-progress).
     `hygiene` scores each project's board cleanliness (% touched in 30d) + the
     stale/unassigned/unestimated buckets to clear — use it to run the cleanup quest.
@@ -330,6 +332,24 @@ def yt_report(type: str, project: str = "", location: str = "", days: int = 7,
     return _run(lambda: {"type": type, "blocks": core.report(_resolve_ctx(), type, project=project,
                                                               location=location, days=days,
                                                               sprint=sprint, limit=limit)})
+
+
+@mcp.tool
+def yt_effort(project: str = "PXB1", scope: str = "PHASE 1",
+              cutoff_iso: str = core.EFFORT_CUTOFF_DEFAULT, exclude_ids: str = "PXB1-3295") -> dict:
+    """POSX Control Tower — the ported PXB1 Phase-1 Effort Report. Discovers every open
+    in-scope epic (via `TaskType: EPIC`) PLUS epics resolved after the cutoff, categorizes
+    them DONE / PENDING / MIXED / NO_STORIES from their Subtask stories, rolls up
+    Server+UI+Testing estimation over the pending in-scope stories (man-day = 480 min),
+    computes the P2 backlog (epics whose Scope moved PHASE 1→PHASE 2 after the cutoff, from
+    activity history), and attributes TRUE logged time from a work-item sweep with an
+    overshoot flag. Grand Total = PENDING + MIXED + NO_STORIES only (Done and P2 are
+    separate). `exclude_ids` is a comma-separated epic-id skip list. Returns structured
+    data: counts, per-section epic lists, per-section man-day totals, and spend metadata —
+    render Done/Pending/Mixed/No-stories/P2 as sections with per-field man-day totals."""
+    ex = tuple(x.strip() for x in exclude_ids.split(",") if x.strip())
+    return _run(lambda: core.effort_report(_resolve_ctx(), project=project, scope=scope,
+                                           cutoff_iso=cutoff_iso, exclude_ids=ex))
 
 
 @mcp.tool
