@@ -1,0 +1,6 @@
+# POSX Control Tower — Python serverless API (Vercel).
+# The engine (web/api/_engine/ytcore.py) is STDLIB-ONLY by design, so there are no
+# third-party runtime dependencies. This file exists so Vercel's Python builder
+# engages for the api/*.py functions (an empty/comment-only requirements.txt is a
+# valid build signal). Keep it dependency-free: if you ever need a package here,
+# reconsider — the engine must byte-compile on Python 3.9 with the stdlib alone.

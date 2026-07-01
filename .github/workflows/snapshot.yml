@@ -1,0 +1,89 @@
+name: Snapshot
+
+# Nightly PRECOMPUTE for the POSX Control Tower. A full effort_report takes ~285s
+# live, which cannot run inside a Vercel Hobby function (60s ceiling). So we compute
+# the whole snapshot here (or locally) and commit web/data/*.json back to the repo;
+# that push triggers a Vercel redeploy and the Next.js UI reads the JSON server-side.
+#
+# SETUP REQUIRED (one time): add a repository secret named `YT_TOKEN` — a YouTrack
+# permanent token. Use a LEAST-PRIVILEGE, READ-ONLY service account token (the
+# snapshot only READS: effort/worklog/hygiene). Never use an admin write token here.
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#     Name: YT_TOKEN   Value: perm-...
+# Optionally set `YT_BASE` (defaults to https://support.posibolt.com in the engine).
+
+on:
+  schedule:
+    - cron: "0 2 * * *"      # 02:00 UTC nightly
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Project short name"
+        required: false
+        default: "PXB1"
+      scope:
+        description: "Scope (e.g. PHASE 1)"
+        required: false
+        default: "PHASE 1"
+      sprint:
+        description: "Sprint override for timespent (blank = latest active)"
+        required: false
+        default: ""
+
+# Least-privilege token for the workflow itself: it only needs to push the committed
+# snapshot back to the branch.
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # The engine is stdlib-only, so there are no runtime deps to install for the
+      # producer. (pytest etc. are not needed for the snapshot job.)
+
+      - name: Produce snapshot
+        # Dispatch inputs are routed through env (never interpolated into the shell)
+        # so an untrusted value can't inject a command. Defaults apply on the nightly
+        # schedule where inputs are empty.
+        env:
+          YT_TOKEN: ${{ secrets.YT_TOKEN }}
+          YT_BASE: ${{ secrets.YT_BASE }}   # optional; engine defaults if unset
+          IN_PROJECT: ${{ github.event.inputs.project }}
+          IN_SCOPE: ${{ github.event.inputs.scope }}
+          IN_SPRINT: ${{ github.event.inputs.sprint }}
+        run: |
+          if [ -z "${YT_TOKEN}" ]; then
+            echo "::error::YT_TOKEN secret is not set. Add a read-only YouTrack token as the YT_TOKEN Actions secret."
+            exit 1
+          fi
+          PROJECT="${IN_PROJECT:-PXB1}"
+          SCOPE="${IN_SCOPE:-PHASE 1}"
+          if [ -n "${IN_SPRINT}" ]; then
+            python3 scripts/snapshot.py --project "$PROJECT" --scope "$SCOPE" --sprint "$IN_SPRINT"
+          else
+            python3 scripts/snapshot.py --project "$PROJECT" --scope "$SCOPE"
+          fi
+
+      - name: Commit updated snapshot
+        run: |
+          git config user.name  "positrack-snapshot[bot]"
+          git config user.email "positrack-snapshot@users.noreply.github.com"
+          git add web/data/*.json
+          if git diff --staged --quiet; then
+            echo "No snapshot changes to commit."
+          else
+            git commit -m "chore(snapshot): nightly POSX Control Tower data ($(date -u +%Y-%m-%dT%H:%MZ))"
+            git push
+          fi
