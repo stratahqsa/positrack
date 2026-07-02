@@ -8,6 +8,7 @@ import {
   UserX,
   AlertTriangle,
   FileWarning,
+  Split,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Epic } from "@/lib/types";
@@ -38,6 +39,7 @@ const RED_ITEMS: {
   { value: "needs-owner", label: "Needs owner", icon: UserX },
   { value: "overshoot", label: "Overshoot", icon: AlertTriangle },
   { value: "unestimated", label: "Unestimated", icon: FileWarning },
+  { value: "deferred", label: "Deferred (P2)", icon: Split },
 ];
 
 /** RED multi-toggle in a dropdown (three fixed conditions). */

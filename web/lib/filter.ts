@@ -17,7 +17,7 @@ export const NEEDS_OWNER = "__needs_owner__";
 /** Sentinel priority value meaning "no priority set". */
 export const NO_PRIORITY = "__none__";
 
-export type RedFilter = "needs-owner" | "overshoot" | "unestimated";
+export type RedFilter = "needs-owner" | "overshoot" | "unestimated" | "deferred";
 
 export type SortKey = "created" | "total" | "spent" | "overshoot";
 export type SortDir = "asc" | "desc";
@@ -237,6 +237,7 @@ function matchesRed(e: Epic, reds: RedFilter[]): boolean {
   return reds.some((r) => {
     if (r === "needs-owner") return f.needsOwner;
     if (r === "overshoot") return f.overshoot;
+    if (r === "deferred") return e.has_p2 === true; // P1 epic with stories pushed to P2
     return f.missingEst; // "unestimated"
   });
 }
@@ -319,7 +320,7 @@ export function filtersToQuery(f: FilterState): string {
   return filtersToParams(f).toString();
 }
 
-const RED_VALUES: RedFilter[] = ["needs-owner", "overshoot", "unestimated"];
+const RED_VALUES: RedFilter[] = ["needs-owner", "overshoot", "unestimated", "deferred"];
 const SORT_KEYS: SortKey[] = ["created", "total", "spent", "overshoot"];
 
 function splitList(v: string | null): string[] {
@@ -377,6 +378,7 @@ const RED_LABEL: Record<RedFilter, string> = {
   "needs-owner": "Needs owner",
   overshoot: "Overshoot",
   unestimated: "Unestimated",
+  deferred: "Deferred (P2)",
 };
 
 /** Build the list of active-filter chips in a stable, readable order. */
