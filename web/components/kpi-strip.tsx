@@ -187,13 +187,17 @@ export function KpiStrip({
           hint="untouched recently"
         />
         <KpiCard
-          label="Unowned"
+          label="Needs owner"
           value={red.unowned}
           icon={UserX}
           tone="danger"
           delta={delta?.unowned}
           loud={red.unowned > 0}
-          hint="no assignee — act first"
+          hint={
+            red.role_owned && red.role_owned > 0
+              ? `blank or role-parked · ${red.role_owned} on a role account`
+              : "blank or role-parked — act first"
+          }
         />
         <KpiCard
           label="Total RED"

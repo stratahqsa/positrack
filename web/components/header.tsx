@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Radar, Clock, LogOut, Loader2 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /**
  * Sticky app header. Always visible. Shows project context + freshness stamp
@@ -75,6 +76,7 @@ export function Header({
             as of <span className="tabular font-semibold text-fg">{asOf}</span>
             {date ? <span className="text-faint">· {date}</span> : null}
           </div>
+          <ThemeToggle />
           <button
             onClick={logout}
             disabled={loggingOut}

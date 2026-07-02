@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, User } from "lucide-react";
+import { ChevronRight, User, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Epic } from "@/lib/types";
 import {
@@ -12,15 +12,32 @@ import {
   stateTone,
   isUnowned,
   rollupTotal,
+  type EpicFlags,
 } from "@/lib/format";
 import { IssueLink } from "@/components/issue-link";
 import { FlagChips } from "@/components/flag-chips";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
-/** Assignee cell — highlights the unowned case loudly. */
-function Assignee({ name }: { name: string }) {
-  if (isUnowned(name)) {
+/**
+ * Assignee cell — loud when the epic needs an owner. Blank → "unowned";
+ * parked on a role placeholder → the role name shown in danger with a "needs
+ * owner" hint, so it never masquerades as truly owned.
+ */
+function Assignee({ name, flags }: { name: string; flags: EpicFlags }) {
+  if (flags.needsOwner) {
+    if (flags.roleOwner) {
+      return (
+        <span
+          className="inline-flex items-center gap-1 rounded bg-danger/12 px-1.5 py-0.5 text-[11px] font-medium text-danger ring-1 ring-danger/25"
+          title={`Parked on a role account (${name.trim()}) — assign a person`}
+        >
+          <UserCog className="size-3" />
+          <span className="max-w-[120px] truncate">{name.trim()}</span>
+          <span className="text-danger/70">· needs owner</span>
+        </span>
+      );
+    }
     return (
       <span className="inline-flex items-center gap-1 rounded bg-danger/12 px-1.5 py-0.5 text-[11px] font-medium text-danger ring-1 ring-danger/25">
         <User className="size-3" /> unowned
@@ -145,7 +162,7 @@ function EpicRow({ epic, expandable }: { epic: Epic; expandable: boolean }) {
           canExpand && "cursor-pointer",
           f.overshoot
             ? "amber-rail hover:bg-warn/[0.06]"
-            : f.unowned
+            : f.needsOwner
               ? "red-rail hover:bg-danger/[0.05]"
               : "hover:bg-elevated/40",
         )}
@@ -179,7 +196,7 @@ function EpicRow({ epic, expandable }: { epic: Epic; expandable: boolean }) {
           ) : null}
         </td>
         <td className="px-2 py-2 align-top">
-          <Assignee name={epic.assignee} />
+          <Assignee name={epic.assignee} flags={f} />
         </td>
         <td className="px-2 py-2 align-top text-[11.5px] text-muted whitespace-nowrap">
           {fmtDate(epic.created)}

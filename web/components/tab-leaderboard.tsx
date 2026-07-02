@@ -10,10 +10,12 @@ import { CaveatBanner } from "@/components/caveat-banner";
 import { HygieneBars, SignalLegend } from "@/components/hygiene-signals";
 import { earnedBadges } from "@/components/badges";
 
+// Podium accents. Light-mode overrides deepen the gradient tint and swap to
+// darker medal text so gold/silver/bronze stay legible on white cards.
 const RANK_ACCENT = [
-  "from-amber-400/20 ring-amber-400/40 text-amber-300",
-  "from-slate-300/15 ring-slate-300/30 text-slate-200",
-  "from-orange-500/15 ring-orange-500/30 text-orange-300",
+  "from-amber-400/20 ring-amber-400/40 text-amber-300 light:from-amber-400/30 light:ring-amber-500/50 light:text-amber-700",
+  "from-slate-300/15 ring-slate-300/30 text-slate-200 light:from-slate-400/25 light:ring-slate-400/50 light:text-slate-600",
+  "from-orange-500/15 ring-orange-500/30 text-orange-300 light:from-orange-400/25 light:ring-orange-500/50 light:text-orange-700",
 ];
 
 function scoreTone(score: number): string {

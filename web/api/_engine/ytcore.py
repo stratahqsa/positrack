@@ -387,7 +387,7 @@ def _epic_stories(epic):
                     "summary": s.get("summary") or "",
                     "state": _cf_str(s, "State"),
                     "scope": _cf_str(s, "Scope"),
-                    "assignee": (s.get("assignee") or {}).get("name") or "",
+                    "assignee": _cf_str(s, "Assignee"),
                     "created": s.get("created"),
                     "est": {"server": _cf_minutes(s, "Server Estimation"),
                             "ui": _cf_minutes(s, "UI Estimation"),
@@ -413,7 +413,7 @@ def categorize_epic(epic):
         rollup_all["testing"] += s["est"]["testing"]
     rec = {"id": epic.get("idReadable"), "summary": epic.get("summary") or "",
            "created": epic.get("created"), "resolved": epic.get("resolved"),
-           "assignee": (epic.get("assignee") or {}).get("name") or "",
+           "assignee": _cf_str(epic, "Assignee"),
            "epic_state": epic_state, "stories": stories, "rollup_all": rollup_all,
            "epic_est": epic_est}
     if is_done_state(epic_state):
@@ -640,9 +640,9 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
                        "&fields=timestamp,added(name),removed(name),field(name)" % pid)
         matched, changed_at = _scope_changed_p1_to_p2(act if isinstance(act, list) else [], cutoff_ms)
         if matched:
-            meta = GET(ctx, "/api/issues/%s?fields=idReadable,summary,created,assignee(name)" % pid)
+            meta = GET(ctx, "/api/issues/%s?fields=idReadable,summary,created,customFields(name,value(name))" % pid)
             p2_backlog.append({"id": pid, "summary": meta.get("summary") or "",
-                               "assignee": (meta.get("assignee") or {}).get("name") or "",
+                               "assignee": _cf_str(meta, "Assignee"),
                                "created": meta.get("created"), "changed_at": changed_at})
 
     def _sum_section(recs):

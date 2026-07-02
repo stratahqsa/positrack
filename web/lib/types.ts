@@ -52,6 +52,17 @@ export interface Epic {
   spent: number;
   overshoot: boolean;
   changed_at?: number;
+  /**
+   * True when the epic has no *individual* owner: assignee is blank OR parked on
+   * a role/system placeholder (e.g. "Dev Lead"). Optional — absent on older
+   * snapshots, in which case the UI falls back to isUnowned(assignee).
+   */
+  needs_owner?: boolean;
+  /**
+   * True specifically when the assignee is a role/system placeholder (non-blank
+   * but not a real person). A subset of needs_owner. Optional on older snapshots.
+   */
+  role_owner?: boolean;
 }
 
 export interface P2Item {
@@ -195,6 +206,11 @@ export interface RedCounts {
   overshoot: number;
   total_red: number;
   stale_days: number;
+  /**
+   * How many open epics are parked on a role/system account (subset of
+   * `unowned`). Optional — absent on older snapshots.
+   */
+  role_owned?: number;
 }
 
 export interface RedDelta {

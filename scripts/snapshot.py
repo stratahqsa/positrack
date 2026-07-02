@@ -39,6 +39,7 @@ import datetime
 import glob
 import json
 import os
+import re
 import sys
 
 # Import the shared engine from core/ (canonical) whether we're run from the repo
@@ -58,6 +59,32 @@ DATA_DIR = os.path.join(_ROOT, "web", "data")
 STALE_DAYS = 30          # engine hygiene precedent (Rev #8 default)
 LOGGING_WINDOW_DAYS = 7  # "on-time logging" / "moving" recency window
 FALLBACK_SPRINT = "beta1-19"
+
+# Role/system placeholder accounts that "own" work but are NOT individuals — epics
+# parked on "Dev Lead"/"UIX Lead"/"QX Lead"/system support. A role owner means NO
+# person is accountable, so such epics count as needs-a-real-owner and these accounts
+# are kept OFF the per-person leaderboard. Extend via web/config/roster.json
+# {"non_human": ["login or full name", ...]}.
+_ROLE_NAME_RE = re.compile(r"\blead\b|system\s+support", re.I)
+_ROLE_LOGINS = {"Devxleads", "UIX_Lead", "QX_Lead"}
+_NON_HUMAN_EXTRA = set()  # loaded from roster.json "non_human" at runtime
+
+
+def is_role_account(name="", login=""):
+    """True if this owner is a role/system placeholder, not an individual contributor."""
+    name = (name or "").strip()
+    login = (login or "").strip()
+    if login and (login in _ROLE_LOGINS or login in _NON_HUMAN_EXTRA):
+        return True
+    if name and name in _NON_HUMAN_EXTRA:
+        return True
+    return bool(name and _ROLE_NAME_RE.search(name))
+
+
+def _needs_owner(epic):
+    """An open epic needs a real owner when its assignee is blank OR a role placeholder."""
+    a = (epic.get("assignee") or "").strip()
+    return (not a) or is_role_account(name=a)
 
 
 # ---------------------------------------------------------------- helpers
@@ -115,12 +142,15 @@ def _red_counts_from_effort(effort):
     These come straight from the committed effort data so the UI and the snapshot
     agree by construction. `stale` is intentionally conservative; the live hygiene
     block carries the authoritative board-wide stale number."""
-    import re
     open_secs = ["pending", "mixed", "no_stories"]
     epics = []
     for sec in open_secs:
         epics.extend(effort.get("sections", {}).get(sec, []))
-    unowned = sum(1 for e in epics if not (e.get("assignee") or "").strip())
+    # "unowned" = needs a REAL owner: blank assignee OR a role/system placeholder
+    # (an epic parked on "Dev Lead"/"UIX Lead" has no individual accountable).
+    unowned = sum(1 for e in epics if _needs_owner(e))
+    role_owned = sum(1 for e in epics
+                     if (e.get("assignee") or "").strip() and is_role_account(name=e["assignee"]))
     unestimated = sum(1 for e in epics if e.get("missing_est"))
     blocked = sum(1 for e in epics
                   if re.search(r"block|hold", (e.get("epic_state") or ""), re.I))
@@ -135,6 +165,7 @@ def _red_counts_from_effort(effort):
         "stale": stale,
         "blocked": blocked,
         "overshoot": overshoot,
+        "role_owned": role_owned,
         "total_red": unowned + unestimated + stale + blocked + overshoot,
         "stale_days": STALE_DAYS,
     }
@@ -236,7 +267,8 @@ def _assignee_logins(ctx, project, effort):
         for cf in it.get("customFields", []):
             if cf.get("name") == "Assignee":
                 v = cf.get("value")
-                if isinstance(v, dict) and v.get("login"):
+                if (isinstance(v, dict) and v.get("login")
+                        and not is_role_account(name=v.get("fullName"), login=v.get("login"))):
                     out[v["login"]] = v.get("fullName") or v["login"]
     return out
 
@@ -314,7 +346,7 @@ def build_gamification(ctx, project, effort, roster=None):
     open_epics = sum(len(effort.get("sections", {}).get(s, [])) for s in open_secs)
     unowned_epics = sum(
         1 for s in open_secs for e in effort.get("sections", {}).get(s, [])
-        if not (e.get("assignee") or "").strip())
+        if _needs_owner(e))
 
     return {
         "signals_allowlist": list(gam.HYGIENE_SIGNALS),
@@ -328,9 +360,9 @@ def build_gamification(ctx, project, effort, roster=None):
         "owner_gap": {
             "open_epics": open_epics,
             "unowned_epics": unowned_epics,
-            "note": ("Per-owner hygiene covers only epics/issues that HAVE an assignee. "
-                     "%d of %d open epics are unowned; per-owner coverage grows as "
-                     "assignees are filled." % (unowned_epics, open_epics)),
+            "note": ("%d of %d open epics have no individual owner (blank or parked on a "
+                     "role placeholder like Dev Lead/UIX Lead) — assign a person so "
+                     "someone is accountable." % (unowned_epics, open_epics)),
         },
     }
 
@@ -352,6 +384,13 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
 
     # 1) effort — the full report (this is the ~285s sweep).
     effort = yt.effort_report(ctx, project=project, scope=scope)
+    # Owner-accountability flags for the UI: a role/system placeholder (e.g. "Dev Lead")
+    # owning an epic means no individual is accountable -> treat as needs_owner.
+    for _sec in ("pending", "mixed", "no_stories", "done", "p2_backlog"):
+        for e in effort.get("sections", {}).get(_sec, []):
+            _a = (e.get("assignee") or "").strip()
+            e["role_owner"] = bool(_a) and is_role_account(name=_a)
+            e["needs_owner"] = (not _a) or e["role_owner"]
 
     # 2) timespent — latest active sprint (fallback beta1-19), propagated-excluded.
     sprint = sprint or latest_active_sprint(ctx, project)
@@ -436,6 +475,13 @@ def main(argv=None):
         return 3
 
     ctx = yt.Ctx(token, a.base or os.environ.get("YT_BASE") or yt.DEFAULT_BASE)
+    # role/system accounts to exclude from the per-person leaderboard (roster "non_human")
+    try:
+        with open(os.path.join(_ROOT, "web", "config", "roster.json"), encoding="utf-8") as _f:
+            for _x in (json.load(_f).get("non_human") or []):
+                _NON_HUMAN_EXTRA.add(str(_x))
+    except Exception:
+        pass
     try:
         # fail fast + clearly on an auth problem before the long sweep
         yt.whoami(ctx)
