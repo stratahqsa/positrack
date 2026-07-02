@@ -1,0 +1,272 @@
+"""Tests for the ported PXB1 Phase-1 Effort Report (core/ytcore.py effort_report).
+
+Two layers:
+  * PURE, fixture-based unit tests for the recipe logic — categorization, the
+    pending-Phase-1 estimate rollup + epic-level fallback, the missing-estimate flag,
+    the P2 activity-history filter, the story->epic spend attribution (incl. child-bug
+    time), and the ISO->ms cutoff parse. No network; run with no token.
+  * Recipe-TRAP guards that independently assert the subtle rules the report depends
+    on (TaskType: EPIC not type: Epic; resolved-date query syntax; activity-based P2;
+    PXB1-3295 excluded; man-day = 480; epic-estimate fallback).
+  * A LIVE golden test (skipped without $YT_TOKEN) that runs effort_report at the
+    frozen cutoff and asserts EXACT per-section counts + per-field man-day totals from
+    a committed fixture (exact counts; +/-1 man-day tolerance on rollups/spend).
+
+The golden fixture is tests/golden/effort_pxb1_phase1.json, captured from a real run.
+"""
+import json
+import os
+import sys
+
+import pytest
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+import ytcore as yt  # noqa: E402
+
+GOLDEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden", "effort_pxb1_phase1.json")
+
+
+# ---------- fixture builders (recipe-shaped issue dicts) ----------
+def _cf(name, value):
+    return {"name": name, "value": value}
+
+
+def _story(sid, state, scope="PHASE 1", server=0, ui=0, testing=0, assignee=""):
+    return {"idReadable": sid, "summary": sid, "created": 1,
+            "assignee": ({"name": assignee} if assignee else None),
+            "customFields": [_cf("State", {"name": state}), _cf("Scope", {"name": scope}),
+                             _cf("Server Estimation", {"minutes": server}),
+                             _cf("UI Estimation", {"minutes": ui}),
+                             _cf("Testing Estimation", {"minutes": testing})]}
+
+
+def _epic(eid, state, stories=(), server=0, ui=0, testing=0, resolved=None, assignee=""):
+    return {"idReadable": eid, "summary": eid, "created": 1, "resolved": resolved,
+            "assignee": ({"name": assignee} if assignee else None),
+            "customFields": [_cf("State", {"name": state}),
+                             _cf("Server Estimation", {"minutes": server}),
+                             _cf("UI Estimation", {"minutes": ui}),
+                             _cf("Testing Estimation", {"minutes": testing})],
+            "links": [{"linkType": {"name": "Subtask"}, "direction": "OUTWARD",
+                       "issues": list(stories)}] if stories else []}
+
+
+# ---------- iso_to_ms (3.9-safe cutoff parse) ----------
+def test_iso_to_ms_both_formats_utc():
+    # 2026-06-29 10:30:00 UTC == 1782729000000 ms
+    assert yt.iso_to_ms("2026-06-29T10:30:00.000Z") == 1782729000000
+    assert yt.iso_to_ms("2026-06-29T10:30:00Z") == 1782729000000
+    assert yt.iso_to_ms("") is None
+    assert yt.iso_to_ms(None) is None
+
+
+# ---------- man-day constant + DONE states (recipe traps) ----------
+def test_man_day_is_480():
+    assert yt.MAN_DAY == 480  # trap: a man-day is 8h; every md total divides by this
+
+
+def test_done_states_substring_match():
+    for s in ("DONE", "Fixed", "verified", "CLOSED", "Won't Fix", "Duplicate", "Obsolete"):
+        assert yt.is_done_state(s), s
+    for s in ("UI INTEGRATION", "READY FOR DEPLOYEMENT", "IN PROGRESS", "OPEN", ""):
+        assert not yt.is_done_state(s), s
+
+
+# ---------- categorize_epic: the four categories ----------
+def test_categorize_done_zeroes_rollup():
+    rec = yt.categorize_epic(_epic("E-1", "DONE", stories=[_story("S-1", "OPEN", server=480)]))
+    assert rec["category"] == "DONE"
+    assert rec["rollup"] == {"server": 0, "ui": 0, "testing": 0}
+    assert rec["missing_est"] is False
+
+
+def test_categorize_no_stories():
+    rec = yt.categorize_epic(_epic("E-2", "OPEN"))
+    assert rec["category"] == "NO_STORIES"
+
+
+def test_categorize_pending_rollup_over_pending_p1_only():
+    ep = _epic("E-3", "OPEN", stories=[
+        _story("S-a", "IN PROGRESS", server=480, ui=0, testing=240),
+        _story("S-b", "OPEN", server=60, ui=120, testing=0)])
+    rec = yt.categorize_epic(ep)
+    assert rec["category"] == "PENDING"          # stories, none done
+    assert rec["rollup"] == {"server": 540, "ui": 120, "testing": 240}
+
+
+def test_categorize_mixed_excludes_done_story_from_rollup():
+    ep = _epic("E-4", "OPEN", stories=[
+        _story("S-done", "DONE", server=100, ui=100, testing=100),   # excluded (done)
+        _story("S-open", "OPEN", server=50, ui=0, testing=480)])     # counted
+    rec = yt.categorize_epic(ep)
+    assert rec["category"] == "MIXED"
+    assert rec["rollup"] == {"server": 50, "ui": 0, "testing": 480}
+
+
+def test_categorize_non_phase1_pending_story_excluded_from_rollup():
+    # a pending story explicitly scoped PHASE 2 is not part of the Phase-1 rollup
+    ep = _epic("E-5", "OPEN", stories=[
+        _story("S-p2", "OPEN", scope="PHASE 2", server=999, ui=999, testing=999),
+        _story("S-p1", "OPEN", scope="PHASE 1", server=30, ui=0, testing=60)])
+    rec = yt.categorize_epic(ep)
+    assert rec["rollup"] == {"server": 30, "ui": 0, "testing": 60}
+
+
+# ---------- epic-level estimate fallback (recipe trap) ----------
+def test_epic_estimate_fallback_when_story_rollup_zero():
+    # story rollup for UI is 0 but the epic has UI 60 -> fall back to epic's value
+    ep = _epic("E-6", "OPEN", ui=60, testing=120, stories=[
+        _story("S-z", "OPEN", server=240, ui=0, testing=0)])
+    rec = yt.categorize_epic(ep)
+    assert rec["rollup"]["server"] == 240        # story value kept (non-zero)
+    assert rec["rollup"]["ui"] == 60             # fell back to epic UI
+    assert rec["rollup"]["testing"] == 120       # fell back to epic Testing
+
+
+def test_missing_est_flag_rule():
+    # (Dev=0 AND UI=0) OR QA=0
+    dev_ui_zero = yt.categorize_epic(_epic("E-7", "OPEN", stories=[
+        _story("S", "OPEN", server=0, ui=0, testing=480)]))
+    assert dev_ui_zero["missing_est"] is True     # Dev=0 AND UI=0
+    qa_zero = yt.categorize_epic(_epic("E-8", "OPEN", stories=[
+        _story("S", "OPEN", server=480, ui=0, testing=0)]))
+    assert qa_zero["missing_est"] is True         # QA=0
+    ok = yt.categorize_epic(_epic("E-9", "OPEN", stories=[
+        _story("S", "OPEN", server=480, ui=0, testing=240)]))
+    assert ok["missing_est"] is False             # Dev>0 and QA>0
+
+
+# ---------- P2 activity-history filter (recipe trap: activity-based, not scope-field) ----------
+def test_p2_scope_change_after_cutoff_only():
+    cut = 1782729000000
+    acts = [
+        {"field": {"name": "Scope"}, "timestamp": cut - 1,
+         "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},     # before cutoff -> no
+        {"field": {"name": "Scope"}, "timestamp": cut + 1000,
+         "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},     # after -> yes
+        {"field": {"name": "Priority"}, "timestamp": cut + 5,
+         "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},     # wrong field -> no
+    ]
+    matched, ts = yt._scope_changed_p1_to_p2(acts, cut)
+    assert matched and ts == cut + 1000
+
+
+def test_p2_ignores_reverse_and_unrelated_changes():
+    cut = 1782729000000
+    reverse = [{"field": {"name": "Scope"}, "timestamp": cut + 5,
+                "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 1"}]}]
+    assert yt._scope_changed_p1_to_p2(reverse, cut) == (False, None)
+    assert yt._scope_changed_p1_to_p2([], cut) == (False, None)
+
+
+# ---------- spend attribution (Consensus Rev #2) ----------
+def test_attribute_spend_epic_story_bug_and_unattributed():
+    story_epic = {"S-1": "E-1", "S-2": "E-2"}
+    bug_parent = {"BUG-1": "S-1", "BUG-2": "E-2"}      # bug under a story; bug under an epic
+    epic_ids = ["E-1", "E-2"]
+    items = [
+        {"issue": "E-1", "minutes": 100},               # direct on epic
+        {"issue": "S-1", "minutes": 50},                # on a story -> E-1
+        {"issue": "S-2", "minutes": 30},                # on a story -> E-2
+        {"issue": "BUG-1", "minutes": 20},              # bug -> S-1 -> E-1
+        {"issue": "BUG-2", "minutes": 40},              # bug -> E-2 (parent is the epic)
+        {"issue": "OTHER", "minutes": 7},               # unattributed (kept visible)
+        {"issue": "E-1", "minutes": 0},                 # zero-minute entry ignored
+    ]
+    spend, un = yt._attribute_spend(items, story_epic, epic_ids, bug_parent)
+    assert spend == {"E-1": 170, "E-2": 70}
+    assert un == 7                                      # never silently dropped
+
+
+def test_attribute_spend_does_not_use_issue_rollup():
+    # Attribution is purely from work items; an epic with no work-item entries gets 0
+    # spend even if (in reality) it carries a Spent-time rollup. Guards against
+    # regressing to the issue-level rollup the recipe/plan forbids.
+    spend, un = yt._attribute_spend([], {"S": "E"}, ["E"], {})
+    assert spend == {} and un == 0
+
+
+def test_build_story_epic_map_first_writer_wins():
+    cats = [
+        {"id": "E-1", "stories": [{"id": "S-1"}, {"id": "S-2"}]},
+        {"id": "E-2", "stories": [{"id": "S-2"}, {"id": "S-3"}]},   # S-2 already mapped to E-1
+    ]
+    m = yt._build_story_epic_map(cats)
+    assert m == {"S-1": "E-1", "S-2": "E-1", "S-3": "E-2"}
+
+
+# ---------- report block rendering (pure, no network) ----------
+def test_effort_blocks_render_sections_and_grand_total():
+    rep = {
+        "project": "PXB1", "scope": "PHASE 1", "cutoff_iso": "2026-06-29T10:30:00.000Z",
+        "man_day": 480,
+        "counts": {"done": 1, "pending": 1, "mixed": 0, "no_stories": 0, "p2_backlog": 1,
+                   "epics_discovered": 3},
+        "sections": {
+            "done": [{"id": "E-D", "summary": "d", "assignee": "", "created": 1, "resolved": 2,
+                      "rollup": {"server": 0, "ui": 0, "testing": 0}, "total": 0, "spent": 0,
+                      "overshoot": False, "missing_est": False, "stories": []}],
+            "pending": [{"id": "E-P", "summary": "p", "assignee": "Lead", "created": 1,
+                         "rollup": {"server": 480, "ui": 0, "testing": 480}, "total": 960,
+                         "spent": 1440, "overshoot": True, "missing_est": False, "stories": []}],
+            "mixed": [], "no_stories": [],
+            "p2_backlog": [{"id": "E-2P", "summary": "moved", "assignee": "", "created": 1,
+                            "changed_at": 3}],
+        },
+        "totals": {
+            "pending": {"server": 480, "ui": 0, "testing": 480, "total": 960, "spent": 1440},
+            "mixed": {"server": 0, "ui": 0, "testing": 0, "total": 0, "spent": 0},
+            "no_stories": {"server": 0, "ui": 0, "testing": 0, "total": 0, "spent": 0},
+            "done": {"server": 0, "ui": 0, "testing": 0, "total": 0, "spent": 0},
+            "grand_total": {"server": 480, "ui": 0, "testing": 480, "total": 960, "spent": 1440,
+                            "server_md": 1.0, "ui_md": 0.0, "testing_md": 1.0, "total_md": 2.0,
+                            "spent_md": 3.0},
+        },
+        "spend": {"scope_query": "project: PXB1", "total_minutes": 1440,
+                  "unattributed_minutes": 0, "excluded": {"total": "5h 0m"}},
+    }
+    blocks = yt._effort_blocks(rep)
+    kinds = [b["kind"] for b in blocks]
+    assert kinds.count("table") == 5          # done, pending, mixed, no-stories, p2
+    text = "\n".join(b["s"] for b in blocks if b["kind"] == "raw")
+    assert "Grand Total" in text and "Total 2.0 man-days" in text
+    # overshoot marker rides on the pending epic's Spent cell
+    pend_tbl = [b for b in blocks if b["kind"] == "table"][1]
+    assert any("⚠" in str(c) for row in pend_tbl["rows"] for c in row)
+
+
+# ---------- LIVE golden test (skipped without a token) ----------
+def _load_golden():
+    with open(GOLDEN) as f:
+        return json.load(f)
+
+
+@pytest.mark.skipif(not os.environ.get("YT_TOKEN"),
+                    reason="live golden test needs $YT_TOKEN (YouTrack); skipped in offline CI")
+def test_effort_golden_live():
+    """Run the ported report at the frozen cutoff and assert it reproduces the golden
+    fixture: EXACT section counts + P2 id set; per-field man-day totals within +/-1."""
+    golden = _load_golden()
+    ctx = yt.Ctx(os.environ["YT_TOKEN"], os.environ.get("YT_BASE") or yt.DEFAULT_BASE)
+    rep = yt.effort_report(ctx, project=golden["project"], scope=golden["scope"],
+                           cutoff_iso=golden["cutoff_iso"],
+                           exclude_ids=tuple(golden["excluded_ids"]))
+
+    # exact section counts
+    for k, v in golden["counts"].items():
+        assert rep["counts"][k] == v, "count[%s]: got %d want %d" % (k, rep["counts"][k], v)
+
+    # exact P2-backlog id set (activity-based discovery must be stable)
+    assert sorted(e["id"] for e in rep["sections"]["p2_backlog"]) == sorted(golden["p2_ids"])
+
+    # PXB1-3295 excluded from every section (recipe trap)
+    all_ids = [e["id"] for sec in rep["sections"].values() for e in sec]
+    assert "PXB1-3295" not in all_ids
+
+    # per-field man-day totals within +/-1 man-day (worklog spend can drift a touch)
+    for sec, want in golden["totals_md"].items():
+        got = rep["totals"][sec]
+        for field, wmd in want.items():
+            gmd = round(got[field] / 480.0, 1)
+            assert abs(gmd - wmd) <= 1.0, \
+                "totals_md[%s][%s]: got %.1f want %.1f (+/-1)" % (sec, field, gmd, wmd)

@@ -12,6 +12,7 @@ cd "$ROOT"
 pairs=(
   "core/ytcore.py:skill/positrack/scripts/ytcore.py"
   "cli/yt.py:skill/positrack/scripts/yt.py"
+  "core/ytcore.py:web/api/_engine/ytcore.py"
 )
 
 drift=0
@@ -28,7 +29,7 @@ for pair in "${pairs[@]}"; do
 done
 
 if [ "$drift" -ne 0 ]; then
-  echo "ENGINE SYNC CHECK FAILED — run: cp core/ytcore.py skill/positrack/scripts/ytcore.py && cp cli/yt.py skill/positrack/scripts/yt.py"
+  echo "ENGINE SYNC CHECK FAILED — run: cp core/ytcore.py skill/positrack/scripts/ytcore.py && cp cli/yt.py skill/positrack/scripts/yt.py && cp core/ytcore.py web/api/_engine/ytcore.py"
   exit 1
 fi
 echo "engine sync OK (vendored skill copies match core/ + cli/)"

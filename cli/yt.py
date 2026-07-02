@@ -204,6 +204,16 @@ def cmd_report(ctx, a):
                          days=a.days, sprint=a.sprint, limit=a.limit)
     print("\n".join(block_strings(blocks)))
 
+def cmd_effort(ctx, a):
+    exclude = tuple(x.strip() for x in (a.exclude or "").split(",") if x.strip())
+    if a.json:
+        rep = core.effort_report(ctx, project=a.project, scope=a.scope,
+                                 cutoff_iso=a.cutoff, exclude_ids=exclude)
+        print(json.dumps(rep, indent=1)); return
+    rep = core.effort_report(ctx, project=a.project, scope=a.scope,
+                             cutoff_iso=a.cutoff, exclude_ids=exclude)
+    print("\n".join(block_strings(core._effort_blocks(rep))))
+
 def cmd_create(ctx, a):
     fields = parse_fields(a.field)
     r = core.create(ctx, a.project, a.summary, a.description, fields, a.commit)
@@ -362,10 +372,18 @@ def build_parser():
     s = sub.add_parser("report")
     s.add_argument("type", choices=["health", "activity", "briefing", "stale", "unestimated",
                                     "unassigned", "epics", "mywork", "sprint", "myday", "hygiene",
-                                    "timespent"])
+                                    "timespent", "effort"])
     s.add_argument("--project", default=""); s.add_argument("--location", default="")
     s.add_argument("--days", type=int, default=7); s.add_argument("--sprint", default="")
     s.add_argument("--limit", type=int, default=50); s.set_defaults(fn=cmd_report)
+
+    s = sub.add_parser("effort", help="POSX Control Tower — ported Phase-1 Effort Report")
+    s.add_argument("--project", default="PXB1"); s.add_argument("--scope", default="PHASE 1")
+    s.add_argument("--cutoff", default=core.EFFORT_CUTOFF_DEFAULT,
+                   help="ISO cutoff (default %s)" % core.EFFORT_CUTOFF_DEFAULT)
+    s.add_argument("--exclude", default="PXB1-3295", help="comma-separated epic ids to exclude")
+    s.add_argument("--json", action="store_true", help="emit the raw structured report as JSON")
+    s.set_defaults(fn=cmd_effort)
 
     s = sub.add_parser("create"); s.add_argument("--project", required=True)
     s.add_argument("--summary", required=True); s.add_argument("--description", default="")
