@@ -11,6 +11,7 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Split,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RedCounts, RedDelta } from "@/lib/types";
@@ -303,6 +304,21 @@ export function KpiStrip({
             <FileWarning className="size-3" />
             {red.unestimated} unestimated{" "}
             {isExactRed("unestimated") ? "· filtering" : "→ filter Effort"}
+          </button>
+        ) : null}
+        {red.deferred && red.deferred > 0 ? (
+          <button
+            type="button"
+            onClick={() => toggleRedFilter("deferred")}
+            className={cn(
+              "inline-flex items-center gap-1 text-[11px] font-medium transition-colors",
+              isExactRed("deferred") ? "text-warn" : "text-faint hover:text-warn",
+            )}
+            title="Phase-1 epics with stories deferred to Phase 2 — the scope-leakage watch list"
+          >
+            <Split className="size-3" />
+            {red.deferred} deferred to P2{" "}
+            {isExactRed("deferred") ? "· filtering" : "→ review scope"}
           </button>
         ) : null}
         {filters.reds.length > 0 ? (

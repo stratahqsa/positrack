@@ -80,6 +80,12 @@ export interface Epic {
   priority?: string;
   /** Owning module/component label. Optional on older snapshots. */
   module?: string;
+  /** Stories deferred to Phase 2 under this P1 epic (scope-leakage). Optional. */
+  p2_stories?: number;
+  /** Still-pending Phase-1 stories. Optional on older snapshots. */
+  p1_pending?: number;
+  /** True when p2_stories > 0 — the epic is being partially deferred. Optional. */
+  has_p2?: boolean;
 }
 
 export interface P2Item {
@@ -228,6 +234,11 @@ export interface RedCounts {
    * `unowned`). Optional — absent on older snapshots.
    */
   role_owned?: number;
+  /**
+   * Open P1 epics with stories deferred to Phase 2 (scope leakage / watch list).
+   * A watch signal, NOT summed into total_red. Optional on older snapshots.
+   */
+  deferred?: number;
 }
 
 export interface RedDelta {

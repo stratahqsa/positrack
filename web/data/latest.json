@@ -1,11 +1,11 @@
 {
  "meta": {
-  "generated_at_iso": "2026-07-02T05:23:31.173816+00:00",
-  "generated_at_ms": 1782969811173,
+  "generated_at_iso": "2026-07-02T08:03:26.166285+00:00",
+  "generated_at_ms": 1782979406166,
   "project": "PXB1",
   "scope": "PHASE 1",
   "sprint": "beta1-20",
-  "as_of_hhmm": "05:23",
+  "as_of_hhmm": "08:03",
   "engine_version": "control-tower-b1"
  },
  "effort": {
@@ -18,8 +18,8 @@
    "PXB1-3295"
   ],
   "counts": {
-   "done": 12,
-   "pending": 49,
+   "done": 13,
+   "pending": 48,
    "mixed": 13,
    "no_stories": 0,
    "p2_backlog": 15,
@@ -28,6 +28,58 @@
   "sections": {
    "done": [
     {
+     "id": "PXB1-1531",
+     "summary": "Changes to RG report",
+     "created": 1768574001994,
+     "resolved": 1782975816219,
+     "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
+     "epic_state": "DONE",
+     "stories": [
+      {
+       "id": "PXB1-7569",
+       "summary": "Changes to RG report",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Shafeek M",
+       "created": 1782669056468,
+       "est": {
+        "server": 0,
+        "ui": 180,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 0,
+      "ui": 180,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 180,
+      "testing": 480
+     },
+     "category": "DONE",
+     "rollup": {
+      "server": 0,
+      "ui": 0,
+      "testing": 0
+     },
+     "missing_est": false,
+     "total": 0,
+     "spent": 80,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
      "id": "PXB1-7843",
      "summary": "Dashboard Spec",
      "created": 1782968626830,
@@ -35,6 +87,9 @@
      "assignee": "Vishnu kv",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [],
      "rollup_all": {
@@ -68,6 +123,9 @@
      "assignee": "Vishnu kv",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [],
      "rollup_all": {
@@ -101,6 +159,9 @@
      "assignee": "Sarjith Pullithodi",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [
       {
@@ -150,6 +211,9 @@
      "assignee": "UIX Lead",
      "priority": "Low",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [
       {
@@ -199,6 +263,9 @@
      "assignee": "UIX Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [
       {
@@ -248,6 +315,9 @@
      "assignee": "Aruna Saini",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [
       {
@@ -297,6 +367,9 @@
      "assignee": "Dev Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [
       {
@@ -346,6 +419,9 @@
      "assignee": "UIX Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [
       {
@@ -395,6 +471,9 @@
      "assignee": "UIX Lead",
      "priority": "Low",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [
       {
@@ -444,6 +523,9 @@
      "assignee": "Aruna Saini",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [
       {
@@ -493,6 +575,9 @@
      "assignee": "Anjali M S",
      "priority": "",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [],
      "rollup_all": {
@@ -526,6 +611,9 @@
      "assignee": "Jaseena A K",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 0,
+     "has_p2": false,
      "epic_state": "DONE",
      "stories": [],
      "rollup_all": {
@@ -554,186 +642,287 @@
    ],
    "pending": [
     {
-     "id": "PXB1-7410",
-     "summary": "Default Bank Account No format",
-     "created": 1782297360425,
+     "id": "PXB1-6905",
+     "summary": "Rename the button in purchase return screen",
+     "created": 1781268278144,
      "resolved": null,
-     "assignee": "Ajnas O",
-     "priority": "",
+     "assignee": "UIX Lead",
+     "priority": "Low",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-7822",
-       "summary": "Default Bank Account No format",
+       "id": "PXB1-7558",
+       "summary": "Rename the button in purchase return screen",
        "state": "OPEN",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
-       "assignee": "Ajnas O",
-       "created": 1782911463992,
+       "assignee": "Shafeek M",
+       "created": 1782663090449,
        "est": {
-        "server": 300,
-        "ui": 0,
-        "testing": 0
+        "server": 0,
+        "ui": 30,
+        "testing": 240
        }
       }
      ],
      "rollup_all": {
-      "server": 300,
-      "ui": 0,
-      "testing": 0
+      "server": 0,
+      "ui": 30,
+      "testing": 240
      },
      "epic_est": {
-      "server": 300,
-      "ui": 0,
-      "testing": 0
+      "server": 0,
+      "ui": 30,
+      "testing": 240
      },
      "rollup": {
-      "server": 300,
-      "ui": 0,
-      "testing": 0
+      "server": 0,
+      "ui": 30,
+      "testing": 240
      },
      "category": "PENDING",
-     "missing_est": true,
-     "total": 300,
+     "missing_est": false,
+     "total": 270,
+     "spent": 0,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-7215",
+     "summary": "Sales cart need not show bundle components.",
+     "created": 1781862809662,
+     "resolved": null,
+     "assignee": "Dev Lead",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7587",
+       "summary": "Sales cart need not show bundle components.",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1782716327240,
+       "est": {
+        "server": 60,
+        "ui": 30,
+        "testing": 240
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 60,
+      "ui": 30,
+      "testing": 240
+     },
+     "epic_est": {
+      "server": 60,
+      "ui": 30,
+      "testing": 240
+     },
+     "rollup": {
+      "server": 60,
+      "ui": 30,
+      "testing": 240
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 330,
+     "spent": 0,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-6016",
+     "summary": "Changes to \"Exchange\" modal in POS screen.",
+     "created": 1779701408990,
+     "resolved": null,
+     "assignee": "Dev Lead",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7586",
+       "summary": "Changes to \"Exchange\" modal in POS screen.",
+       "state": "UI INTEGRATION",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1782716270085,
+       "est": {
+        "server": 60,
+        "ui": 60,
+        "testing": 240
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 60,
+      "ui": 60,
+      "testing": 240
+     },
+     "epic_est": {
+      "server": 60,
+      "ui": 60,
+      "testing": 240
+     },
+     "rollup": {
+      "server": 60,
+      "ui": 60,
+      "testing": 240
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 360,
+     "spent": 110,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-6915",
+     "summary": "Product Catalog: Show tax rate in the tax category list box",
+     "created": 1781332723654,
+     "resolved": null,
+     "assignee": "Aruna Saini",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7607",
+       "summary": "Product Catalog: Show tax rate in the tax category list box",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Aruna Saini",
+       "created": 1782723665587,
+       "est": {
+        "server": 60,
+        "ui": 0,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 60,
+      "ui": 0,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 60,
+      "ui": 0,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 60,
+      "ui": 0,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 540,
      "spent": 0,
      "overshoot": false,
      "role_owner": false,
      "needs_owner": false
     },
     {
-     "id": "PXB1-5384",
-     "summary": "Context specific titles for modals.",
-     "created": 1778510321666,
-     "resolved": null,
-     "assignee": "Aruna Saini",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7591",
-       "summary": "Context specific titles for modals.",
-       "state": "READY FOR TESTING",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Aruna Saini",
-       "created": 1782718231813,
-       "est": {
-        "server": 480,
-        "ui": 480,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 480,
-      "ui": 480,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 480,
-      "ui": 480,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 480,
-      "ui": 480,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 1440,
-     "spent": 180,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-6812",
-     "summary": "Terminology changes in RG screen",
-     "created": 1781183328066,
+     "id": "PXB1-6797",
+     "summary": "Additional fields in Customer master",
+     "created": 1781173078585,
      "resolved": null,
      "assignee": "UIX Lead",
-     "priority": "Medium",
+     "priority": "High",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-7562",
-       "summary": "Terminology changes in RG screen",
-       "state": "RE-OPEN",
+       "id": "PXB1-7561",
+       "summary": "Additional fields in Customer master",
+       "state": "OPEN",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
        "assignee": "Shafeek M",
-       "created": 1782665468773,
+       "created": 1782665374924,
        "est": {
-        "server": 0,
+        "server": 60,
         "ui": 180,
         "testing": 480
        }
       }
      ],
      "rollup_all": {
-      "server": 0,
+      "server": 60,
       "ui": 180,
       "testing": 480
      },
      "epic_est": {
-      "server": 0,
+      "server": 60,
       "ui": 180,
       "testing": 480
      },
      "rollup": {
-      "server": 0,
+      "server": 60,
       "ui": 180,
       "testing": 480
      },
      "category": "PENDING",
      "missing_est": false,
-     "total": 660,
-     "spent": 30,
+     "total": 720,
+     "spent": 0,
      "overshoot": false,
      "role_owner": true,
      "needs_owner": true
     },
     {
-     "id": "PXB1-3496",
-     "summary": "Design Team Feedback (Goods Receipt)",
-     "created": 1774350596093,
+     "id": "PXB1-6156",
+     "summary": "Changes to Laybuy settlement flow",
+     "created": 1779888171631,
      "resolved": null,
-     "assignee": "Dev Lead",
-     "priority": "",
+     "assignee": "Sarjith Pullithodi",
+     "priority": "High",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-7206",
-       "summary": "Recieve Goods Report Screen UI Changes",
-       "state": "UI INTEGRATION",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Shafeek M",
-       "created": 1781853616794,
-       "est": {
-        "server": 0,
-        "ui": 300,
-        "testing": 480
-       }
-      },
-      {
-       "id": "PXB1-7219",
-       "summary": "Create RG Screen UI Changes",
-       "state": "READY FOR DEPLOYEMENT",
+       "id": "PXB1-7601",
+       "summary": "Changes to Laybuy settlement flow",
+       "state": "OPEN",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
        "assignee": "Shafeek M",
-       "created": 1781863051571,
+       "created": 1782722183024,
        "est": {
         "server": 0,
         "ui": 240,
@@ -743,26 +932,182 @@
      ],
      "rollup_all": {
       "server": 0,
-      "ui": 540,
-      "testing": 960
+      "ui": 240,
+      "testing": 480
      },
      "epic_est": {
       "server": 0,
-      "ui": 540,
-      "testing": 960
+      "ui": 240,
+      "testing": 480
      },
      "rollup": {
       "server": 0,
-      "ui": 540,
-      "testing": 960
+      "ui": 240,
+      "testing": 480
      },
      "category": "PENDING",
      "missing_est": false,
-     "total": 1500,
-     "spent": 550,
+     "total": 720,
+     "spent": 0,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-6149",
+     "summary": "Provision to create new charge from the service charge modal (RG/PO/PO_Return)",
+     "created": 1779883380534,
+     "resolved": null,
+     "assignee": "Dev Lead",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7588",
+       "summary": "Provision to create new charge from the service charge modal (RG/PO/PO_Return)",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Aruna Saini",
+       "created": 1782716539995,
+       "est": {
+        "server": 120,
+        "ui": 180,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 120,
+      "ui": 180,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 120,
+      "ui": 180,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 120,
+      "ui": 180,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 780,
+     "spent": 0,
      "overshoot": false,
      "role_owner": true,
      "needs_owner": true
+    },
+    {
+     "id": "PXB1-6936",
+     "summary": "Design for Button Focus",
+     "created": 1781505957348,
+     "resolved": null,
+     "assignee": "UIX Lead",
+     "priority": "Low",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7555",
+       "summary": "Design for Button Focus",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "UIX Lead",
+       "created": 1782606856069,
+       "est": {
+        "server": 0,
+        "ui": 300,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 0,
+      "ui": 300,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 300,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 0,
+      "ui": 300,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 780,
+     "spent": 0,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-7348",
+     "summary": "License expiry message in login screen",
+     "created": 1782198195482,
+     "resolved": null,
+     "assignee": "Aruna Saini",
+     "priority": "Low",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7606",
+       "summary": "License expiry message in login screen",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Aruna Saini",
+       "created": 1782723553615,
+       "est": {
+        "server": 240,
+        "ui": 240,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 240,
+      "ui": 240,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 240,
+      "ui": 240,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 240,
+      "ui": 240,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 960,
+     "spent": 180,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
     },
     {
      "id": "PXB1-7237",
@@ -770,8 +1115,11 @@
      "created": 1781871743040,
      "resolved": null,
      "assignee": "UIX Lead",
-     "priority": "Medium",
+     "priority": "Low",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -814,68 +1162,264 @@
      "needs_owner": true
     },
     {
-     "id": "PXB1-3100",
-     "summary": "Ageing Report",
-     "created": 1773210126319,
+     "id": "PXB1-6155",
+     "summary": "Changes to POS Credit Settlement – Partial Payment Flow Enhancement",
+     "created": 1779887218135,
      "resolved": null,
-     "assignee": "Dev Lead",
-     "priority": "Medium",
+     "assignee": "Sarjith Pullithodi",
+     "priority": "High",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-7819",
-       "summary": "Ageing Report",
+       "id": "PXB1-7600",
+       "summary": "Changes to POS Credit Settlement – Partial Payment Flow Enhancement",
        "state": "OPEN",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1782911005832,
-       "est": {
-        "server": 2400,
-        "ui": 2400,
-        "testing": 2400
-       }
-      },
-      {
-       "id": "PXB1-7820",
-       "summary": "Aging Report - AI Insights",
-       "state": "OPEN",
-       "scope": "PHASE 2",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1782911087084,
+       "assignee": "Shafeek M",
+       "created": 1782722084903,
        "est": {
         "server": 0,
-        "ui": 0,
-        "testing": 0
+        "ui": 300,
+        "testing": 720
        }
       }
      ],
      "rollup_all": {
-      "server": 2400,
-      "ui": 2400,
-      "testing": 2400
+      "server": 0,
+      "ui": 300,
+      "testing": 720
      },
      "epic_est": {
-      "server": 2400,
-      "ui": 2400,
-      "testing": 2400
+      "server": 0,
+      "ui": 300,
+      "testing": 720
      },
      "rollup": {
-      "server": 2400,
-      "ui": 2400,
-      "testing": 2400
+      "server": 0,
+      "ui": 300,
+      "testing": 720
      },
      "category": "PENDING",
      "missing_est": false,
-     "total": 7200,
+     "total": 1020,
      "spent": 0,
      "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-2078",
+     "summary": "Design Change for the Side Panel Summary Table",
+     "created": 1770451269250,
+     "resolved": null,
+     "assignee": "Sarjith Pullithodi",
+     "priority": "Low",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7602",
+       "summary": "Design Change for the Side Panel Summary Table",
+       "state": "READY FOR UI",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1782722276751,
+       "est": {
+        "server": 480,
+        "ui": 480,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 480,
+      "ui": 480,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 480,
+      "ui": 480,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 480,
+      "ui": 480,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1440,
+     "spent": 120,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-6373",
+     "summary": "Stock Adjustment: Add \"Reversed\" status",
+     "created": 1780410184531,
+     "resolved": null,
+     "assignee": "Ajnas O",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7604",
+       "summary": "Stock Adjustment: Reversed status in report",
+       "state": "DEVELOPMENT",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Ajnas O",
+       "created": 1782723311563,
+       "est": {
+        "server": 300,
+        "ui": 960,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 300,
+      "ui": 960,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 300,
+      "ui": 960,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 300,
+      "ui": 960,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1740,
+     "spent": 120,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-6017",
+     "summary": "Vendor Invoice: Add \"Reversed\" status in the status filter",
+     "created": 1779703396765,
+     "resolved": null,
+     "assignee": "Ajnas O",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7597",
+       "summary": "Vendor Invoice: Reversed status in report",
+       "state": "DEVELOPMENT",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Ajnas O",
+       "created": 1782720813040,
+       "est": {
+        "server": 300,
+        "ui": 960,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 300,
+      "ui": 960,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 300,
+      "ui": 960,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 300,
+      "ui": 960,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1740,
+     "spent": 120,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-7233",
+     "summary": "Hide list price (MRP) in product catalog",
+     "created": 1781870987115,
+     "resolved": null,
+     "assignee": "Sarika Agrawal",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7658",
+       "summary": "Hide list price from system",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarika Agrawal",
+       "created": 1782742070145,
+       "est": {
+        "server": 960,
+        "ui": 480,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 960,
+      "ui": 480,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 960,
+      "ui": 480,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 960,
+      "ui": 480,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1920,
+     "spent": 0,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
     },
     {
      "id": "PXB1-6999",
@@ -883,8 +1427,11 @@
      "created": 1781530441842,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
-     "priority": "Medium",
+     "priority": "High",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -927,313 +1474,71 @@
      "needs_owner": false
     },
     {
-     "id": "PXB1-3588",
-     "summary": "Design Team Feedback (Stock Adjustment)",
-     "created": 1774526504436,
+     "id": "PXB1-6144",
+     "summary": "Payment Screen UX Improvements",
+     "created": 1779881028952,
      "resolved": null,
-     "assignee": "Dev Lead",
-     "priority": "",
+     "assignee": "Sarjith Pullithodi",
+     "priority": "High",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 2,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-7266",
-       "summary": "Stock Adjustment Report Design Changes",
-       "state": "READY FOR TESTING",
+       "id": "PXB1-7598",
+       "summary": "Sales : POS - Payment Screen UX Improvements in Sales",
+       "state": "OPEN",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
-       "assignee": "Posibolt System Support",
-       "created": 1782115680985,
+       "assignee": "Pramod Saini",
+       "created": 1782721730791,
        "est": {
         "server": 0,
-        "ui": 240,
+        "ui": 480,
         "testing": 480
        }
       },
       {
-       "id": "PXB1-7270",
-       "summary": "Stock Adjustment Design Changes",
-       "state": "RE-OPEN",
+       "id": "PXB1-7599",
+       "summary": "Payment Screen UX Improvements in General",
+       "state": "OPEN",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
-       "assignee": "Shafeek M",
-       "created": 1782115774919,
+       "assignee": "Pramod Saini",
+       "created": 1782721855344,
        "est": {
         "server": 0,
-        "ui": 300,
-        "testing": 480
+        "ui": 480,
+        "testing": 720
        }
       }
      ],
      "rollup_all": {
       "server": 0,
-      "ui": 540,
-      "testing": 960
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 540,
-      "testing": 960
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 540,
-      "testing": 960
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 1500,
-     "spent": 500,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
-     "id": "PXB1-980",
-     "summary": "Design Team Feedback (Common for all screens)",
-     "created": 1767428921230,
-     "resolved": null,
-     "assignee": "UIX Lead",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7511",
-       "summary": "Common Design Changes Required",
-       "state": "READY FOR TESTING",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "UIX Lead",
-       "created": 1782455008056,
-       "est": {
-        "server": 0,
-        "ui": 360,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 360,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 360,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 360,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 840,
-     "spent": 850,
-     "overshoot": true,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
-     "id": "PXB1-7196",
-     "summary": "Remove the Product Setup modal",
-     "created": 1781850305418,
-     "resolved": null,
-     "assignee": "UIX Lead",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7545",
-       "summary": "Remove the Product Setup modal",
-       "state": "RE-OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "UIX Lead",
-       "created": 1782545496792,
-       "est": {
-        "server": 0,
-        "ui": 120,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 120,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 120,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 120,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 600,
-     "spent": 120,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
-     "id": "PXB1-6016",
-     "summary": "Changes to \"Exchange\" modal in POS screen.",
-     "created": 1779701408990,
-     "resolved": null,
-     "assignee": "Dev Lead",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7586",
-       "summary": "Changes to \"Exchange\" modal in POS screen.",
-       "state": "READY FOR UI",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1782716270085,
-       "est": {
-        "server": 60,
-        "ui": 60,
-        "testing": 240
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 60,
-      "ui": 60,
-      "testing": 240
-     },
-     "epic_est": {
-      "server": 60,
-      "ui": 60,
-      "testing": 240
-     },
-     "rollup": {
-      "server": 60,
-      "ui": 60,
-      "testing": 240
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 360,
-     "spent": 110,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
-     "id": "PXB1-3840",
-     "summary": "License Activation, Renewal and Subscription Managment",
-     "created": 1775142164848,
-     "resolved": null,
-     "assignee": "Sarjith Pullithodi",
-     "priority": "",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-4632",
-       "summary": "Create Client with Initial License, License Change API & App Behavior Based on License",
-       "state": "RE-OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1777294707047,
-       "est": {
-        "server": 2400,
-        "ui": 960,
-        "testing": 1440
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 2400,
       "ui": 960,
-      "testing": 1440
+      "testing": 1200
      },
      "epic_est": {
-      "server": 2400,
+      "server": 0,
       "ui": 960,
-      "testing": 1440
+      "testing": 1200
      },
      "rollup": {
-      "server": 2400,
+      "server": 0,
       "ui": 960,
-      "testing": 1440
+      "testing": 1200
      },
      "category": "PENDING",
      "missing_est": false,
-     "total": 4800,
-     "spent": 1230,
+     "total": 2160,
+     "spent": 0,
      "overshoot": false,
      "role_owner": false,
      "needs_owner": false
-    },
-    {
-     "id": "PXB1-7408",
-     "summary": "Tool tip in Price List master screen.",
-     "created": 1782296658157,
-     "resolved": null,
-     "assignee": "UIX Lead",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7462",
-       "summary": "Tool tip in Price List master screen.",
-       "state": "RE-OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Shafeek M",
-       "created": 1782380649773,
-       "est": {
-        "server": 0,
-        "ui": 120,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 120,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 120,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 120,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 600,
-     "spent": 195,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
     },
     {
      "id": "PXB1-7021",
@@ -1241,8 +1546,11 @@
      "created": 1781590822087,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
-     "priority": "Medium",
+     "priority": "High",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 2,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1300,246 +1608,53 @@
      "needs_owner": false
     },
     {
-     "id": "PXB1-6958",
-     "summary": "Change in Auto SKU Code Generation Logic",
-     "created": 1781516548573,
+     "id": "PXB1-6109",
+     "summary": "Price Import (Product Import Enhancement)",
+     "created": 1779859954254,
      "resolved": null,
      "assignee": "Sarika Agrawal",
-     "priority": "Medium",
-     "module": "",
+     "priority": "High",
+     "module": "Stock",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-7650",
-       "summary": "Change in Auto SKU Code Generation ",
-       "state": "OPEN",
+       "id": "PXB1-7333",
+       "summary": "Product price Import",
+       "state": "UI INTEGRATION",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
        "assignee": "Sarika Agrawal",
-       "created": 1782737161956,
+       "created": 1782193227745,
        "est": {
-        "server": 480,
-        "ui": 480,
+        "server": 960,
+        "ui": 1440,
         "testing": 720
        }
       }
      ],
      "rollup_all": {
-      "server": 480,
-      "ui": 480,
+      "server": 960,
+      "ui": 1440,
       "testing": 720
      },
      "epic_est": {
-      "server": 480,
-      "ui": 480,
+      "server": 960,
+      "ui": 1440,
       "testing": 720
      },
      "rollup": {
-      "server": 480,
-      "ui": 480,
+      "server": 960,
+      "ui": 1440,
       "testing": 720
      },
      "category": "PENDING",
      "missing_est": false,
-     "total": 1680,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-2078",
-     "summary": "Design Change for the Side Panel Summary Table",
-     "created": 1770451269250,
-     "resolved": null,
-     "assignee": "Sarjith Pullithodi",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7602",
-       "summary": "Design Change for the Side Panel Summary Table",
-       "state": "READY FOR UI",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1782722276751,
-       "est": {
-        "server": 480,
-        "ui": 480,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 480,
-      "ui": 480,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 480,
-      "ui": 480,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 480,
-      "ui": 480,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 1440,
-     "spent": 120,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-1530",
-     "summary": "Label change in Cash Account screen.",
-     "created": 1768572197629,
-     "resolved": null,
-     "assignee": "UIX Lead",
-     "priority": "High",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7570",
-       "summary": "Label change in Cash Account screen.",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "High",
-       "assignee": "Shafeek M",
-       "created": 1782669200880,
-       "est": {
-        "server": 0,
-        "ui": 240,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 240,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 240,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 240,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 720,
-     "spent": 60,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
-     "id": "PXB1-5961",
-     "summary": "Book: ExpenseCopy order should copy only the charge lines.",
-     "created": 1779455668340,
-     "resolved": null,
-     "assignee": "Sarika Agrawal",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7649",
-       "summary": "ExpenseCopy order should copy only the charge lines.",
-       "state": "TESTING",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Posibolt System Support",
-       "created": 1782736887276,
-       "est": {
-        "server": 480,
-        "ui": 0,
-        "testing": 720
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 480,
-      "ui": 0,
-      "testing": 720
-     },
-     "epic_est": {
-      "server": 480,
-      "ui": 0,
-      "testing": 720
-     },
-     "rollup": {
-      "server": 480,
-      "ui": 0,
-      "testing": 720
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 1200,
-     "spent": 240,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-25",
-     "summary": "Inter terminal data synchronization ",
-     "created": 1724312086894,
-     "resolved": null,
-     "assignee": "Pramod Saini",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7733",
-       "summary": "Inter Terminal Data Synchronization",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Pramod Saini",
-       "created": 1782881650719,
-       "est": {
-        "server": 1440,
-        "ui": 0,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 1440,
-      "ui": 0,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 1440,
-      "ui": 0,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 1440,
-      "ui": 0,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 1920,
-     "spent": 0,
+     "total": 3120,
+     "spent": 1650,
      "overshoot": false,
      "role_owner": false,
      "needs_owner": false
@@ -1552,12 +1667,15 @@
      "assignee": "Shafeek M",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 2,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
        "id": "PXB1-7603",
        "summary": "Back button in Web POS",
-       "state": "UI INTEGRATION",
+       "state": "READY FOR DEPLOYEMENT",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
@@ -1603,30 +1721,479 @@
      "category": "PENDING",
      "missing_est": false,
      "total": 1200,
+     "spent": 60,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-7410",
+     "summary": "Default Bank Account No format",
+     "created": 1782297360425,
+     "resolved": null,
+     "assignee": "Ajnas O",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7822",
+       "summary": "Default Bank Account No format",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Ajnas O",
+       "created": 1782911463992,
+       "est": {
+        "server": 300,
+        "ui": 0,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 300,
+      "ui": 0,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 300,
+      "ui": 0,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 300,
+      "ui": 0,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 780,
      "spent": 0,
      "overshoot": false,
      "role_owner": false,
      "needs_owner": false
     },
     {
-     "id": "PXB1-1531",
-     "summary": "Changes to RG report",
-     "created": 1768574001994,
+     "id": "PXB1-7193",
+     "summary": "Register: Account selection for Payment modes",
+     "created": 1781847415669,
      "resolved": null,
-     "assignee": "UIX Lead",
+     "assignee": "Dev Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-7569",
-       "summary": "Changes to RG report",
-       "state": "TESTING",
+       "id": "PXB1-7549",
+       "summary": "Register: Account selection for Payment modes",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "UIX Lead",
+       "created": 1782552555007,
+       "est": {
+        "server": 0,
+        "ui": 240,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 0,
+      "ui": 240,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 240,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 0,
+      "ui": 240,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 720,
+     "spent": 0,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-3840",
+     "summary": "License Activation, Renewal and Subscription Managment",
+     "created": 1775142164848,
+     "resolved": null,
+     "assignee": "Sarjith Pullithodi",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-4632",
+       "summary": "Create Client with Initial License, License Change API & App Behavior Based on License",
+       "state": "RE-OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1777294707047,
+       "est": {
+        "server": 2400,
+        "ui": 960,
+        "testing": 1440
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 2400,
+      "ui": 960,
+      "testing": 1440
+     },
+     "epic_est": {
+      "server": 2400,
+      "ui": 960,
+      "testing": 1440
+     },
+     "rollup": {
+      "server": 2400,
+      "ui": 960,
+      "testing": 1440
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 4800,
+     "spent": 1230,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-3588",
+     "summary": "Design Team Feedback (Stock Adjustment)",
+     "created": 1774526504436,
+     "resolved": null,
+     "assignee": "Dev Lead",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 2,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7266",
+       "summary": "Stock Adjustment Report Design Changes",
+       "state": "READY FOR TESTING",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Posibolt System Support",
+       "created": 1782115680985,
+       "est": {
+        "server": 0,
+        "ui": 240,
+        "testing": 480
+       }
+      },
+      {
+       "id": "PXB1-7270",
+       "summary": "Stock Adjustment Design Changes",
+       "state": "RE-OPEN",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
        "assignee": "Shafeek M",
-       "created": 1782669056468,
+       "created": 1782115774919,
+       "est": {
+        "server": 0,
+        "ui": 300,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 0,
+      "ui": 540,
+      "testing": 960
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 540,
+      "testing": 960
+     },
+     "rollup": {
+      "server": 0,
+      "ui": 540,
+      "testing": 960
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1500,
+     "spent": 500,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-3496",
+     "summary": "Design Team Feedback (Goods Receipt)",
+     "created": 1774350596093,
+     "resolved": null,
+     "assignee": "Dev Lead",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 2,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7206",
+       "summary": "Recieve Goods Report Screen UI Changes",
+       "state": "UI INTEGRATION",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Shafeek M",
+       "created": 1781853616794,
+       "est": {
+        "server": 0,
+        "ui": 300,
+        "testing": 480
+       }
+      },
+      {
+       "id": "PXB1-7219",
+       "summary": "Create RG Screen UI Changes",
+       "state": "READY FOR DEPLOYEMENT",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Shafeek M",
+       "created": 1781863051571,
+       "est": {
+        "server": 0,
+        "ui": 240,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 0,
+      "ui": 540,
+      "testing": 960
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 540,
+      "testing": 960
+     },
+     "rollup": {
+      "server": 0,
+      "ui": 540,
+      "testing": 960
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1500,
+     "spent": 550,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-7196",
+     "summary": "Remove the Product Setup modal",
+     "created": 1781850305418,
+     "resolved": null,
+     "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7545",
+       "summary": "Remove the Product Setup modal",
+       "state": "RE-OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "UIX Lead",
+       "created": 1782545496792,
+       "est": {
+        "server": 0,
+        "ui": 120,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 0,
+      "ui": 120,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 120,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 0,
+      "ui": 120,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 600,
+     "spent": 120,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-5961",
+     "summary": "Book: ExpenseCopy order should copy only the charge lines.",
+     "created": 1779455668340,
+     "resolved": null,
+     "assignee": "Sarika Agrawal",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7649",
+       "summary": "ExpenseCopy order should copy only the charge lines.",
+       "state": "RE-OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Posibolt System Support",
+       "created": 1782736887276,
+       "est": {
+        "server": 480,
+        "ui": 0,
+        "testing": 720
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 480,
+      "ui": 0,
+      "testing": 720
+     },
+     "epic_est": {
+      "server": 480,
+      "ui": 0,
+      "testing": 720
+     },
+     "rollup": {
+      "server": 480,
+      "ui": 0,
+      "testing": 720
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1200,
+     "spent": 240,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-5384",
+     "summary": "Context specific titles for modals.",
+     "created": 1778510321666,
+     "resolved": null,
+     "assignee": "Aruna Saini",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7591",
+       "summary": "Context specific titles for modals.",
+       "state": "TESTING",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Aruna Saini",
+       "created": 1782718231813,
+       "est": {
+        "server": 480,
+        "ui": 480,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 480,
+      "ui": 480,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 480,
+      "ui": 480,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 480,
+      "ui": 480,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1440,
+     "spent": 180,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-6812",
+     "summary": "Terminology changes in RG screen",
+     "created": 1781183328066,
+     "resolved": null,
+     "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7562",
+       "summary": "Terminology changes in RG screen",
+       "state": "RE-OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Shafeek M",
+       "created": 1782665468773,
        "est": {
         "server": 0,
         "ui": 180,
@@ -1652,56 +2219,334 @@
      "category": "PENDING",
      "missing_est": false,
      "total": 660,
-     "spent": 60,
+     "spent": 30,
      "overshoot": false,
      "role_owner": true,
      "needs_owner": true
     },
     {
-     "id": "PXB1-7348",
-     "summary": "License expiry message in login screen",
-     "created": 1782198195482,
+     "id": "PXB1-3100",
+     "summary": "Ageing Report",
+     "created": 1773210126319,
      "resolved": null,
-     "assignee": "Aruna Saini",
+     "assignee": "Dev Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 1,
+     "p1_pending": 1,
+     "has_p2": true,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-7606",
-       "summary": "License expiry message in login screen",
+       "id": "PXB1-7819",
+       "summary": "Ageing Report",
        "state": "OPEN",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
-       "assignee": "Aruna Saini",
-       "created": 1782723553615,
+       "assignee": "Sarjith Pullithodi",
+       "created": 1782911005832,
        "est": {
-        "server": 240,
+        "server": 2400,
+        "ui": 2400,
+        "testing": 2400
+       }
+      },
+      {
+       "id": "PXB1-7820",
+       "summary": "Aging Report - AI Insights",
+       "state": "OPEN",
+       "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1782911087084,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 2400,
+      "ui": 2400,
+      "testing": 2400
+     },
+     "epic_est": {
+      "server": 2400,
+      "ui": 2400,
+      "testing": 2400
+     },
+     "rollup": {
+      "server": 2400,
+      "ui": 2400,
+      "testing": 2400
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 7200,
+     "spent": 0,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-980",
+     "summary": "Design Team Feedback (Common for all screens)",
+     "created": 1767428921230,
+     "resolved": null,
+     "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7511",
+       "summary": "Common Design Changes Required",
+       "state": "READY FOR TESTING",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "UIX Lead",
+       "created": 1782455008056,
+       "est": {
+        "server": 0,
+        "ui": 360,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 0,
+      "ui": 360,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 360,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 0,
+      "ui": 360,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 840,
+     "spent": 850,
+     "overshoot": true,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-7408",
+     "summary": "Tool tip in Price List master screen.",
+     "created": 1782296658157,
+     "resolved": null,
+     "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7462",
+       "summary": "Tool tip in Price List master screen.",
+       "state": "RE-OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Shafeek M",
+       "created": 1782380649773,
+       "est": {
+        "server": 0,
+        "ui": 120,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 0,
+      "ui": 120,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 120,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 0,
+      "ui": 120,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 600,
+     "spent": 195,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-6958",
+     "summary": "Change in Auto SKU Code Generation Logic",
+     "created": 1781516548573,
+     "resolved": null,
+     "assignee": "Sarika Agrawal",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7650",
+       "summary": "Change in Auto SKU Code Generation ",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarika Agrawal",
+       "created": 1782737161956,
+       "est": {
+        "server": 480,
+        "ui": 480,
+        "testing": 720
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 480,
+      "ui": 480,
+      "testing": 720
+     },
+     "epic_est": {
+      "server": 480,
+      "ui": 480,
+      "testing": 720
+     },
+     "rollup": {
+      "server": 480,
+      "ui": 480,
+      "testing": 720
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1680,
+     "spent": 0,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-1530",
+     "summary": "Label change in Cash Account screen.",
+     "created": 1768572197629,
+     "resolved": null,
+     "assignee": "UIX Lead",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7570",
+       "summary": "Label change in Cash Account screen.",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "High",
+       "assignee": "Shafeek M",
+       "created": 1782669200880,
+       "est": {
+        "server": 0,
         "ui": 240,
         "testing": 480
        }
       }
      ],
      "rollup_all": {
-      "server": 240,
+      "server": 0,
       "ui": 240,
       "testing": 480
      },
      "epic_est": {
-      "server": 240,
+      "server": 0,
       "ui": 240,
       "testing": 480
      },
      "rollup": {
-      "server": 240,
+      "server": 0,
       "ui": 240,
       "testing": 480
      },
      "category": "PENDING",
      "missing_est": false,
-     "total": 960,
-     "spent": 180,
+     "total": 720,
+     "spent": 60,
+     "overshoot": false,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-25",
+     "summary": "Inter terminal data synchronization ",
+     "created": 1724312086894,
+     "resolved": null,
+     "assignee": "Pramod Saini",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-7733",
+       "summary": "Inter Terminal Data Synchronization",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Pramod Saini",
+       "created": 1782881650719,
+       "est": {
+        "server": 1440,
+        "ui": 0,
+        "testing": 480
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 1440,
+      "ui": 0,
+      "testing": 480
+     },
+     "epic_est": {
+      "server": 1440,
+      "ui": 0,
+      "testing": 480
+     },
+     "rollup": {
+      "server": 1440,
+      "ui": 0,
+      "testing": 480
+     },
+     "category": "PENDING",
+     "missing_est": false,
+     "total": 1920,
+     "spent": 0,
      "overshoot": false,
      "role_owner": false,
      "needs_owner": false
@@ -1714,6 +2559,9 @@
      "assignee": "Shafeek M",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 4,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1801,104 +2649,6 @@
      "needs_owner": false
     },
     {
-     "id": "PXB1-6109",
-     "summary": "Price Import (Product Import Enhancement)",
-     "created": 1779859954254,
-     "resolved": null,
-     "assignee": "Sarika Agrawal",
-     "priority": "Medium",
-     "module": "Stock",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7333",
-       "summary": "Product price Import",
-       "state": "UI INTEGRATION",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarika Agrawal",
-       "created": 1782193227745,
-       "est": {
-        "server": 960,
-        "ui": 1440,
-        "testing": 720
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 960,
-      "ui": 1440,
-      "testing": 720
-     },
-     "epic_est": {
-      "server": 960,
-      "ui": 1440,
-      "testing": 720
-     },
-     "rollup": {
-      "server": 960,
-      "ui": 1440,
-      "testing": 720
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 3120,
-     "spent": 1650,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-6156",
-     "summary": "Changes to Laybuy settlement flow",
-     "created": 1779888171631,
-     "resolved": null,
-     "assignee": "Sarjith Pullithodi",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7601",
-       "summary": "Changes to Laybuy settlement flow",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Shafeek M",
-       "created": 1782722183024,
-       "est": {
-        "server": 0,
-        "ui": 240,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 240,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 240,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 240,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 720,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
      "id": "PXB1-6796",
      "summary": "New design for account creation OTP emails",
      "created": 1781172902923,
@@ -1906,6 +2656,9 @@
      "assignee": "Aruna Saini",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1955,6 +2708,9 @@
      "assignee": "Aruna Saini",
      "priority": "Low",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 3,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2034,12 +2790,15 @@
      "assignee": "Sarjith Pullithodi",
      "priority": "High",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
        "id": "PXB1-7660",
        "summary": "Update total section (disocunt / excl base amt/ tax amt)",
-       "state": "OPEN",
+       "state": "DEVELOPMENT",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
@@ -2076,153 +2835,6 @@
      "needs_owner": false
     },
     {
-     "id": "PXB1-7233",
-     "summary": "Hide list price (MRP) in product catalog",
-     "created": 1781870987115,
-     "resolved": null,
-     "assignee": "Sarika Agrawal",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7658",
-       "summary": "Hide list price from system",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarika Agrawal",
-       "created": 1782742070145,
-       "est": {
-        "server": 960,
-        "ui": 480,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 960,
-      "ui": 480,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 960,
-      "ui": 480,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 960,
-      "ui": 480,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 1920,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-6017",
-     "summary": "Vendor Invoice: Add \"Reversed\" status in the status filter",
-     "created": 1779703396765,
-     "resolved": null,
-     "assignee": "Ajnas O",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7597",
-       "summary": "Vendor Invoice: Reversed status in report",
-       "state": "DEVELOPMENT",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Ajnas O",
-       "created": 1782720813040,
-       "est": {
-        "server": 300,
-        "ui": 960,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 300,
-      "ui": 960,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 300,
-      "ui": 960,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 300,
-      "ui": 960,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 1740,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-6373",
-     "summary": "Stock Adjustment: Add \"Reversed\" status",
-     "created": 1780410184531,
-     "resolved": null,
-     "assignee": "Ajnas O",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7604",
-       "summary": "Stock Adjustment: Reversed status in report",
-       "state": "DEVELOPMENT",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Ajnas O",
-       "created": 1782723311563,
-       "est": {
-        "server": 300,
-        "ui": 960,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 300,
-      "ui": 960,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 300,
-      "ui": 960,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 300,
-      "ui": 960,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 1740,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
      "id": "PXB1-6910",
      "summary": "Changes to Product Catalog main screen",
      "created": 1781270973879,
@@ -2230,6 +2842,9 @@
      "assignee": "UIX Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2272,168 +2887,6 @@
      "needs_owner": true
     },
     {
-     "id": "PXB1-6905",
-     "summary": "Rename the button in purchase return screen",
-     "created": 1781268278144,
-     "resolved": null,
-     "assignee": "UIX Lead",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7558",
-       "summary": "Rename the button in purchase return screen",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Shafeek M",
-       "created": 1782663090449,
-       "est": {
-        "server": 0,
-        "ui": 30,
-        "testing": 240
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 30,
-      "testing": 240
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 30,
-      "testing": 240
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 30,
-      "testing": 240
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 270,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
-     "id": "PXB1-6144",
-     "summary": "Payment Screen UX Improvements",
-     "created": 1779881028952,
-     "resolved": null,
-     "assignee": "Sarjith Pullithodi",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7598",
-       "summary": "Sales : POS - Payment Screen UX Improvements in Sales",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Pramod Saini",
-       "created": 1782721730791,
-       "est": {
-        "server": 0,
-        "ui": 480,
-        "testing": 480
-       }
-      },
-      {
-       "id": "PXB1-7599",
-       "summary": "Payment Screen UX Improvements in General",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Pramod Saini",
-       "created": 1782721855344,
-       "est": {
-        "server": 0,
-        "ui": 480,
-        "testing": 720
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 960,
-      "testing": 1200
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 960,
-      "testing": 1200
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 960,
-      "testing": 1200
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 2160,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-6155",
-     "summary": "Changes to POS Credit Settlement – Partial Payment Flow Enhancement",
-     "created": 1779887218135,
-     "resolved": null,
-     "assignee": "Sarjith Pullithodi",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7600",
-       "summary": "Changes to POS Credit Settlement – Partial Payment Flow Enhancement",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Shafeek M",
-       "created": 1782722084903,
-       "est": {
-        "server": 0,
-        "ui": 300,
-        "testing": 720
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 300,
-      "testing": 720
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 300,
-      "testing": 720
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 300,
-      "testing": 720
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 1020,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
      "id": "PXB1-6909",
      "summary": "New design for \"Save\" button.",
      "created": 1781270494124,
@@ -2441,6 +2894,9 @@
      "assignee": "UIX Lead",
      "priority": "Low",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2483,104 +2939,6 @@
      "needs_owner": true
     },
     {
-     "id": "PXB1-6797",
-     "summary": "Additional fields in Customer master",
-     "created": 1781173078585,
-     "resolved": null,
-     "assignee": "UIX Lead",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7561",
-       "summary": "Additional fields in Customer master",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Shafeek M",
-       "created": 1782665374924,
-       "est": {
-        "server": 60,
-        "ui": 180,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 60,
-      "ui": 180,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 60,
-      "ui": 180,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 60,
-      "ui": 180,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 720,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
-     "id": "PXB1-6915",
-     "summary": "Product Catalog: Show tax rate in the tax category list box",
-     "created": 1781332723654,
-     "resolved": null,
-     "assignee": "Aruna Saini",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7607",
-       "summary": "Product Catalog: Show tax rate in the tax category list box",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Aruna Saini",
-       "created": 1782723665587,
-       "est": {
-        "server": 60,
-        "ui": 0,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 60,
-      "ui": 0,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 60,
-      "ui": 0,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 60,
-      "ui": 0,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 540,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
      "id": "PXB1-6985",
      "summary": "Changes in Expense Report",
      "created": 1781525345612,
@@ -2588,6 +2946,9 @@
      "assignee": "UIX Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2630,55 +2991,6 @@
      "needs_owner": true
     },
     {
-     "id": "PXB1-6936",
-     "summary": "Design for Button Focus",
-     "created": 1781505957348,
-     "resolved": null,
-     "assignee": "UIX Lead",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7555",
-       "summary": "Design for Button Focus",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "UIX Lead",
-       "created": 1782606856069,
-       "est": {
-        "server": 0,
-        "ui": 300,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 300,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 300,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 300,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 780,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
      "id": "PXB1-982",
      "summary": "Design Team Feddback (Register Screen)",
      "created": 1767429335293,
@@ -2686,6 +2998,9 @@
      "assignee": "UIX Lead",
      "priority": "Low",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2728,104 +3043,6 @@
      "needs_owner": true
     },
     {
-     "id": "PXB1-6149",
-     "summary": "Provision to create new charge from the service charge modal (RG/PO/PO_Return)",
-     "created": 1779883380534,
-     "resolved": null,
-     "assignee": "Dev Lead",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7588",
-       "summary": "Provision to create new charge from the service charge modal (RG/PO/PO_Return)",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Aruna Saini",
-       "created": 1782716539995,
-       "est": {
-        "server": 120,
-        "ui": 180,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 120,
-      "ui": 180,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 120,
-      "ui": 180,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 120,
-      "ui": 180,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 780,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
-     "id": "PXB1-7215",
-     "summary": "Sales cart need not show bundle components.",
-     "created": 1781862809662,
-     "resolved": null,
-     "assignee": "Dev Lead",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7587",
-       "summary": "Sales cart need not show bundle components.",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1782716327240,
-       "est": {
-        "server": 60,
-        "ui": 30,
-        "testing": 240
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 60,
-      "ui": 30,
-      "testing": 240
-     },
-     "epic_est": {
-      "server": 60,
-      "ui": 30,
-      "testing": 240
-     },
-     "rollup": {
-      "server": 60,
-      "ui": 30,
-      "testing": 240
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 330,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
      "id": "PXB1-7481",
      "summary": "Name and Address needs to separated by a line break",
      "created": 1782387289147,
@@ -2833,6 +3050,9 @@
      "assignee": "Dev Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2882,6 +3102,9 @@
      "assignee": "UIX Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2931,6 +3154,9 @@
      "assignee": "UIX Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2980,6 +3206,9 @@
      "assignee": "UIX Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3029,6 +3258,9 @@
      "assignee": "UIX Lead",
      "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3069,261 +3301,9 @@
      "overshoot": false,
      "role_owner": true,
      "needs_owner": true
-    },
-    {
-     "id": "PXB1-7193",
-     "summary": "Register: Account selection for Payment modes",
-     "created": 1781847415669,
-     "resolved": null,
-     "assignee": "Dev Lead",
-     "priority": "",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7549",
-       "summary": "Register: Account selection for Payment modes",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "UIX Lead",
-       "created": 1782552555007,
-       "est": {
-        "server": 0,
-        "ui": 240,
-        "testing": 480
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 0,
-      "ui": 240,
-      "testing": 480
-     },
-     "epic_est": {
-      "server": 0,
-      "ui": 240,
-      "testing": 480
-     },
-     "rollup": {
-      "server": 0,
-      "ui": 240,
-      "testing": 480
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 720,
-     "spent": 0,
-     "overshoot": false,
-     "role_owner": true,
-     "needs_owner": true
     }
    ],
    "mixed": [
-    {
-     "id": "PXB1-148",
-     "summary": "Laybuy",
-     "created": 1758520852142,
-     "resolved": null,
-     "assignee": "Sarjith Pullithodi",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-590",
-       "summary": "Import/Export Laybuy",
-       "state": "DEVELOPMENT",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarika Agrawal",
-       "created": 1765272958476,
-       "est": {
-        "server": 1440,
-        "ui": 480,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-173",
-       "summary": "Laybuy setup",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1759984776629,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      },
-      {
-       "id": "PXB1-174",
-       "summary": "Laybuy Report",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1759984791381,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      },
-      {
-       "id": "PXB1-591",
-       "summary": "Laybuy notification",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Dev Lead",
-       "created": 1765273080948,
-       "est": {
-        "server": 960,
-        "ui": 0,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-592",
-       "summary": "Further actions from laybuy report",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Muhammed Safwan",
-       "created": 1765273143377,
-       "est": {
-        "server": 2880,
-        "ui": 240,
-        "testing": 720
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 5280,
-      "ui": 720,
-      "testing": 2160
-     },
-     "epic_est": {
-      "server": 5280,
-      "ui": 720,
-      "testing": 2160
-     },
-     "rollup": {
-      "server": 1440,
-      "ui": 480,
-      "testing": 720
-     },
-     "category": "MIXED",
-     "missing_est": false,
-     "total": 2640,
-     "spent": 12665,
-     "overshoot": true,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-1787",
-     "summary": "Close Register",
-     "created": 1769579367004,
-     "resolved": null,
-     "assignee": "Ajnas O",
-     "priority": "",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-1926",
-       "summary": "Close Register",
-       "state": "RE-OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Ajnas O",
-       "created": 1770017200063,
-       "est": {
-        "server": 1920,
-        "ui": 0,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-2053",
-       "summary": "Close Register: Cash Denomination Calculator",
-       "state": "OPEN",
-       "scope": "PHASE 2",
-       "type": "STORY",
-       "priority": "Low",
-       "assignee": "Ajnas O",
-       "created": 1770361263801,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      },
-      {
-       "id": "PXB1-1921",
-       "summary": "Register Sessions Listing & Quick View",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Ajnas O",
-       "created": 1770016816882,
-       "est": {
-        "server": 3360,
-        "ui": 0,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-1923",
-       "summary": "Transaction Details Screen(Cash Line)",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Ajnas O",
-       "created": 1770016955936,
-       "est": {
-        "server": 1440,
-        "ui": 0,
-        "testing": 720
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 6720,
-      "ui": 0,
-      "testing": 2160
-     },
-     "epic_est": {
-      "server": 6720,
-      "ui": 0,
-      "testing": 2160
-     },
-     "rollup": {
-      "server": 1920,
-      "ui": 0,
-      "testing": 720
-     },
-     "category": "MIXED",
-     "missing_est": false,
-     "total": 2640,
-     "spent": 9490,
-     "overshoot": true,
-     "role_owner": false,
-     "needs_owner": false
-    },
     {
      "id": "PXB1-515",
      "summary": "RBAC-Role",
@@ -3332,6 +3312,9 @@
      "assignee": "Sarjith Pullithodi",
      "priority": "",
      "module": "",
+     "p2_stories": 2,
+     "p1_pending": 4,
+     "has_p2": true,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3352,7 +3335,7 @@
       {
        "id": "PXB1-1321",
        "summary": "Impact of purchase related role configs",
-       "state": "READY FOR DEPLOYEMENT",
+       "state": "RE-OPEN",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
@@ -3563,7 +3546,7 @@
      "category": "MIXED",
      "missing_est": false,
      "total": 9480,
-     "spent": 14480,
+     "spent": 14960,
      "overshoot": true,
      "role_owner": false,
      "needs_owner": false
@@ -3576,6 +3559,9 @@
      "assignee": "Dev Lead",
      "priority": "",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3588,7 +3574,7 @@
        "assignee": "Posibolt System Support",
        "created": 1773404267745,
        "est": {
-        "server": 960,
+        "server": 1920,
         "ui": 1440,
         "testing": 720
        }
@@ -3610,27 +3596,550 @@
       }
      ],
      "rollup_all": {
-      "server": 1920,
+      "server": 2880,
       "ui": 1440,
       "testing": 1440
      },
      "epic_est": {
-      "server": 1920,
+      "server": 2880,
       "ui": 1440,
       "testing": 1440
      },
      "rollup": {
-      "server": 960,
+      "server": 1920,
       "ui": 1440,
       "testing": 720
      },
      "category": "MIXED",
      "missing_est": false,
-     "total": 3120,
+     "total": 4080,
      "spent": 2725,
      "overshoot": false,
      "role_owner": true,
      "needs_owner": true
+    },
+    {
+     "id": "PXB1-2525",
+     "summary": "POS (Web - List View)",
+     "created": 1771999665521,
+     "resolved": null,
+     "assignee": "Dev Lead",
+     "priority": "High",
+     "module": "",
+     "p2_stories": 1,
+     "p1_pending": 4,
+     "has_p2": true,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-2820",
+       "summary": "Credit Settlement & Laybuy Settlement From POS",
+       "state": "RE-OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Muhammed Safwan",
+       "created": 1772632903601,
+       "est": {
+        "server": 4320,
+        "ui": 0,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-2826",
+       "summary": "POS : Drop Cash",
+       "state": "RE-OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1772634568624,
+       "est": {
+        "server": 960,
+        "ui": 480,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-5242",
+       "summary": "Implement Cash Refund in Sales",
+       "state": "OPEN",
+       "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Dev Lead",
+       "created": 1778221681004,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-6646",
+       "summary": "Impact of Product Settings in Sales",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Ajnas O",
+       "created": 1780990582070,
+       "est": {
+        "server": 480,
+        "ui": 0,
+        "testing": 480
+       }
+      },
+      {
+       "id": "PXB1-7292",
+       "summary": "Implementation of Additional barcode in sales",
+       "state": "READY FOR TESTING",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Ajnas O",
+       "created": 1782123852842,
+       "est": {
+        "server": 1920,
+        "ui": 480,
+        "testing": 480
+       }
+      },
+      {
+       "id": "PXB1-2818",
+       "summary": "Web POS – Sales Transaction Handling (Normal / Credit / Laybuy / Parked)",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1772632542421,
+       "est": {
+        "server": 3360,
+        "ui": 0,
+        "testing": 960
+       }
+      },
+      {
+       "id": "PXB1-2819",
+       "summary": "Web POS – Sales Return & Exchange Processing",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1772632718473,
+       "est": {
+        "server": 2400,
+        "ui": 0,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-4323",
+       "summary": "Customer Creation from sales screen",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1776685129049,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 13440,
+      "ui": 960,
+      "testing": 4080
+     },
+     "epic_est": {
+      "server": 13440,
+      "ui": 960,
+      "testing": 4080
+     },
+     "rollup": {
+      "server": 7680,
+      "ui": 960,
+      "testing": 2400
+     },
+     "category": "MIXED",
+     "missing_est": false,
+     "total": 11040,
+     "spent": 15855,
+     "overshoot": true,
+     "role_owner": true,
+     "needs_owner": true
+    },
+    {
+     "id": "PXB1-1787",
+     "summary": "Close Register",
+     "created": 1769579367004,
+     "resolved": null,
+     "assignee": "Ajnas O",
+     "priority": "",
+     "module": "",
+     "p2_stories": 1,
+     "p1_pending": 1,
+     "has_p2": true,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-1926",
+       "summary": "Close Register",
+       "state": "RE-OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Ajnas O",
+       "created": 1770017200063,
+       "est": {
+        "server": 9600,
+        "ui": 0,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-2053",
+       "summary": "Close Register: Cash Denomination Calculator",
+       "state": "OPEN",
+       "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "Low",
+       "assignee": "Ajnas O",
+       "created": 1770361263801,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-1921",
+       "summary": "Register Sessions Listing & Quick View",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Ajnas O",
+       "created": 1770016816882,
+       "est": {
+        "server": 3360,
+        "ui": 0,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-1923",
+       "summary": "Transaction Details Screen(Cash Line)",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Ajnas O",
+       "created": 1770016955936,
+       "est": {
+        "server": 1440,
+        "ui": 0,
+        "testing": 720
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 14400,
+      "ui": 0,
+      "testing": 2160
+     },
+     "epic_est": {
+      "server": 14400,
+      "ui": 0,
+      "testing": 2160
+     },
+     "rollup": {
+      "server": 9600,
+      "ui": 0,
+      "testing": 720
+     },
+     "category": "MIXED",
+     "missing_est": false,
+     "total": 10320,
+     "spent": 9490,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-54",
+     "summary": "Vendor Management",
+     "created": 1757483559259,
+     "resolved": null,
+     "assignee": "Sarika Agrawal",
+     "priority": "",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-190",
+       "summary": "AI Suggestion in Vendor Management",
+       "state": "READY FOR TESTING",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarika Agrawal",
+       "created": 1760259330220,
+       "est": {
+        "server": 2400,
+        "ui": 0,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-184",
+       "summary": "Add/Edit Vendor",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarika Agrawal",
+       "created": 1760259029125,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-185",
+       "summary": "Search and Get Vendor ",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarika Agrawal",
+       "created": 1760259099571,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-186",
+       "summary": "Save/Reset Vendor Filter ",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Aruna Saini",
+       "created": 1760259159798,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-187",
+       "summary": "Vendor Import Changes",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarika Agrawal",
+       "created": 1760259190517,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-188",
+       "summary": "Vendor Export Changes",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarika Agrawal",
+       "created": 1760259209502,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-189",
+       "summary": "Vendor Notification ",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarika Agrawal",
+       "created": 1760259282977,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-373",
+       "summary": "Transaction History in the vendor master",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarika Agrawal",
+       "created": 1763101508208,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 2400,
+      "ui": 0,
+      "testing": 720
+     },
+     "epic_est": {
+      "server": 2400,
+      "ui": 0,
+      "testing": 720
+     },
+     "rollup": {
+      "server": 2400,
+      "ui": 0,
+      "testing": 720
+     },
+     "category": "MIXED",
+     "missing_est": false,
+     "total": 3120,
+     "spent": 38150,
+     "overshoot": true,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-604",
+     "summary": "RBAC (Global Settings)",
+     "created": 1765347198172,
+     "resolved": null,
+     "assignee": "Sarjith Pullithodi",
+     "priority": "",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-636",
+       "summary": "Impact of global settings in Sales modules",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1765820500161,
+       "est": {
+        "server": 960,
+        "ui": 480,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-620",
+       "summary": "Client configuration management",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1765436579925,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-637",
+       "summary": "impact of purchase related configs",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1765820707013,
+       "est": {
+        "server": 2400,
+        "ui": 2400,
+        "testing": 480
+       }
+      },
+      {
+       "id": "PXB1-638",
+       "summary": "Impact of customer configs",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1765820729811,
+       "est": {
+        "server": 960,
+        "ui": 0,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-1264",
+       "summary": "Update on Config",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1767685032694,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 4320,
+      "ui": 2880,
+      "testing": 1920
+     },
+     "epic_est": {
+      "server": 4320,
+      "ui": 2880,
+      "testing": 1920
+     },
+     "rollup": {
+      "server": 960,
+      "ui": 480,
+      "testing": 720
+     },
+     "category": "MIXED",
+     "missing_est": false,
+     "total": 2160,
+     "spent": 4970,
+     "overshoot": true,
+     "role_owner": false,
+     "needs_owner": false
     },
     {
      "id": "PXB1-53",
@@ -3638,8 +4147,11 @@
      "created": 1757483445532,
      "resolved": null,
      "assignee": "Dev Lead",
-     "priority": "",
+     "priority": "High",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3766,367 +4278,10 @@
      "category": "MIXED",
      "missing_est": false,
      "total": 2880,
-     "spent": 15695,
+     "spent": 18095,
      "overshoot": true,
      "role_owner": true,
      "needs_owner": true
-    },
-    {
-     "id": "PXB1-2525",
-     "summary": "POS (Web - List View)",
-     "created": 1771999665521,
-     "resolved": null,
-     "assignee": "Dev Lead",
-     "priority": "",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-2820",
-       "summary": "Credit Settlement & Laybuy Settlement From POS",
-       "state": "RE-OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Muhammed Safwan",
-       "created": 1772632903601,
-       "est": {
-        "server": 2400,
-        "ui": 0,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-2826",
-       "summary": "POS : Drop Cash",
-       "state": "RE-OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1772634568624,
-       "est": {
-        "server": 960,
-        "ui": 480,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-5242",
-       "summary": "Implement Cash Refund in Sales",
-       "state": "OPEN",
-       "scope": "PHASE 2",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Dev Lead",
-       "created": 1778221681004,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      },
-      {
-       "id": "PXB1-6646",
-       "summary": "Impact of Product Settings in Sales",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Ajnas O",
-       "created": 1780990582070,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 480
-       }
-      },
-      {
-       "id": "PXB1-7292",
-       "summary": "Implementation of Additional barcode in sales",
-       "state": "READY FOR TESTING",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Ajnas O",
-       "created": 1782123852842,
-       "est": {
-        "server": 1920,
-        "ui": 480,
-        "testing": 480
-       }
-      },
-      {
-       "id": "PXB1-2818",
-       "summary": "Web POS – Sales Transaction Handling (Normal / Credit / Laybuy / Parked)",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1772632542421,
-       "est": {
-        "server": 3360,
-        "ui": 0,
-        "testing": 960
-       }
-      },
-      {
-       "id": "PXB1-2819",
-       "summary": "Web POS – Sales Return & Exchange Processing",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1772632718473,
-       "est": {
-        "server": 2400,
-        "ui": 0,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-4323",
-       "summary": "Customer Creation from sales screen",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1776685129049,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 11040,
-      "ui": 960,
-      "testing": 4080
-     },
-     "epic_est": {
-      "server": 11040,
-      "ui": 960,
-      "testing": 4080
-     },
-     "rollup": {
-      "server": 5280,
-      "ui": 960,
-      "testing": 2400
-     },
-     "category": "MIXED",
-     "missing_est": false,
-     "total": 8640,
-     "spent": 15855,
-     "overshoot": true,
-     "role_owner": true,
-     "needs_owner": true
-    },
-    {
-     "id": "PXB1-414",
-     "summary": "Receive Goods (Transaction)",
-     "created": 1763615743657,
-     "resolved": null,
-     "assignee": "Muhammed Safwan",
-     "priority": "",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-472",
-       "summary": "Copy order in RG",
-       "state": "OPEN",
-       "scope": "PHASE 2",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1764241705575,
-       "est": {
-        "server": 2400,
-        "ui": 960,
-        "testing": 960
-       }
-      },
-      {
-       "id": "PXB1-7180",
-       "summary": "Impact of Product Settings in Purchase screens",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Ajnas O",
-       "created": 1781787737440,
-       "est": {
-        "server": 1440,
-        "ui": 0,
-        "testing": 480
-       }
-      },
-      {
-       "id": "PXB1-467",
-       "summary": "Receive Goods",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Ajnas O",
-       "created": 1764241118509,
-       "est": {
-        "server": 11520,
-        "ui": 5760,
-        "testing": 2880
-       }
-      },
-      {
-       "id": "PXB1-469",
-       "summary": "Receive goods against PO",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Muhammed Safwan",
-       "created": 1764241339616,
-       "est": {
-        "server": 5760,
-        "ui": 2880,
-        "testing": 2880
-       }
-      },
-      {
-       "id": "PXB1-470",
-       "summary": "Vendor history in RG",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Ajnas O",
-       "created": 1764241534669,
-       "est": {
-        "server": 2400,
-        "ui": 1920,
-        "testing": 960
-       }
-      },
-      {
-       "id": "PXB1-471",
-       "summary": "Product history in RG",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Ajnas O",
-       "created": 1764241601779,
-       "est": {
-        "server": 2400,
-        "ui": 1920,
-        "testing": 960
-       }
-      },
-      {
-       "id": "PXB1-2087",
-       "summary": "Receive Goods with Payment",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Muhammed Safwan",
-       "created": 1770618644304,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 25920,
-      "ui": 13440,
-      "testing": 9120
-     },
-     "epic_est": {
-      "server": 25920,
-      "ui": 13440,
-      "testing": 9120
-     },
-     "rollup": {
-      "server": 1440,
-      "ui": 13440,
-      "testing": 480
-     },
-     "category": "MIXED",
-     "missing_est": false,
-     "total": 15360,
-     "spent": 10590,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
-     "id": "PXB1-2724",
-     "summary": "Tax Report",
-     "created": 1772449853171,
-     "resolved": null,
-     "assignee": "Sarjith Pullithodi",
-     "priority": "Medium",
-     "module": "",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-3316",
-       "summary": "Tax Report – Export ",
-       "state": "OPEN",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1773734396168,
-       "est": {
-        "server": 960,
-        "ui": 180,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-3312",
-       "summary": "Tax Report – Period Summary & Drill-down",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1773734278007,
-       "est": {
-        "server": 2400,
-        "ui": 0,
-        "testing": 720
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 3360,
-      "ui": 180,
-      "testing": 1440
-     },
-     "epic_est": {
-      "server": 3360,
-      "ui": 180,
-      "testing": 1440
-     },
-     "rollup": {
-      "server": 960,
-      "ui": 180,
-      "testing": 720
-     },
-     "category": "MIXED",
-     "missing_est": false,
-     "total": 1860,
-     "spent": 4015,
-     "overshoot": true,
-     "role_owner": false,
-     "needs_owner": false
     },
     {
      "id": "PXB1-1603",
@@ -4134,8 +4289,11 @@
      "created": 1768976482960,
      "resolved": null,
      "assignee": "Muhammed Safwan",
-     "priority": "",
+     "priority": "High",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -4148,9 +4306,9 @@
        "assignee": "Ajnas O",
        "created": 1773736308845,
        "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
+        "server": 2400,
+        "ui": 2400,
+        "testing": 1440
        }
       },
       {
@@ -4200,23 +4358,23 @@
       }
      ],
      "rollup_all": {
-      "server": 4320,
-      "ui": 0,
-      "testing": 2160
+      "server": 6720,
+      "ui": 2400,
+      "testing": 3600
      },
      "epic_est": {
-      "server": 4320,
-      "ui": 0,
-      "testing": 2160
+      "server": 6720,
+      "ui": 2400,
+      "testing": 3600
      },
      "rollup": {
-      "server": 4320,
-      "ui": 0,
-      "testing": 2160
+      "server": 2400,
+      "ui": 2400,
+      "testing": 1440
      },
      "category": "MIXED",
      "missing_est": false,
-     "total": 6480,
+     "total": 6240,
      "spent": 10330,
      "overshoot": true,
      "role_owner": false,
@@ -4228,8 +4386,11 @@
      "created": 1764686980717,
      "resolved": null,
      "assignee": "Sarika Agrawal",
-     "priority": "",
+     "priority": "High",
      "module": "",
+     "p2_stories": 1,
+     "p1_pending": 1,
+     "has_p2": true,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -4392,129 +4553,117 @@
      "needs_owner": false
     },
     {
-     "id": "PXB1-54",
-     "summary": "Vendor Management",
-     "created": 1757483559259,
+     "id": "PXB1-414",
+     "summary": "Receive Goods (Transaction)",
+     "created": 1763615743657,
      "resolved": null,
-     "assignee": "Sarika Agrawal",
-     "priority": "",
+     "assignee": "Muhammed Safwan",
+     "priority": "High",
      "module": "",
+     "p2_stories": 1,
+     "p1_pending": 1,
+     "has_p2": true,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-190",
-       "summary": "AI Suggestion in Vendor Management",
-       "state": "READY FOR TESTING",
-       "scope": "PHASE 1",
+       "id": "PXB1-472",
+       "summary": "Copy order in RG",
+       "state": "OPEN",
+       "scope": "PHASE 2",
        "type": "STORY",
-       "priority": "",
-       "assignee": "Sarika Agrawal",
-       "created": 1760259330220,
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1764241705575,
        "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
+        "server": 2400,
+        "ui": 960,
+        "testing": 960
        }
       },
       {
-       "id": "PXB1-184",
-       "summary": "Add/Edit Vendor",
+       "id": "PXB1-7180",
+       "summary": "Impact of Product Settings in Purchase screens",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Ajnas O",
+       "created": 1781787737440,
+       "est": {
+        "server": 1440,
+        "ui": 0,
+        "testing": 480
+       }
+      },
+      {
+       "id": "PXB1-467",
+       "summary": "Receive Goods",
        "state": "DONE",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "",
-       "assignee": "Sarika Agrawal",
-       "created": 1760259029125,
+       "assignee": "Ajnas O",
+       "created": 1764241118509,
        "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
+        "server": 11520,
+        "ui": 5760,
+        "testing": 2880
        }
       },
       {
-       "id": "PXB1-185",
-       "summary": "Search and Get Vendor ",
+       "id": "PXB1-469",
+       "summary": "Receive goods against PO",
        "state": "DONE",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "",
-       "assignee": "Sarika Agrawal",
-       "created": 1760259099571,
+       "assignee": "Muhammed Safwan",
+       "created": 1764241339616,
        "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
+        "server": 5760,
+        "ui": 2880,
+        "testing": 2880
        }
       },
       {
-       "id": "PXB1-186",
-       "summary": "Save/Reset Vendor Filter ",
+       "id": "PXB1-470",
+       "summary": "Vendor history in RG",
        "state": "DONE",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "",
-       "assignee": "Aruna Saini",
-       "created": 1760259159798,
+       "assignee": "Ajnas O",
+       "created": 1764241534669,
        "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
+        "server": 2400,
+        "ui": 1920,
+        "testing": 960
        }
       },
       {
-       "id": "PXB1-187",
-       "summary": "Vendor Import Changes",
+       "id": "PXB1-471",
+       "summary": "Product history in RG",
        "state": "DONE",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "",
-       "assignee": "Sarika Agrawal",
-       "created": 1760259190517,
+       "assignee": "Ajnas O",
+       "created": 1764241601779,
        "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
+        "server": 2400,
+        "ui": 1920,
+        "testing": 960
        }
       },
       {
-       "id": "PXB1-188",
-       "summary": "Vendor Export Changes",
+       "id": "PXB1-2087",
+       "summary": "Receive Goods with Payment",
        "state": "DONE",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "",
-       "assignee": "Sarika Agrawal",
-       "created": 1760259209502,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      },
-      {
-       "id": "PXB1-189",
-       "summary": "Vendor Notification ",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Sarika Agrawal",
-       "created": 1760259282977,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      },
-      {
-       "id": "PXB1-373",
-       "summary": "Transaction History in the vendor master",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "type": "STORY",
-       "priority": "",
-       "assignee": "Sarika Agrawal",
-       "created": 1763101508208,
+       "assignee": "Muhammed Safwan",
+       "created": 1770618644304,
        "est": {
         "server": 0,
         "ui": 0,
@@ -4523,62 +4672,65 @@
       }
      ],
      "rollup_all": {
-      "server": 0,
-      "ui": 0,
-      "testing": 0
+      "server": 25920,
+      "ui": 13440,
+      "testing": 9120
      },
      "epic_est": {
-      "server": 0,
-      "ui": 0,
-      "testing": 0
+      "server": 25920,
+      "ui": 13440,
+      "testing": 9120
      },
      "rollup": {
-      "server": 0,
-      "ui": 0,
-      "testing": 0
+      "server": 1440,
+      "ui": 13440,
+      "testing": 480
      },
      "category": "MIXED",
-     "missing_est": true,
-     "total": 0,
-     "spent": 35750,
+     "missing_est": false,
+     "total": 15360,
+     "spent": 10590,
      "overshoot": false,
      "role_owner": false,
      "needs_owner": false
     },
     {
-     "id": "PXB1-604",
-     "summary": "RBAC (Global Settings)",
-     "created": 1765347198172,
+     "id": "PXB1-148",
+     "summary": "Laybuy",
+     "created": 1758520852142,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
-     "priority": "",
+     "priority": "Medium",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
-       "id": "PXB1-636",
-       "summary": "Impact of global settings in Sales modules",
-       "state": "OPEN",
+       "id": "PXB1-590",
+       "summary": "Import/Export Laybuy",
+       "state": "DEVELOPMENT",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "Medium",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1765820500161,
+       "assignee": "Sarika Agrawal",
+       "created": 1765272958476,
        "est": {
-        "server": 2400,
-        "ui": 960,
+        "server": 1440,
+        "ui": 480,
         "testing": 720
        }
       },
       {
-       "id": "PXB1-620",
-       "summary": "Client configuration management",
+       "id": "PXB1-173",
+       "summary": "Laybuy setup",
        "state": "DONE",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "",
        "assignee": "Sarjith Pullithodi",
-       "created": 1765436579925,
+       "created": 1759984776629,
        "est": {
         "server": 0,
         "ui": 0,
@@ -4586,29 +4738,29 @@
        }
       },
       {
-       "id": "PXB1-637",
-       "summary": "impact of purchase related configs",
+       "id": "PXB1-174",
+       "summary": "Laybuy Report",
        "state": "DONE",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "",
        "assignee": "Sarjith Pullithodi",
-       "created": 1765820707013,
+       "created": 1759984791381,
        "est": {
-        "server": 2400,
-        "ui": 2400,
-        "testing": 480
+        "server": 0,
+        "ui": 0,
+        "testing": 0
        }
       },
       {
-       "id": "PXB1-638",
-       "summary": "Impact of customer configs",
+       "id": "PXB1-591",
+       "summary": "Laybuy notification",
        "state": "DONE",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1765820729811,
+       "assignee": "Dev Lead",
+       "created": 1765273080948,
        "est": {
         "server": 960,
         "ui": 0,
@@ -4616,40 +4768,107 @@
        }
       },
       {
-       "id": "PXB1-1264",
-       "summary": "Update on Config",
+       "id": "PXB1-592",
+       "summary": "Further actions from laybuy report",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Muhammed Safwan",
+       "created": 1765273143377,
+       "est": {
+        "server": 2880,
+        "ui": 240,
+        "testing": 720
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 5280,
+      "ui": 720,
+      "testing": 2160
+     },
+     "epic_est": {
+      "server": 5280,
+      "ui": 720,
+      "testing": 2160
+     },
+     "rollup": {
+      "server": 1440,
+      "ui": 480,
+      "testing": 720
+     },
+     "category": "MIXED",
+     "missing_est": false,
+     "total": 2640,
+     "spent": 12665,
+     "overshoot": true,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-2724",
+     "summary": "Tax Report",
+     "created": 1772449853171,
+     "resolved": null,
+     "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-3316",
+       "summary": "Tax Report – Export ",
+       "state": "OPEN",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1773734396168,
+       "est": {
+        "server": 960,
+        "ui": 180,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-3312",
+       "summary": "Tax Report – Period Summary & Drill-down",
        "state": "DONE",
        "scope": "PHASE 1",
        "type": "STORY",
        "priority": "",
        "assignee": "Sarjith Pullithodi",
-       "created": 1767685032694,
+       "created": 1773734278007,
        "est": {
-        "server": 0,
+        "server": 2400,
         "ui": 0,
-        "testing": 0
+        "testing": 720
        }
       }
      ],
      "rollup_all": {
-      "server": 5760,
-      "ui": 3360,
-      "testing": 1920
+      "server": 3360,
+      "ui": 180,
+      "testing": 1440
      },
      "epic_est": {
-      "server": 5760,
-      "ui": 3360,
-      "testing": 1920
+      "server": 3360,
+      "ui": 180,
+      "testing": 1440
      },
      "rollup": {
-      "server": 2400,
-      "ui": 960,
+      "server": 960,
+      "ui": 180,
       "testing": 720
      },
      "category": "MIXED",
      "missing_est": false,
-     "total": 4080,
-     "spent": 4970,
+     "total": 1860,
+     "spent": 4015,
      "overshoot": true,
      "role_owner": false,
      "needs_owner": false
@@ -4662,6 +4881,9 @@
      "assignee": "Dev Lead",
      "priority": "",
      "module": "",
+     "p2_stories": 0,
+     "p1_pending": 1,
+     "has_p2": false,
      "epic_state": "OPEN",
      "stories": [
       {
@@ -4861,17 +5083,17 @@
   "totals": {
    "pending": {
     "server": 15360,
-    "ui": 20460,
+    "ui": 20280,
     "testing": 30960,
-    "total": 66780,
-    "spent": 6945
+    "total": 66600,
+    "spent": 7185
    },
    "mixed": {
-    "server": 28800,
-    "ui": 25260,
+    "server": 38880,
+    "ui": 27180,
     "testing": 14400,
-    "total": 68460,
-    "spent": 156275
+    "total": 80460,
+    "spent": 161555
    },
    "no_stories": {
     "server": 0,
@@ -4885,37 +5107,37 @@
     "ui": 0,
     "testing": 0,
     "total": 0,
-    "spent": 1105
+    "spent": 1185
    },
    "grand_total": {
-    "server": 44160,
-    "ui": 45720,
+    "server": 54240,
+    "ui": 47460,
     "testing": 45360,
-    "total": 135240,
-    "spent": 163220,
-    "server_md": 92.0,
-    "ui_md": 95.2,
+    "total": 147060,
+    "spent": 168740,
+    "server_md": 113.0,
+    "ui_md": 98.9,
     "testing_md": 94.5,
-    "total_md": 281.8,
-    "spent_md": 340.0
+    "total_md": 306.4,
+    "spent_md": 351.5
    }
   },
   "spend": {
    "scope_query": "project: PXB1",
-   "total_minutes": 1032490,
-   "unattributed_minutes": 868165,
+   "total_minutes": 1038805,
+   "unattributed_minutes": 868880,
    "excluded": {
-    "entries": 3072,
-    "minutes": 159750,
-    "total": "2662h 30m"
+    "entries": 3075,
+    "minutes": 159860,
+    "total": "2664h 20m"
    }
   }
  },
  "timespent": {
   "group_by": "author",
-  "count": 585,
-  "total_minutes": 70082,
-  "total": "1168h 2m",
+  "count": 603,
+  "total_minutes": 76192,
+  "total": "1269h 52m",
   "groups": [
    {
     "key": "Sameera K",
@@ -4934,6 +5156,14 @@
     "bar": "██████████░░░░"
    },
    {
+    "key": "Sarjith Pullithodi",
+    "minutes": 6660,
+    "presentation": "111h 0m",
+    "entries": 7,
+    "issues": 7,
+    "bar": "███████░░░░░░░"
+   },
+   {
     "key": "Sarika Agrawal",
     "minutes": 5435,
     "presentation": "90h 35m",
@@ -4950,19 +5180,19 @@
     "bar": "█████░░░░░░░░░"
    },
    {
+    "key": "Niranjan Babu",
+    "minutes": 3690,
+    "presentation": "61h 30m",
+    "entries": 50,
+    "issues": 37,
+    "bar": "████░░░░░░░░░░"
+   },
+   {
     "key": "Shabbir Hussain",
     "minutes": 3680,
     "presentation": "61h 20m",
     "entries": 23,
     "issues": 5,
-    "bar": "████░░░░░░░░░░"
-   },
-   {
-    "key": "Niranjan Babu",
-    "minutes": 3480,
-    "presentation": "58h 0m",
-    "entries": 47,
-    "issues": 35,
     "bar": "████░░░░░░░░░░"
    },
    {
@@ -4975,10 +5205,10 @@
    },
    {
     "key": "Ajnas O",
-    "minutes": 2820,
-    "presentation": "47h 0m",
-    "entries": 8,
-    "issues": 2,
+    "minutes": 2850,
+    "presentation": "47h 30m",
+    "entries": 9,
+    "issues": 3,
     "bar": "███░░░░░░░░░░░"
    },
    {
@@ -5007,74 +5237,66 @@
    },
    {
     "key": "Aruna Saini",
-    "minutes": 1860,
-    "presentation": "31h 0m",
-    "entries": 7,
-    "issues": 6,
+    "minutes": 1920,
+    "presentation": "32h 0m",
+    "entries": 8,
+    "issues": 7,
     "bar": "██░░░░░░░░░░░░"
    },
    {
     "key": "Aleena",
-    "minutes": 1755,
-    "presentation": "29h 15m",
-    "entries": 42,
-    "issues": 30,
+    "minutes": 1805,
+    "presentation": "30h 5m",
+    "entries": 44,
+    "issues": 32,
     "bar": "██░░░░░░░░░░░░"
    },
    {
     "key": "Vivek P",
-    "minutes": 1750,
-    "presentation": "29h 10m",
-    "entries": 34,
-    "issues": 27,
+    "minutes": 1770,
+    "presentation": "29h 30m",
+    "entries": 35,
+    "issues": 28,
     "bar": "██░░░░░░░░░░░░"
    },
    {
     "key": "Rajesh Kumar Sahoo",
-    "minutes": 1435,
-    "presentation": "23h 55m",
-    "entries": 12,
-    "issues": 10,
-    "bar": "█░░░░░░░░░░░░░"
+    "minutes": 1525,
+    "presentation": "25h 25m",
+    "entries": 13,
+    "issues": 11,
+    "bar": "██░░░░░░░░░░░░"
    },
    {
-    "key": "Sarjith Pullithodi",
-    "minutes": 1380,
-    "presentation": "23h 0m",
-    "entries": 4,
-    "issues": 4,
+    "key": "Muhammed Suhail CH",
+    "minutes": 1425,
+    "presentation": "23h 45m",
+    "entries": 16,
+    "issues": 14,
     "bar": "█░░░░░░░░░░░░░"
    },
    {
     "key": "Rejitha KP",
-    "minutes": 1320,
-    "presentation": "22h 0m",
-    "entries": 39,
+    "minutes": 1355,
+    "presentation": "22h 35m",
+    "entries": 40,
     "issues": 26,
     "bar": "█░░░░░░░░░░░░░"
    },
    {
-    "key": "Muhammed Suhail CH",
-    "minutes": 1140,
-    "presentation": "19h 0m",
-    "entries": 13,
-    "issues": 11,
-    "bar": "█░░░░░░░░░░░░░"
-   },
-   {
     "key": "Mehanas M K",
-    "minutes": 1105,
-    "presentation": "18h 25m",
-    "entries": 43,
+    "minutes": 1125,
+    "presentation": "18h 45m",
+    "entries": 44,
     "issues": 35,
     "bar": "█░░░░░░░░░░░░░"
    },
    {
     "key": "Anugraha B M",
-    "minutes": 1030,
-    "presentation": "17h 10m",
-    "entries": 35,
-    "issues": 33,
+    "minutes": 1060,
+    "presentation": "17h 40m",
+    "entries": 36,
+    "issues": 34,
     "bar": "█░░░░░░░░░░░░░"
    },
    {
@@ -5144,9 +5366,9 @@
   ],
   "scope": "project: PXB1 Sprints: {beta1-20}",
   "excluded": {
-   "entries": 314,
-   "minutes": 16120,
-   "total": "268h 40m"
+   "entries": 317,
+   "minutes": 16230,
+   "total": "270h 30m"
   }
  },
  "timespent_by_sprint": {
@@ -5746,9 +5968,9 @@
   },
   "beta1-20": {
    "group_by": "author",
-   "count": 585,
-   "total_minutes": 70082,
-   "total": "1168h 2m",
+   "count": 603,
+   "total_minutes": 76192,
+   "total": "1269h 52m",
    "groups": [
     {
      "key": "Sameera K",
@@ -5767,6 +5989,14 @@
      "bar": "██████████░░░░"
     },
     {
+     "key": "Sarjith Pullithodi",
+     "minutes": 6660,
+     "presentation": "111h 0m",
+     "entries": 7,
+     "issues": 7,
+     "bar": "███████░░░░░░░"
+    },
+    {
      "key": "Sarika Agrawal",
      "minutes": 5435,
      "presentation": "90h 35m",
@@ -5783,19 +6013,19 @@
      "bar": "█████░░░░░░░░░"
     },
     {
+     "key": "Niranjan Babu",
+     "minutes": 3690,
+     "presentation": "61h 30m",
+     "entries": 50,
+     "issues": 37,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
      "key": "Shabbir Hussain",
      "minutes": 3680,
      "presentation": "61h 20m",
      "entries": 23,
      "issues": 5,
-     "bar": "████░░░░░░░░░░"
-    },
-    {
-     "key": "Niranjan Babu",
-     "minutes": 3480,
-     "presentation": "58h 0m",
-     "entries": 47,
-     "issues": 35,
      "bar": "████░░░░░░░░░░"
     },
     {
@@ -5808,10 +6038,10 @@
     },
     {
      "key": "Ajnas O",
-     "minutes": 2820,
-     "presentation": "47h 0m",
-     "entries": 8,
-     "issues": 2,
+     "minutes": 2850,
+     "presentation": "47h 30m",
+     "entries": 9,
+     "issues": 3,
      "bar": "███░░░░░░░░░░░"
     },
     {
@@ -5840,74 +6070,66 @@
     },
     {
      "key": "Aruna Saini",
-     "minutes": 1860,
-     "presentation": "31h 0m",
-     "entries": 7,
-     "issues": 6,
+     "minutes": 1920,
+     "presentation": "32h 0m",
+     "entries": 8,
+     "issues": 7,
      "bar": "██░░░░░░░░░░░░"
     },
     {
      "key": "Aleena",
-     "minutes": 1755,
-     "presentation": "29h 15m",
-     "entries": 42,
-     "issues": 30,
+     "minutes": 1805,
+     "presentation": "30h 5m",
+     "entries": 44,
+     "issues": 32,
      "bar": "██░░░░░░░░░░░░"
     },
     {
      "key": "Vivek P",
-     "minutes": 1750,
-     "presentation": "29h 10m",
-     "entries": 34,
-     "issues": 27,
+     "minutes": 1770,
+     "presentation": "29h 30m",
+     "entries": 35,
+     "issues": 28,
      "bar": "██░░░░░░░░░░░░"
     },
     {
      "key": "Rajesh Kumar Sahoo",
-     "minutes": 1435,
-     "presentation": "23h 55m",
-     "entries": 12,
-     "issues": 10,
-     "bar": "█░░░░░░░░░░░░░"
+     "minutes": 1525,
+     "presentation": "25h 25m",
+     "entries": 13,
+     "issues": 11,
+     "bar": "██░░░░░░░░░░░░"
     },
     {
-     "key": "Sarjith Pullithodi",
-     "minutes": 1380,
-     "presentation": "23h 0m",
-     "entries": 4,
-     "issues": 4,
+     "key": "Muhammed Suhail CH",
+     "minutes": 1425,
+     "presentation": "23h 45m",
+     "entries": 16,
+     "issues": 14,
      "bar": "█░░░░░░░░░░░░░"
     },
     {
      "key": "Rejitha KP",
-     "minutes": 1320,
-     "presentation": "22h 0m",
-     "entries": 39,
+     "minutes": 1355,
+     "presentation": "22h 35m",
+     "entries": 40,
      "issues": 26,
      "bar": "█░░░░░░░░░░░░░"
     },
     {
-     "key": "Muhammed Suhail CH",
-     "minutes": 1140,
-     "presentation": "19h 0m",
-     "entries": 13,
-     "issues": 11,
-     "bar": "█░░░░░░░░░░░░░"
-    },
-    {
      "key": "Mehanas M K",
-     "minutes": 1105,
-     "presentation": "18h 25m",
-     "entries": 43,
+     "minutes": 1125,
+     "presentation": "18h 45m",
+     "entries": 44,
      "issues": 35,
      "bar": "█░░░░░░░░░░░░░"
     },
     {
      "key": "Anugraha B M",
-     "minutes": 1030,
-     "presentation": "17h 10m",
-     "entries": 35,
-     "issues": 33,
+     "minutes": 1060,
+     "presentation": "17h 40m",
+     "entries": 36,
+     "issues": 34,
      "bar": "█░░░░░░░░░░░░░"
     },
     {
@@ -5977,9 +6199,9 @@
    ],
    "scope": "project: PXB1 Sprints: {beta1-20}",
    "excluded": {
-    "entries": 314,
-    "minutes": 16120,
-    "total": "268h 40m"
+    "entries": 317,
+    "minutes": 16230,
+    "total": "270h 30m"
    }
   }
  },
@@ -6009,10 +6231,10 @@
     "rows": [
      [
       "PXB1",
-      2150,
-      1035,
+      2153,
+      1032,
       5,
-      1971,
+      1974,
       "52%",
       "███████░░░░░░░"
      ]
@@ -6064,18 +6286,18 @@
    {
     "key": "Ajnas",
     "name": "Ajnas O",
-    "score": 89,
+    "score": 92,
     "signals": {
-     "stale_free": 0.917,
-     "estimated": 0.75,
-     "moving": 0.875,
+     "stale_free": 0.905,
+     "estimated": 0.905,
+     "moving": 0.857,
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 24,
+     "open": 21,
      "stale": 2,
-     "unestimated": 6,
-     "moved": 21
+     "unestimated": 2,
+     "moved": 18
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6084,58 +6306,58 @@
    {
     "key": "aruna@posibolt.com",
     "name": "Aruna Saini",
-    "score": 86,
+    "score": 85,
     "signals": {
-     "stale_free": 0.962,
-     "estimated": 0.5,
-     "moving": 0.962,
+     "stale_free": 0.963,
+     "estimated": 0.481,
+     "moving": 0.963,
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 26,
+     "open": 27,
      "stale": 1,
-     "unestimated": 13,
-     "moved": 25
+     "unestimated": 14,
+     "moved": 26
     },
     "logged_recently": true,
     "red_reduction": 0,
     "rank": 3
    },
    {
-    "key": "shafeek@posibolt.com",
-    "name": "Shafeek M",
-    "score": 83,
+    "key": "sarika@posibolt.com",
+    "name": "Sarika Agrawal",
+    "score": 85,
     "signals": {
-     "stale_free": 1.0,
-     "estimated": 0.431,
-     "moving": 0.882,
+     "stale_free": 0.9,
+     "estimated": 0.65,
+     "moving": 0.85,
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 51,
-     "stale": 0,
-     "unestimated": 29,
-     "moved": 45
+     "open": 20,
+     "stale": 2,
+     "unestimated": 7,
+     "moved": 17
     },
     "logged_recently": true,
     "red_reduction": 0,
     "rank": 4
    },
    {
-    "key": "sarika@posibolt.com",
-    "name": "Sarika Agrawal",
-    "score": 78,
+    "key": "shafeek@posibolt.com",
+    "name": "Shafeek M",
+    "score": 82,
     "signals": {
-     "stale_free": 0.818,
-     "estimated": 0.545,
-     "moving": 0.773,
+     "stale_free": 1.0,
+     "estimated": 0.412,
+     "moving": 0.882,
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 22,
-     "stale": 4,
-     "unestimated": 10,
-     "moved": 17
+     "open": 51,
+     "stale": 0,
+     "unestimated": 30,
+     "moved": 45
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6152,10 +6374,10 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 1,
+     "open": 3,
      "stale": 0,
-     "unestimated": 1,
-     "moved": 1
+     "unestimated": 3,
+     "moved": 3
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6172,10 +6394,10 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 2,
+     "open": 1,
      "stale": 0,
-     "unestimated": 2,
-     "moved": 2
+     "unestimated": 1,
+     "moved": 1
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6192,10 +6414,10 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 8,
+     "open": 5,
      "stale": 0,
-     "unestimated": 8,
-     "moved": 8
+     "unestimated": 5,
+     "moved": 5
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6212,10 +6434,10 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 3,
+     "open": 2,
      "stale": 0,
-     "unestimated": 3,
-     "moved": 3
+     "unestimated": 2,
+     "moved": 2
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6272,10 +6494,10 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 4,
+     "open": 2,
      "stale": 0,
-     "unestimated": 4,
-     "moved": 4
+     "unestimated": 2,
+     "moved": 2
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6292,10 +6514,10 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 37,
+     "open": 26,
      "stale": 0,
-     "unestimated": 37,
-     "moved": 37
+     "unestimated": 26,
+     "moved": 26
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6332,10 +6554,10 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 8,
+     "open": 13,
      "stale": 0,
-     "unestimated": 8,
-     "moved": 8
+     "unestimated": 13,
+     "moved": 13
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6352,10 +6574,10 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 5,
+     "open": 3,
      "stale": 0,
-     "unestimated": 5,
-     "moved": 5
+     "unestimated": 3,
+     "moved": 3
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6412,10 +6634,10 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 5,
+     "open": 7,
      "stale": 0,
-     "unestimated": 5,
-     "moved": 5
+     "unestimated": 7,
+     "moved": 7
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6424,18 +6646,18 @@
    {
     "key": "sarjith@posibolt.com",
     "name": "Sarjith Pullithodi",
-    "score": 65,
+    "score": 66,
     "signals": {
-     "stale_free": 0.628,
+     "stale_free": 0.641,
      "estimated": 0.474,
-     "moving": 0.5,
+     "moving": 0.513,
      "on_time_logging": 1.0
     },
     "counts": {
      "open": 78,
-     "stale": 29,
+     "stale": 28,
      "unestimated": 41,
-     "moved": 39
+     "moved": 40
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6444,18 +6666,18 @@
    {
     "key": "Pramod_Saini",
     "name": "Pramod Saini",
-    "score": 57,
+    "score": 56,
     "signals": {
-     "stale_free": 0.8,
-     "estimated": 0.7,
-     "moving": 0.8,
+     "stale_free": 0.833,
+     "estimated": 0.583,
+     "moving": 0.833,
      "on_time_logging": 0.0
     },
     "counts": {
-     "open": 10,
+     "open": 12,
      "stale": 2,
-     "unestimated": 3,
-     "moved": 8
+     "unestimated": 5,
+     "moved": 10
     },
     "logged_recently": false,
     "red_reduction": 0,
@@ -6544,18 +6766,18 @@
    {
     "key": "shad@posibolt.com",
     "name": "Shad A M",
-    "score": 43,
+    "score": 40,
     "signals": {
      "stale_free": 1.0,
      "estimated": 0.0,
-     "moving": 0.714,
+     "moving": 0.6,
      "on_time_logging": 0.0
     },
     "counts": {
-     "open": 7,
+     "open": 5,
      "stale": 0,
-     "unestimated": 7,
-     "moved": 5
+     "unestimated": 5,
+     "moved": 3
     },
     "logged_recently": false,
     "red_reduction": 0,
@@ -6564,18 +6786,18 @@
    {
     "key": "Rejitha_KP",
     "name": "Rejitha KP",
-    "score": 40,
+    "score": 38,
     "signals": {
-     "stale_free": 0.375,
+     "stale_free": 0.348,
      "estimated": 0.0,
-     "moving": 0.208,
+     "moving": 0.174,
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 24,
+     "open": 23,
      "stale": 15,
-     "unestimated": 24,
-     "moved": 5
+     "unestimated": 23,
+     "moved": 4
     },
     "logged_recently": true,
     "red_reduction": 0,
@@ -6586,16 +6808,16 @@
     "name": "Jaseena A K",
     "score": 20,
     "signals": {
-     "stale_free": 0.423,
+     "stale_free": 0.425,
      "estimated": 0.0,
-     "moving": 0.378,
+     "moving": 0.38,
      "on_time_logging": 0.0
     },
     "counts": {
-     "open": 1414,
+     "open": 1418,
      "stale": 816,
-     "unestimated": 1414,
-     "moved": 535
+     "unestimated": 1418,
+     "moved": 539
     },
     "logged_recently": false,
     "red_reduction": 0,
@@ -6627,9 +6849,9 @@
     "key": "All",
     "score": 66,
     "signals": {
-     "stale_free": 0.877,
-     "estimated": 0.182,
-     "moving": 0.848,
+     "stale_free": 0.88,
+     "estimated": 0.186,
+     "moving": 0.847,
      "on_time_logging": 0.724
     },
     "members": [
@@ -6763,29 +6985,30 @@
    }
   ],
   "owner_gap": {
-   "open_epics": 62,
-   "unowned_epics": 30,
-   "note": "30 of 62 open epics have no individual owner (blank or parked on a role placeholder like Dev Lead/UIX Lead) — assign a person so someone is accountable."
+   "open_epics": 61,
+   "unowned_epics": 29,
+   "note": "29 of 61 open epics have no individual owner (blank or parked on a role placeholder like Dev Lead/UIX Lead) — assign a person so someone is accountable."
   }
  },
  "insights": {
   "red_counts": {
-   "unowned": 30,
-   "unestimated": 2,
-   "stale": 11,
+   "unowned": 29,
+   "unestimated": 0,
+   "stale": 9,
    "blocked": 0,
    "overshoot": 10,
-   "role_owned": 30,
-   "total_red": 53,
+   "role_owned": 29,
+   "deferred": 6,
+   "total_red": 48,
    "stale_days": 30
   },
   "red_delta": {
-   "unowned": 0,
-   "unestimated": 0,
-   "stale": 0,
+   "unowned": -1,
+   "unestimated": -2,
+   "stale": -2,
    "blocked": 0,
    "overshoot": 0,
-   "total_red": 0
+   "total_red": -5
   },
   "compared_to": "snapshot-2026-07-02.json"
  }
