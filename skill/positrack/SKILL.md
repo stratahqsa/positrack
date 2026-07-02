@@ -10,8 +10,11 @@ description: >-
   create / update / comment-on / attach-a-screenshot-to an issue — in any
   project or location (SA, UAE, India, KSA…). Trigger even if they don't say
   "YouTrack": any Posibolt project / ticket / status / briefing request routes
-  here. Also load this skill in general work conversations so you can proactively
-  prompt the user to capture decisions, bugs, and tasks before they're forgotten.
+  here. Also trigger on the shorthand code "LAAT" (Log As A Ticket) — typed or
+  from a voice note — which logs a quick ticket into Integration Support (IS)
+  from a subject/description/assignee given in plain language. Also load this
+  skill in general work conversations so you can proactively prompt the user
+  to capture decisions, bugs, and tasks before they're forgotten.
 ---
 
 # Positrack
@@ -351,6 +354,77 @@ python3 scripts/yt.py attach IS-184 /tmp/screenshot.png
 - **Assignee** is a login, not a display name. **Periods**: `2h`, `1d`, `1h30m`.
 - If a state/enum value is rejected, prefer `cmd` (it validates), or run
   `describe --project X` for the exact spelling (case matters: `On hold`).
+
+## Quick ticket logging — the `LAAT` shorthand
+
+Anyone can log a ticket into **Integration Support (IS)** the fast way: type (or
+voice-note — it arrives as plain text either way) `LAAT` followed by whatever
+they want logged, in any order, however loosely phrased:
+
+```
+LAAT subject: Shopify sync stuck for SA merchant / description: orders from the
+last 2 hours aren't syncing to POS, seen on 3 stores / assignee: arshad
+LAAT the WooCommerce webhook is dropping tax fields again, can someone pick it up
+LAAT assign to Priya — Service App is throwing 500s on the India tenant since
+this morning
+```
+
+`LAAT` = **Log As A Ticket**. Treat it as an explicit, low-friction "just get
+this on the board" request — the user used a code word specifically to skip
+hunting for the right command, so don't make them work for it.
+
+**How to handle it:**
+1. **Extract** subject, description and assignee from whatever follows `LAAT`,
+   however it's phrased. A short summary line becomes the subject; the rest
+   (context, symptoms, "since when") becomes the description. If a name is
+   given as owner, resolve it to a login the same way you would for
+   `cmd`/`reassign` (via `users`/`whoami`) — don't guess a login format.
+2. **Fill required fields with sensible defaults instead of interrogating the
+   user:**
+   - `Project = IS` (always — that's the point of `LAAT`).
+   - `State = Open`.
+   - `Type` — infer from the wording against IS's real values: **Shopify,
+     Woo-Commerce, Service App, B2B, One Stock, HR** (and others — `describe
+     --project IS` lists the live field names, but not every token can see the
+     full allowed-value list, so when in doubt sample a couple of recent
+     similar tickets with `search "project: IS" --columns "id,summary,Type"`
+     to confirm the exact spelling in use). Fall back to the closest match if
+     nothing lines up, and let the preview step be the safety net.
+   - `Location` — use the caller's saved profile location if set; otherwise
+     omit it rather than asking just for this.
+   - `Assignee` — only set if named in the note. **Leave unassigned if not
+     mentioned** — don't ask, don't default to someone.
+   - `Groworx SA Client Name` — **IS enforces this as required on create** (a
+     workflow rule, not optional). Default to `Groworx` (a valid catch-all
+     value, confirmed live) unless a specific client is clearly named in the
+     note (e.g. "Kidsalot," "Edvinne Beauty") — in that case use the named
+     client instead. This field is enum-bound to real client names, so if a
+     guessed client name gets rejected, fall back to `Groworx` rather than
+     retrying blind guesses.
+   - Only pause to ask if a genuinely *required* field can't be inferred at
+     all and has no safe default (rare — `describe` shows what's required).
+3. **Preview, then confirm, then commit** — same discipline as every other
+   write in this skill. Show the drafted ticket (subject / description / Type
+   / State / assignee-or-"unassigned") in one short block and create it on a
+   "yes" — no extra ceremony beyond that single confirm, since the shorthand
+   itself signals urgency.
+4. Once created, reply with just the ticket ID (e.g. "Logged as IS-231") —
+   that's the confirmation they're after, not a recap of what you did.
+
+```
+python3 scripts/yt.py create --project IS --summary "<subject>" \
+  --description "<description>" \
+  --field "State=Open" --field "Type=<inferred>" \
+  --field "Groworx SA Client Name=<named client, else Groworx>" \
+  --field "Assignee=<login>"          # omit this --field entirely if unnamed
+# then, after the user confirms the preview:
+python3 scripts/yt.py create --project IS --summary "..." --description "..." \
+  --field "State=Open" --field "Type=..." --field "Groworx SA Client Name=Groworx" --commit
+```
+
+This is just the existing `create` flow with IS pre-selected and the fields
+defaulted — `LAAT` is a trigger word, not a new command, so it needs no engine
+changes.
 
 ## Automation with scheduled tasks (Cowork)
 

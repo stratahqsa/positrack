@@ -139,7 +139,7 @@ def field_schema(ctx, short):
     pid = project_id(ctx, short)
     fs = _req(ctx, "GET",
               f"/api/admin/projects/{pid}/customFields?fields=field(name,fieldType(id))&$top=200", soft=True)
-    if fs is not None:
+    if fs:
         return {f["field"]["name"]: f["field"]["fieldType"]["id"] for f in fs if f.get("field")}
     sample = get_issues(ctx, f"project: {short}", fields="customFields(name,$type)", limit=1)
     out = {}
