@@ -36,6 +36,24 @@ export function Header({
     }
   }, [generatedAtIso]);
 
+  // Team spans South Africa and India — always show both, computed from the
+  // same instant so they can't drift apart or depend on the server's own tz.
+  const { sast, ist } = React.useMemo(() => {
+    try {
+      const d = new Date(generatedAtIso);
+      const fmt = (timeZone: string) =>
+        new Intl.DateTimeFormat("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+          timeZone,
+        }).format(d);
+      return { sast: fmt("Africa/Johannesburg"), ist: fmt("Asia/Kolkata") };
+    } catch {
+      return { sast: asOf, ist: asOf };
+    }
+  }, [generatedAtIso, asOf]);
+
   async function logout() {
     setLoggingOut(true);
     try {
@@ -73,7 +91,9 @@ export function Header({
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-1.5 rounded-md border border-border bg-surface/60 px-2.5 py-1.5 text-[11px] text-muted sm:flex">
             <Clock className="size-3.5 text-accent" />
-            as of <span className="tabular font-semibold text-fg">{asOf}</span>
+            <span className="tabular font-semibold text-fg">{sast}</span> SAST
+            <span className="text-faint">·</span>
+            <span className="tabular font-semibold text-fg">{ist}</span> IST
             {date ? <span className="text-faint">· {date}</span> : null}
           </div>
           <ThemeToggle />
