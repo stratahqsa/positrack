@@ -195,6 +195,30 @@ def vname(v):
 DAY = 86400000
 def days_since(ms): return round((time.time()*1000 - ms)/DAY, 1) if ms else None
 
+# ---------- effort report constants (Suhail's PXB1 Phase-1 recipe; pure) ----------
+# A man-day is 8h; every estimate/spend rollup is reported in man-days off this.
+MAN_DAY = 480
+# Case-insensitive substring match against a State name marks an issue "done".
+DONE_STATES = ("done", "fixed", "verified", "closed", "won't fix", "duplicate", "obsolete")
+# The reporting baseline: epics resolved after this land in the Done section, and
+# a Scope PHASE 1->PHASE 2 change after this marks an epic as P2-backlog.
+EFFORT_CUTOFF_DEFAULT = "2026-06-29T10:30:00.000Z"
+
+def iso_to_ms(iso):
+    """Parse an ISO-8601 UTC timestamp ('...Z', optional fractional seconds) to
+    epoch milliseconds. Stdlib + 3.9-safe (no datetime.fromisoformat 'Z' support)."""
+    if not iso:
+        return None
+    s = str(iso).strip()
+    fmt = "%Y-%m-%dT%H:%M:%S.%fZ" if "." in s else "%Y-%m-%dT%H:%M:%SZ"
+    dt = datetime.datetime.strptime(s, fmt).replace(tzinfo=datetime.timezone.utc)
+    return int(dt.timestamp() * 1000)
+
+def is_done_state(state):
+    """True if a State name (epic or story) is a terminal/done state."""
+    s = (state or "").lower()
+    return any(d in s for d in DONE_STATES)
+
 def parse_period(s):
     if s is None: return None
     s = str(s).strip()
@@ -319,6 +343,429 @@ def get_issue(ctx, iid):
 def _issue_block(query, columns, issues):
     return {"kind": "search", "query": query, "columns": columns, "issues": issues}
 
+# ---------- effort report (ported from Suhail's PXB1 Phase-1 recipe; pure core) ----------
+# The engine port of the browser recipe in PXB1_Phase1_Report_Context.md. Every
+# rule below mirrors that oracle exactly so the ported numbers reproduce the report:
+#   * epics discovered by `TaskType: EPIC` (custom field) — NOT `type: Epic`
+#   * stories via Subtask/OUTWARD links off each epic
+#   * DONE / PENDING / MIXED / NO_STORIES per State
+#   * estimate rollup = Server+UI+Testing over PENDING Phase-1 stories, with an
+#     epic-level fallback when a story rollup field is 0
+#   * P2 backlog via activity history (Scope PHASE 1->PHASE 2 after the cutoff)
+#   * true spend from a work-item sweep attributed story->epic (NOT the Spent-time
+#     rollup, which — verified live — is not backed by work items on the epic)
+_EST_FIELDS = ("Server Estimation", "UI Estimation", "Testing Estimation")
+
+def _cf_named(issue, name):
+    """The raw `value` of a customField by name on a recipe-shaped issue dict."""
+    for cf in (issue.get("customFields") or []):
+        if cf.get("name") == name:
+            return cf.get("value")
+    return None
+
+def _cf_minutes(issue, name):
+    """`value.minutes` of a period customField, or 0."""
+    v = _cf_named(issue, name)
+    return int(v["minutes"]) if isinstance(v, dict) and v.get("minutes") else 0
+
+def _cf_str(issue, name):
+    """`value.name` of an enum/state customField (e.g. State, Scope), or ''."""
+    v = _cf_named(issue, name)
+    if isinstance(v, dict):
+        return v.get("name") or ""
+    return v or ""
+
+def _epic_stories(epic):
+    """Extract the Subtask/OUTWARD child stories of a recipe-shaped epic dict as a
+    list of normalized story dicts (id, summary, state, scope, assignee, est)."""
+    stories = []
+    for lk in (epic.get("links") or []):
+        if (lk.get("linkType") or {}).get("name") == "Subtask" and lk.get("direction") == "OUTWARD":
+            for s in (lk.get("issues") or []):
+                stories.append({
+                    "id": s.get("idReadable") or "",
+                    "summary": s.get("summary") or "",
+                    "state": _cf_str(s, "State"),
+                    "scope": _cf_str(s, "Scope"),
+                    "type": _cf_str(s, "TaskType"),
+                    "priority": _cf_str(s, "Priority"),
+                    "assignee": _cf_str(s, "Assignee"),
+                    "created": s.get("created"),
+                    "est": {"server": _cf_minutes(s, "Server Estimation"),
+                            "ui": _cf_minutes(s, "UI Estimation"),
+                            "testing": _cf_minutes(s, "Testing Estimation")},
+                })
+    return stories
+
+def categorize_epic(epic):
+    """PURE port of recipe Step 4. Given one recipe-shaped epic dict (idReadable,
+    summary, created, resolved, assignee(name), customFields, links), return a
+    categorized record: category (DONE/PENDING/MIXED/NO_STORIES), the pending-P1
+    estimate rollup {server,ui,testing} with epic-level fallback, the missing-est
+    flag, and the child story list. No network."""
+    stories = _epic_stories(epic)
+    # Scope-leakage signals (v15 parity): stories deferred to Phase 2 under a P1 epic,
+    # plus how many P1 stories are still pending. Derived from child scopes/states we
+    # already fetched — no extra calls. A P1 epic with P2 stories is being partially
+    # deferred ("hollowed out"), which the tower should surface as a watch item.
+    p2_stories = sum(1 for s in stories if "PHASE 2" in (s.get("scope") or "").upper())
+    p1_pending = sum(1 for s in stories
+                     if "PHASE 2" not in (s.get("scope") or "").upper()
+                     and not is_done_state(s.get("state")))
+    epic_state = _cf_str(epic, "State")
+    epic_est = {"server": _cf_minutes(epic, "Server Estimation"),
+                "ui": _cf_minutes(epic, "UI Estimation"),
+                "testing": _cf_minutes(epic, "Testing Estimation")}
+    rollup_all = {"server": 0, "ui": 0, "testing": 0}
+    for s in stories:
+        rollup_all["server"] += s["est"]["server"]
+        rollup_all["ui"] += s["est"]["ui"]
+        rollup_all["testing"] += s["est"]["testing"]
+    rec = {"id": epic.get("idReadable"), "summary": epic.get("summary") or "",
+           "created": epic.get("created"), "resolved": epic.get("resolved"),
+           "assignee": _cf_str(epic, "Assignee"),
+           "priority": _cf_str(epic, "Priority"), "module": _cf_str(epic, "Module"),
+           "p2_stories": p2_stories, "p1_pending": p1_pending, "has_p2": p2_stories > 0,
+           "epic_state": epic_state, "stories": stories, "rollup_all": rollup_all,
+           "epic_est": epic_est}
+    if is_done_state(epic_state):
+        rec["category"] = "DONE"
+        rec["rollup"] = {"server": 0, "ui": 0, "testing": 0}
+        rec["missing_est"] = False
+        return rec
+    done_s = [s for s in stories if is_done_state(s["state"])]
+    pend_s = [s for s in stories if not is_done_state(s["state"])]
+    # pending & (no scope OR Phase-1) stories drive the estimate rollup
+    p1p = [s for s in pend_s if (not s["scope"]) or ("PHASE 1" in s["scope"].upper())]
+    rollup = {"server": sum(s["est"]["server"] for s in p1p),
+              "ui": sum(s["est"]["ui"] for s in p1p),
+              "testing": sum(s["est"]["testing"] for s in p1p)}
+    # epic-level fallback: a 0 field falls back to the epic's own estimate
+    if rollup["server"] == 0 and epic_est["server"] > 0:
+        rollup["server"] = epic_est["server"]
+    if rollup["ui"] == 0 and epic_est["ui"] > 0:
+        rollup["ui"] = epic_est["ui"]
+    if rollup["testing"] == 0 and epic_est["testing"] > 0:
+        rollup["testing"] = epic_est["testing"]
+    rec["rollup"] = rollup
+    if not stories:
+        rec["category"] = "NO_STORIES"
+    elif not done_s:
+        rec["category"] = "PENDING"
+    else:
+        rec["category"] = "MIXED"
+    # missing-estimate flag: (Dev=0 AND UI=0) OR QA=0 — only meaningful for open work
+    rec["missing_est"] = (rollup["server"] == 0 and rollup["ui"] == 0) or (rollup["testing"] == 0)
+    return rec
+
+def _scope_changed_p1_to_p2(activities, cutoff_ms):
+    """PURE port of recipe Step 6's filter: True if the CustomFieldCategory activity
+    list contains a Scope change removing 'PHASE 1' and adding 'PHASE 2' after the
+    cutoff. Returns (matched, latest_change_ms). No network."""
+    latest = None
+    for a in (activities or []):
+        if (a.get("field") or {}).get("name") != "Scope":
+            continue
+        ts = a.get("timestamp") or 0
+        if ts <= cutoff_ms:
+            continue
+        removed = a.get("removed") or []
+        added = a.get("added") or []
+        if any((x or {}).get("name") == "PHASE 1" for x in removed) and \
+           any((x or {}).get("name") == "PHASE 2" for x in added):
+            if latest is None or ts > latest:
+                latest = ts
+    return (latest is not None), latest
+
+def _build_story_epic_map(cats):
+    """PURE: {story_id -> epic_id} from categorized epics' Subtask/OUTWARD children.
+    First writer wins if a story is (unusually) linked under two epics."""
+    m = {}
+    for rec in cats:
+        eid = rec["id"]
+        for s in rec["stories"]:
+            sid = s["id"]
+            if sid and sid not in m:
+                m[sid] = eid
+    return m
+
+def _attribute_spend(items, story_epic_map, epic_ids, bug_parent_map=None):
+    """PURE (Consensus Rev #2): bucket normalized work-item minutes to epics.
+      * time logged directly on an epic  -> that epic
+      * time on a child story of an epic -> the story's epic (via story_epic_map)
+      * time on a child bug of a story   -> its story's epic (bug_parent_map walks
+        one more link level: bug_id -> parent story/epic id, then re-resolved)
+    Returns {epic_id -> minutes} plus 'unattributed' minutes we could not place
+    (kept visible, never silently dropped). No network."""
+    epic_set = set(epic_ids)
+    bug_parent_map = bug_parent_map or {}
+    spend = {}
+    unattributed = 0
+    for it in items:
+        iid = it.get("issue") or ""
+        mins = it.get("minutes") or 0
+        if not iid or not mins:
+            continue
+        target = None
+        if iid in epic_set:
+            target = iid                       # logged on the epic itself
+        elif iid in story_epic_map:
+            target = story_epic_map[iid]       # logged on a child story
+        else:
+            # one more link level: a bug whose parent is a story (or the epic)
+            parent = bug_parent_map.get(iid)
+            if parent in epic_set:
+                target = parent
+            elif parent in story_epic_map:
+                target = story_epic_map[parent]
+        if target is not None:
+            spend[target] = spend.get(target, 0) + mins
+        else:
+            unattributed += mins
+    return spend, unattributed
+
+def _md(minutes):
+    """Minutes -> man-days rounded to one decimal (for report totals)."""
+    return round((minutes or 0) / float(MAN_DAY), 1)
+
+def _child_parent_map(ctx, parent_ids, chunk=80):
+    """{child_id -> parent_id} for the OUTWARD Subtask children (bugs/sub-tasks) of
+    `parent_ids` (the epics + their stories), via a CHUNKED `issue ID:` bulk query so
+    one paged fetch resolves every bug's parent instead of one GET per bug. Chunked to
+    stay under the request-URI length limit. This is the Rev #2 'one more link level':
+    a bug's time is placed on its story's epic without dropping it or an N+1 sweep."""
+    out = {}
+    ids = [i for i in parent_ids if i]
+    for start in range(0, len(ids), chunk):
+        batch = ids[start:start + chunk]
+        q = "issue ID: " + ", ".join(batch)
+        issues = get_issues(ctx, q, fields="idReadable,links(direction,linkType(name),issues(idReadable))",
+                            top=300)
+        for it in issues:
+            pid = it.get("idReadable")
+            for lk in (it.get("links") or []):
+                if (lk.get("linkType") or {}).get("name") == "Subtask" and lk.get("direction") == "OUTWARD":
+                    for c in (lk.get("issues") or []):
+                        cid = c.get("idReadable")
+                        if cid and cid not in out:
+                            out[cid] = pid
+    return out
+
+def effort_report(ctx, project="PXB1", scope="PHASE 1",
+                  cutoff_iso=EFFORT_CUTOFF_DEFAULT, exclude_ids=("PXB1-3295",)):
+    """Port of Suhail's PXB1 Phase-1 Effort Report onto the engine (stdlib only).
+
+    Discovers every open in-scope epic PLUS epics resolved after `cutoff_iso`,
+    categorizes them (DONE/PENDING/MIXED/NO_STORIES) from their Subtask/OUTWARD
+    stories, rolls up Server+UI+Testing estimation over the pending in-scope stories
+    (with an epic-level fallback), computes the P2 backlog from Scope-change activity
+    history, and attributes TRUE logged time (a single phase-wide work-item sweep,
+    joined story->epic) with an overshoot flag.
+
+    Returns structured data — sections + per-section totals + a grand total — so any
+    shell (CLI/MCP/web) can render it:
+      {
+        "project", "scope", "cutoff_iso", "cutoff_ms", "man_day", "excluded_ids",
+        "counts": {done, pending, mixed, no_stories, p2_backlog},
+        "sections": {
+           "done":       [epic, ...],   # resolved after cutoff
+           "pending":    [epic, ...],
+           "mixed":      [epic, ...],
+           "no_stories": [epic, ...],
+           "p2_backlog": [{id, summary, assignee, created, changed_at}, ...],
+        },
+        "totals": {                      # man-days per field + total, per section
+           "pending"/"mixed"/"no_stories"/"done"/"grand_total": {
+              server, ui, testing, total, spent, overshoot?  # minutes
+           }, ... plus *_md man-day mirrors on grand_total
+        },
+        "spend": {"scope_query", "total_minutes", "unattributed_minutes", "excluded"},
+      }
+    Each epic record carries: id, summary, assignee, created, resolved, category,
+    rollup {server,ui,testing} (minutes), total (minutes), spent (minutes),
+    overshoot (bool), missing_est (bool), stories [...]. Grand Total counts PENDING +
+    MIXED + NO_STORIES only (Done and P2 are separate, excluded from the grand total)."""
+    exclude = set(exclude_ids or ())
+    cutoff_ms = iso_to_ms(cutoff_iso)
+    br = "{%s}" % scope if " " in scope else scope   # Scope: {PHASE 1}
+
+    # --- discover epics: open in-scope + resolved-after-cutoff (recipe Q1 + Q2) ---
+    cutoff_date = (datetime.datetime.utcfromtimestamp(cutoff_ms / 1000).strftime("%Y-%m-%d")
+                   if cutoff_ms else "")
+    q_open = "project: %s TaskType: EPIC Scope: %s #Unresolved" % (project, br)
+    q_done = "project: %s TaskType: EPIC Scope: %s resolved date: %s .. today" % (project, br, cutoff_date)
+    open_epics = get_issues(ctx, q_open, fields="idReadable", top=300)
+    done_epics = get_issues(ctx, q_done, fields="idReadable,resolved", top=300)
+    seen, epic_ids = set(), []
+    for e in list(open_epics) + list(done_epics):
+        iid = e.get("idReadable")
+        if iid and iid not in seen and iid not in exclude:
+            seen.add(iid)
+            epic_ids.append(iid)
+
+    # --- fetch full epic data (recipe Step 3 field set) ---
+    epic_sf = ("idReadable,summary,created,resolved,assignee(name),"
+               "customFields(name,value(name,minutes,presentation)),"
+               "links(direction,linkType(name),issues(idReadable,summary,created,"
+               "assignee(name),customFields(name,value(name,minutes))))")
+    cats = []
+    for iid in epic_ids:
+        raw = GET(ctx, "/api/issues/%s?fields=%s" % (iid, urllib.parse.quote(epic_sf)))
+        cats.append(categorize_epic(raw))
+
+    # --- true spend: ONE phase-wide work-item sweep, joined story->epic (Rev #2) ---
+    # The issue-level 'Spent time' rollup is NOT backed by work items on the epic
+    # (verified live: an epic can show Spent time yet have zero direct work items —
+    # the workflow propagates a child bug's time up), so we sweep work items and
+    # attribute them ourselves. Bugs live one link level below the stories, so their
+    # time would be dropped unless we resolve bug->story: one CHUNKED bulk link fetch
+    # over the epics+stories builds that {bug -> parent} map (no N+1).
+    story_epic_map = _build_story_epic_map(cats)
+    sweep = time_spent(ctx, project=project, group_by="issue", with_items=True, top=1000)
+    items = sweep.get("items", [])
+    bug_parent_map = _child_parent_map(ctx, epic_ids + list(story_epic_map.keys()))
+    spend_by_epic, unattributed = _attribute_spend(items, story_epic_map, epic_ids, bug_parent_map)
+
+    # --- assemble per-epic totals + overshoot ---
+    for rec in cats:
+        r = rec["rollup"]
+        rec["total"] = r["server"] + r["ui"] + r["testing"]
+        rec["spent"] = spend_by_epic.get(rec["id"], 0)
+        rec["overshoot"] = rec["total"] > 0 and rec["spent"] > rec["total"]
+
+    done = [r for r in cats if r["category"] == "DONE"]
+    pending = [r for r in cats if r["category"] == "PENDING"]
+    mixed = [r for r in cats if r["category"] == "MIXED"]
+    no_stories = [r for r in cats if r["category"] == "NO_STORIES"]
+
+    # --- P2 backlog: Scope PHASE 1->PHASE 2 after cutoff, via activity history ---
+    # Candidates are the current open PHASE 2 epics; the PHASE 1->PHASE 2 direction and
+    # the after-cutoff timing are enforced by _scope_changed_p1_to_p2 on each activity.
+    p2_candidates = get_issues(ctx, "project: %s TaskType: EPIC Scope: {PHASE 2} #Unresolved" % project,
+                               fields="idReadable", top=300)
+    p2_backlog = []
+    for e in p2_candidates:
+        pid = e.get("idReadable")
+        if not pid or pid in exclude:
+            continue
+        act = GET(ctx, "/api/issues/%s/activities?categories=CustomFieldCategory"
+                       "&fields=timestamp,added(name),removed(name),field(name)" % pid)
+        matched, changed_at = _scope_changed_p1_to_p2(act if isinstance(act, list) else [], cutoff_ms)
+        if matched:
+            meta = GET(ctx, "/api/issues/%s?fields=idReadable,summary,created,customFields(name,value(name))" % pid)
+            p2_backlog.append({"id": pid, "summary": meta.get("summary") or "",
+                               "assignee": _cf_str(meta, "Assignee"),
+                               "created": meta.get("created"), "changed_at": changed_at})
+
+    def _sum_section(recs):
+        s = {"server": 0, "ui": 0, "testing": 0, "total": 0, "spent": 0}
+        for r in recs:
+            s["server"] += r["rollup"]["server"]
+            s["ui"] += r["rollup"]["ui"]
+            s["testing"] += r["rollup"]["testing"]
+            s["total"] += r["total"]
+            s["spent"] += r["spent"]
+        return s
+
+    t_pending = _sum_section(pending)
+    t_mixed = _sum_section(mixed)
+    t_ns = _sum_section(no_stories)
+    t_done = _sum_section(done)
+    grand = {k: t_pending[k] + t_mixed[k] + t_ns[k] for k in t_pending}   # open work only
+    grand.update({"server_md": _md(grand["server"]), "ui_md": _md(grand["ui"]),
+                  "testing_md": _md(grand["testing"]), "total_md": _md(grand["total"]),
+                  "spent_md": _md(grand["spent"])})
+
+    return {
+        "project": project, "scope": scope, "cutoff_iso": cutoff_iso, "cutoff_ms": cutoff_ms,
+        "man_day": MAN_DAY, "excluded_ids": sorted(exclude),
+        "counts": {"done": len(done), "pending": len(pending), "mixed": len(mixed),
+                   "no_stories": len(no_stories), "p2_backlog": len(p2_backlog),
+                   "epics_discovered": len(epic_ids)},
+        "sections": {"done": done, "pending": pending, "mixed": mixed,
+                     "no_stories": no_stories, "p2_backlog": p2_backlog},
+        "totals": {"pending": t_pending, "mixed": t_mixed, "no_stories": t_ns,
+                   "done": t_done, "grand_total": grand},
+        "spend": {"scope_query": sweep.get("scope"), "total_minutes": sweep.get("total_minutes", 0),
+                  "unattributed_minutes": unattributed, "excluded": sweep.get("excluded")},
+    }
+
+def _effort_blocks(rep):
+    """Render an effort_report result into report()-style blocks (headings + tables)
+    so the CLI/MCP shells format it exactly like every other report."""
+    md = lambda m: _md(m)
+    c = rep["counts"]; g = rep["totals"]["grand_total"]
+    blocks = [{"kind": "raw", "s": "# %s Effort Report — Scope %s (as of %s)\n"
+               % (rep["project"], rep["scope"], rep["cutoff_iso"])},
+              {"kind": "raw", "s": ("_%d epics discovered · Done %d · Pending %d · Mixed %d · "
+                                    "No-stories %d · P2-backlog %d. Man-day = %d min. "
+                                    "Grand Total = Pending+Mixed+No-stories only._\n"
+                                    % (c["epics_discovered"], c["done"], c["pending"], c["mixed"],
+                                       c["no_stories"], c["p2_backlog"], rep["man_day"]))}]
+
+    def epic_rows(recs, with_flags=False, with_spent=True):
+        rows = []
+        for r in recs:
+            row = [r["id"], (r["summary"] or "")[:44], r["assignee"] or "—",
+                   md(r["rollup"]["server"]), md(r["rollup"]["ui"]), md(r["rollup"]["testing"]),
+                   md(r["total"])]
+            if with_spent:
+                row.append(("%s ⚠" % md(r["spent"])) if r["overshoot"] else md(r["spent"]))
+            if with_flags:
+                row.append("MISSING" if r["missing_est"] else "")
+            rows.append(row)
+        return rows
+
+    # Section 0 — Done (resolved after cutoff)
+    if rep["sections"]["done"]:
+        t = rep["totals"]["done"]
+        blocks.append({"kind": "raw", "s": "\n## Done — resolved after cutoff (%d)" % c["done"]})
+        rows = epic_rows(rep["sections"]["done"])
+        rows.append(["**Total**", "", "", md(t["server"]), md(t["ui"]), md(t["testing"]),
+                     md(t["total"]), md(t["spent"])])
+        blocks.append({"kind": "table",
+                       "headers": ["Epic", "Summary", "Assignee", "Dev", "UI", "QA", "Total", "Spent"],
+                       "rows": rows})
+    # Section 1 — Pending
+    t = rep["totals"]["pending"]
+    blocks.append({"kind": "raw", "s": "\n## Pending — no story done yet (%d)" % c["pending"]})
+    rows = epic_rows(rep["sections"]["pending"], with_flags=True)
+    rows.append(["**Total**", "", "", md(t["server"]), md(t["ui"]), md(t["testing"]),
+                 md(t["total"]), md(t["spent"]), ""])
+    blocks.append({"kind": "table",
+                   "headers": ["Epic", "Summary", "Assignee", "Dev", "UI", "QA", "Total", "Spent", "Missing Est."],
+                   "rows": rows})
+    # Section 2 — Mixed
+    t = rep["totals"]["mixed"]
+    blocks.append({"kind": "raw", "s": "\n## Mixed — some done, some pending (%d)" % c["mixed"]})
+    rows = epic_rows(rep["sections"]["mixed"])
+    rows.append(["**Total**", "", "", md(t["server"]), md(t["ui"]), md(t["testing"]),
+                 md(t["total"]), md(t["spent"])])
+    blocks.append({"kind": "table",
+                   "headers": ["Epic", "Summary", "Assignee", "Dev", "UI", "QA", "Total", "Spent"],
+                   "rows": rows})
+    # Section 3 — No stories
+    blocks.append({"kind": "raw", "s": "\n## No stories — epics without linked sub-tasks (%d)" % c["no_stories"]})
+    blocks.append({"kind": "table", "headers": ["Epic", "Summary", "Assignee", "Created"],
+                   "rows": [[r["id"], (r["summary"] or "")[:50], r["assignee"] or "—",
+                             days_since(r["created"])] for r in rep["sections"]["no_stories"]]})
+    # Section 4 — P2 backlog (Epic, Summary, Assignee, Created only — per v14)
+    blocks.append({"kind": "raw", "s": "\n## P2 Backlog — Scope moved PHASE 1→PHASE 2 after cutoff (%d)" % c["p2_backlog"]})
+    blocks.append({"kind": "table", "headers": ["Epic", "Summary", "Assignee", "Created"],
+                   "rows": [[r["id"], (r["summary"] or "")[:50], r["assignee"] or "—",
+                             days_since(r["created"])] for r in rep["sections"]["p2_backlog"]]})
+    # Grand total
+    blocks.append({"kind": "raw", "s": ("\n**Grand Total (open work — Pending+Mixed+No-stories): "
+                                        "Dev %s · UI %s · QA %s · Total %s man-days · Spent %s man-days.**"
+                                        % (g["server_md"], g["ui_md"], g["testing_md"],
+                                           g["total_md"], g["spent_md"]))})
+    ex = rep["spend"].get("excluded")
+    if ex:
+        blocks.append({"kind": "raw", "s": ("_Spend is TRUE logged time from a work-item sweep "
+                       "(propagated 'Propagated from Bug' copies excluded: %s). ⚠ = spend > estimate._"
+                       % ex.get("total"))})
+    return blocks
+
 def report(ctx, rtype, project="", location="", days=7, sprint="", limit=50):
     """Run a canned report. Returns an ordered list of structured blocks so any
     shell can render or serialize it. `project` here is already resolved by the
@@ -435,10 +882,19 @@ def report(ctx, rtype, project="", location="", days=7, sprint="", limit=50):
         label = (f"sprint {sprint}" if sprint else None) or (proj or location or "(whole instance)")
         rows = [[g["key"], g["entries"], g["issues"], g["presentation"], g["bar"]] for g in data["groups"]]
         rows.append(["**Total**", data["count"], "", f"**{data['total']}**", ""])
+        note = ("_True logged time across %d work-item entries, attributed to who LOGGED each one "
+                "(not the current assignee)._\n" % data["count"])
+        ex = data.get("excluded")
+        if ex:
+            note += ("_Excluded %s of workflow-propagated 'Propagated from Bug' time (%d entries that copy a "
+                     "bug's time onto its parent) so only DIRECT logged time counts._\n" % (ex["total"], ex["entries"]))
         return [{"kind": "raw", "s": f"# Time spent by person — {label}\n"},
-                {"kind": "raw", "s": f"_True logged time across {data['count']} work-item entries, "
-                                     f"attributed to who LOGGED each one (not the current assignee)._\n"},
+                {"kind": "raw", "s": note},
                 {"kind": "table", "headers": ["Person", "Entries", "Issues", "Time", "▕"], "rows": rows}]
+    if rtype == "effort":
+        # Suhail's PXB1 Phase-1 Effort Report, ported (project/scope/cutoff parameterized).
+        rep = effort_report(ctx, project=proj or "PXB1", scope=(sprint or "PHASE 1"))
+        return _effort_blocks(rep)
     # stale / unestimated / unassigned / epics / mywork / sprint
     qmap = {
         "stale":       f"#Unresolved updated: * .. {{minus {days}d}} sort by: updated asc",
@@ -605,18 +1061,50 @@ def _wi_query(query="", project="", location="", sprint=""):
         q += query
     return q.strip()
 
+# Some teams run a workflow that copies a bug's spent time onto its parent Story
+# and Epic when the bug is fixed. Each copy is a real work item whose TEXT reads
+# "Propagated from Bug PXB1-…" (its type is usually empty), so the same hours get
+# counted 2-3x and inflate a person's true logged time. Exclude those by default:
+# the person's direct entry on the bug itself is a separate work item and stays.
+PROPAGATED_HINT = "propagat"   # marker lives in the work-item TEXT, not the type
+
+def _is_propagated(it):
+    """True if a work item is a workflow-propagated copy (its text/type carries the
+    'Propagated from Bug' marker)."""
+    return PROPAGATED_HINT in ((it.get("text") or "") + " " + (it.get("type") or "")).lower()
+
+def _split_by_type(items, exclude_propagated=True, exclude_types=None):
+    """Pure: partition normalized work items into (kept, dropped). Drops propagated
+    copies (when exclude_propagated) plus any entry whose type exactly matches one of
+    exclude_types (case-insensitive). No network."""
+    names = {t.strip().lower() for t in (exclude_types or []) if t and t.strip()}
+    kept, dropped = [], []
+    for it in items:
+        drop = (exclude_propagated and _is_propagated(it)) or ((it.get("type") or "").strip().lower() in names)
+        (dropped if drop else kept).append(it)
+    return kept, dropped
+
 def time_spent(ctx, query="", project="", location="", sprint="", author="",
-               start="", end="", group_by="author", limit=20000, with_items=False):
+               start="", end="", group_by="author", limit=20000,
+               exclude_propagated=True, exclude_types=None, with_items=False, top=300):
     """True logged-time breakdown. Resolves scope (project/location/sprint + free
     query) into an issue query, pulls the matching work items, and aggregates by
     `group_by` (author|type|project|issue). `start`/`end` (YYYY-MM-DD) optionally
-    restrict to entries logged in a window. Set with_items=True to also return the
-    flattened entries."""
+    restrict to entries logged in a window. By default DROPS workflow-propagated
+    entries (type contains 'propagat', e.g. 'Propagated from Bug') so only DIRECT
+    logged time counts — pass exclude_propagated=False to include them, or
+    exclude_types=[...] to drop additional named types. Set with_items=True to also
+    return the kept entries. `top` is the work-item page size (raise it for a big
+    phase-wide sweep so paging stays fast)."""
     scoped = _wi_query(query, project, location, sprint)
-    items = [_wi_norm(w) for w in work_items(ctx, query=scoped, author=author,
-                                             start=start, end=end, limit=limit)]
+    raw = [_wi_norm(w) for w in work_items(ctx, query=scoped, author=author,
+                                           start=start, end=end, limit=limit, top=top)]
+    items, dropped = _split_by_type(raw, exclude_propagated, exclude_types)
     out = aggregate_work(items, group_by)
     out["scope"] = scoped
+    if dropped:
+        dmin = sum(it["minutes"] for it in dropped)
+        out["excluded"] = {"entries": len(dropped), "minutes": dmin, "total": fmt_minutes(dmin)}
     if start or end:
         out["window"] = {"start": start or None, "end": end or None}
     if with_items:

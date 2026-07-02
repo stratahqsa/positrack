@@ -67,7 +67,11 @@ that field is a per-issue rollup, so grouping it by the current assignee
 misattributes time after any reassignment and lumps epic-level logging onto the
 epic's owner — confidently wrong numbers. Scope yt_worklog by project/location/
 sprint (+ optional `author`, or `since`/`until` for a date window) and present it
-as a horizontal bar chart with the total.
+as a horizontal bar chart with the total. yt_worklog already EXCLUDES workflow-
+propagated entries by default (work items marked 'Propagated from Bug …' in their
+text, which copy a bug's time onto its parent story/epic and double-count) — mention
+the `excluded` amount it returns, and only pass include_propagated=True if the user
+explicitly wants those.
 
 AUTH & PERMISSIONS: every call uses the caller's OWN YouTrack token (an
 `Authorization: Bearer` header remotely, or $YT_TOKEN locally). A 403 means the
@@ -315,7 +319,9 @@ def yt_history(issue: str, limit: int = 20) -> dict:
 def yt_report(type: str, project: str = "", location: str = "", days: int = 7,
               sprint: str = "", limit: int = 50) -> dict:
     """Run a canned report. `type` is one of: health, activity, briefing, stale,
-    unestimated, unassigned, epics, mywork, sprint, myday, hygiene, timespent.
+    unestimated, unassigned, epics, mywork, sprint, myday, hygiene, timespent, effort.
+    `effort` is the POSX Control Tower PXB1 Phase-1 Effort Report (prefer the dedicated
+    `yt_effort` tool for project/scope/cutoff control).
     `myday` is the caller's personal view (open / stale-needs-status / in-progress).
     `hygiene` scores each project's board cleanliness (% touched in 30d) + the
     stale/unassigned/unestimated buckets to clear — use it to run the cleanup quest.
@@ -326,6 +332,24 @@ def yt_report(type: str, project: str = "", location: str = "", days: int = 7,
     return _run(lambda: {"type": type, "blocks": core.report(_resolve_ctx(), type, project=project,
                                                               location=location, days=days,
                                                               sprint=sprint, limit=limit)})
+
+
+@mcp.tool
+def yt_effort(project: str = "PXB1", scope: str = "PHASE 1",
+              cutoff_iso: str = core.EFFORT_CUTOFF_DEFAULT, exclude_ids: str = "PXB1-3295") -> dict:
+    """POSX Control Tower — the ported PXB1 Phase-1 Effort Report. Discovers every open
+    in-scope epic (via `TaskType: EPIC`) PLUS epics resolved after the cutoff, categorizes
+    them DONE / PENDING / MIXED / NO_STORIES from their Subtask stories, rolls up
+    Server+UI+Testing estimation over the pending in-scope stories (man-day = 480 min),
+    computes the P2 backlog (epics whose Scope moved PHASE 1→PHASE 2 after the cutoff, from
+    activity history), and attributes TRUE logged time from a work-item sweep with an
+    overshoot flag. Grand Total = PENDING + MIXED + NO_STORIES only (Done and P2 are
+    separate). `exclude_ids` is a comma-separated epic-id skip list. Returns structured
+    data: counts, per-section epic lists, per-section man-day totals, and spend metadata —
+    render Done/Pending/Mixed/No-stories/P2 as sections with per-field man-day totals."""
+    ex = tuple(x.strip() for x in exclude_ids.split(",") if x.strip())
+    return _run(lambda: core.effort_report(_resolve_ctx(), project=project, scope=scope,
+                                           cutoff_iso=cutoff_iso, exclude_ids=ex))
 
 
 @mcp.tool
@@ -356,7 +380,8 @@ def yt_load(project: str) -> dict:
 
 @mcp.tool
 def yt_worklog(query: str = "", project: str = "", location: str = "", sprint: str = "",
-               author: str = "", since: str = "", until: str = "", group_by: str = "author") -> dict:
+               author: str = "", since: str = "", until: str = "", group_by: str = "author",
+               include_propagated: bool = False, exclude_types: str = "") -> dict:
     """TRUE logged time — the CORRECT source for "time/hours spent by employee",
     "who logged time", or effort-based workload. Reads YouTrack work items (each
     entry carries its OWN author, issue and date) and aggregates them, so time is
@@ -365,15 +390,25 @@ def yt_worklog(query: str = "", project: str = "", location: str = "", sprint: s
     'Spent time' field grouped by Assignee — that misattributes work after a
     reassignment and lumps epic-level logging onto the epic's owner.
 
+    By DEFAULT it excludes workflow-propagated entries (work items marked
+    'Propagated from Bug …' in their text — teams that copy a bug's time onto its
+    parent Story/Epic, double-counting it), so only DIRECT logged time is counted;
+    the result's `excluded` field reports how much was dropped. Pass
+    include_propagated=True to count them, or exclude_types="Name1, Name2" to drop
+    named work-item types. Tip: run with group_by='type' to see the types in play.
+
     Scope with `project` / `location` / `sprint` and/or a free YouTrack `query`
     (e.g. a sprint plus 'Type: Bug'); `author` narrows to one person (login or
     'me'); `since`/`until` (YYYY-MM-DD) restrict to entries LOGGED in that window
     (omit for all time on the scoped issues); `group_by` is author|type|project|issue.
     Returns the total and per-group minutes, an 'Hh Mm' presentation, entry &
     issue counts, and chart-ready bars — render it as a horizontal bar chart."""
+    ex_types = [t.strip() for t in exclude_types.split(",") if t.strip()]
     return _run(lambda: core.time_spent(_resolve_ctx(), query=query, project=project,
                                         location=location, sprint=sprint, author=author,
-                                        start=since, end=until, group_by=group_by))
+                                        start=since, end=until, group_by=group_by,
+                                        exclude_propagated=not include_propagated,
+                                        exclude_types=ex_types))
 
 
 @mcp.tool

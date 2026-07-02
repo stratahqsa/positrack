@@ -204,6 +204,16 @@ def cmd_report(ctx, a):
                          days=a.days, sprint=a.sprint, limit=a.limit)
     print("\n".join(block_strings(blocks)))
 
+def cmd_effort(ctx, a):
+    exclude = tuple(x.strip() for x in (a.exclude or "").split(",") if x.strip())
+    if a.json:
+        rep = core.effort_report(ctx, project=a.project, scope=a.scope,
+                                 cutoff_iso=a.cutoff, exclude_ids=exclude)
+        print(json.dumps(rep, indent=1)); return
+    rep = core.effort_report(ctx, project=a.project, scope=a.scope,
+                             cutoff_iso=a.cutoff, exclude_ids=exclude)
+    print("\n".join(block_strings(core._effort_blocks(rep))))
+
 def cmd_create(ctx, a):
     fields = parse_fields(a.field)
     r = core.create(ctx, a.project, a.summary, a.description, fields, a.commit)
@@ -293,14 +303,19 @@ def cmd_load(ctx, a):
     print(md_table([[who, n, b] for who, n, b in r["by_owner"]], ["Owner", "Open issues", "Load ▕"]))
 
 def cmd_worklog(ctx, a):
+    ex_types = [t.strip() for t in (a.exclude_types or "").split(",") if t.strip()]
     r = core.time_spent(ctx, query=a.query, project=a.project, location=a.location,
                         sprint=a.sprint, author=a.author, start=a.since, end=a.until,
-                        group_by=a.group_by)
+                        group_by=a.group_by, exclude_propagated=not a.include_propagated,
+                        exclude_types=ex_types)
     label = (f"sprint {a.sprint}" if a.sprint else None) or (a.project or a.location or "(whole instance)")
     win = ""
     if r.get("window"):
         win = f"  [{r['window'].get('start') or '…'} .. {r['window'].get('end') or '…'}]"
     print(f"# Time spent by {r['group_by']} — {label}{win}  ({r['count']} entries · {r['total']} total)\n")
+    ex = r.get("excluded")
+    if ex:
+        print(f"_excluded {ex['total']} of propagated 'Propagated from Bug' time ({ex['entries']} entries)_\n")
     rows = [[g["key"], g["entries"], g["issues"], g["presentation"], g["bar"]] for g in r["groups"]]
     print(md_table(rows, [r["group_by"].capitalize(), "Entries", "Issues", "Time", "▕"]))
 
@@ -357,10 +372,18 @@ def build_parser():
     s = sub.add_parser("report")
     s.add_argument("type", choices=["health", "activity", "briefing", "stale", "unestimated",
                                     "unassigned", "epics", "mywork", "sprint", "myday", "hygiene",
-                                    "timespent"])
+                                    "timespent", "effort"])
     s.add_argument("--project", default=""); s.add_argument("--location", default="")
     s.add_argument("--days", type=int, default=7); s.add_argument("--sprint", default="")
     s.add_argument("--limit", type=int, default=50); s.set_defaults(fn=cmd_report)
+
+    s = sub.add_parser("effort", help="POSX Control Tower — ported Phase-1 Effort Report")
+    s.add_argument("--project", default="PXB1"); s.add_argument("--scope", default="PHASE 1")
+    s.add_argument("--cutoff", default=core.EFFORT_CUTOFF_DEFAULT,
+                   help="ISO cutoff (default %s)" % core.EFFORT_CUTOFF_DEFAULT)
+    s.add_argument("--exclude", default="PXB1-3295", help="comma-separated epic ids to exclude")
+    s.add_argument("--json", action="store_true", help="emit the raw structured report as JSON")
+    s.set_defaults(fn=cmd_effort)
 
     s = sub.add_parser("create"); s.add_argument("--project", required=True)
     s.add_argument("--summary", required=True); s.add_argument("--description", default="")
@@ -406,6 +429,10 @@ def build_parser():
     s.add_argument("--until", default="")
     s.add_argument("--group-by", dest="group_by", default="author",
                    choices=["author", "type", "project", "issue"])
+    s.add_argument("--include-propagated", dest="include_propagated", action="store_true",
+                   help="count workflow-propagated entries (default: exclude them, direct time only)")
+    s.add_argument("--exclude-types", dest="exclude_types", default="",
+                   help="comma-separated work-item type names to also drop")
     s.set_defaults(fn=cmd_worklog)
 
     s = sub.add_parser("articles"); s.add_argument("--query", default="")
