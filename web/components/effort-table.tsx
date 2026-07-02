@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, User, UserCog } from "lucide-react";
+import { ChevronRight, User, UserCog, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Epic } from "@/lib/types";
+import type { Epic, Story } from "@/lib/types";
 import {
   md,
   fmtDate,
@@ -14,6 +14,12 @@ import {
   rollupTotal,
   type EpicFlags,
 } from "@/lib/format";
+import {
+  storyMatchesType,
+  type RedFilter,
+  type SortKey,
+} from "@/lib/filter";
+import { useFilters } from "@/components/filter-context";
 import { IssueLink } from "@/components/issue-link";
 import { FlagChips } from "@/components/flag-chips";
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +80,43 @@ function NumCell({
   );
 }
 
-function StoriesPanel({ epic }: { epic: Epic }) {
+/** Clickable epic-state pill → sets the State filter. */
+function StatePill({ state }: { state: string }) {
+  const { filters, toggle } = useFilters();
+  if (!state) return <span className="text-faint">—</span>;
+  const active = filters.states.includes(state);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        toggle("states", state);
+      }}
+      aria-pressed={active}
+      title={`Filter by state: ${state}`}
+      className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+    >
+      <Badge
+        variant={stateTone(state)}
+        size="sm"
+        className={cn(
+          "cursor-pointer transition-transform hover:-translate-y-px",
+          active && "ring-2 ring-accent/60",
+        )}
+      >
+        {state}
+      </Badge>
+    </button>
+  );
+}
+
+function StoriesPanel({
+  epic,
+  activeType,
+}: {
+  epic: Epic;
+  activeType: string;
+}) {
   if (!epic.stories.length) {
     return (
       <div className="px-4 py-3 text-[12px] text-faint">
@@ -89,6 +131,9 @@ function StoriesPanel({ epic }: { epic: Epic }) {
           <tr className="text-[10px] uppercase tracking-wide text-faint">
             <th className="py-1.5 pl-11 pr-2 text-left font-medium">Story</th>
             <th className="px-2 py-1.5 text-left font-medium">Summary</th>
+            {activeType ? (
+              <th className="px-2 py-1.5 text-left font-medium">Type</th>
+            ) : null}
             <th className="px-2 py-1.5 text-left font-medium">State</th>
             <th className="px-2 py-1.5 text-left font-medium">Scope</th>
             <th className="px-2 py-1.5 text-left font-medium">Owner</th>
@@ -101,10 +146,18 @@ function StoriesPanel({ epic }: { epic: Epic }) {
         <tbody>
           {epic.stories.map((s) => {
             const est = rollupTotal(s.est);
+            // When a child type is filtered, matching rows stay bright and
+            // non-matching rows dim (still visible for context).
+            const dim = activeType ? !storyMatchesType(s, activeType) : false;
+            const match = activeType ? storyMatchesType(s, activeType) : false;
             return (
               <tr
                 key={s.id}
-                className="border-t border-border/50 text-[12px] transition-colors hover:bg-elevated/40"
+                className={cn(
+                  "border-t border-border/50 text-[12px] transition-colors hover:bg-elevated/40",
+                  dim && "opacity-40",
+                  match && "bg-accent/[0.05]",
+                )}
               >
                 <td className="py-1.5 pl-11 pr-2 align-top">
                   <IssueLink id={s.id} showIcon={false} />
@@ -112,6 +165,17 @@ function StoriesPanel({ epic }: { epic: Epic }) {
                 <td className="max-w-[320px] px-2 py-1.5 align-top text-fg/80">
                   <span className="line-clamp-2">{s.summary}</span>
                 </td>
+                {activeType ? (
+                  <td className="px-2 py-1.5 align-top">
+                    {s.type ? (
+                      <Badge variant={match ? "accent" : "outline"} size="sm">
+                        {s.type}
+                      </Badge>
+                    ) : (
+                      <span className="text-[11px] text-faint">—</span>
+                    )}
+                  </td>
+                ) : null}
                 <td className="px-2 py-1.5 align-top">
                   <Badge variant={stateTone(s.state)} size="sm">
                     {s.state}
@@ -148,11 +212,46 @@ function StoriesPanel({ epic }: { epic: Epic }) {
   );
 }
 
-function EpicRow({ epic, expandable }: { epic: Epic; expandable: boolean }) {
-  const [open, setOpen] = React.useState(false);
+function EpicRow({
+  epic,
+  expandable,
+  activeType,
+  onFilterRed,
+  activeReds,
+  colSpan,
+}: {
+  epic: Epic;
+  expandable: boolean;
+  activeType: string;
+  onFilterRed: (red: RedFilter) => void;
+  activeReds: RedFilter[];
+  colSpan: number;
+}) {
   const f = epicFlags(epic);
   const pct = spentPct(epic);
   const canExpand = expandable && epic.stories.length > 0;
+
+  // Auto-open when a child-type filter is active and this epic has a match, so
+  // the matching child rows are revealed without a manual click.
+  const hasTypeMatch =
+    !!activeType &&
+    (epic.stories ?? []).some((s: Story) => storyMatchesType(s, activeType));
+  const [manualOpen, setManualOpen] = React.useState(false);
+  // Track the last activeType we auto-synced against so a user can still
+  // collapse a row after auto-expand without it snapping back every render.
+  const [autoKey, setAutoKey] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (activeType && hasTypeMatch && autoKey !== activeType) {
+      setManualOpen(true);
+      setAutoKey(activeType);
+    }
+    if (!activeType && autoKey !== null) {
+      setManualOpen(false);
+      setAutoKey(null);
+    }
+  }, [activeType, hasTypeMatch, autoKey]);
+
+  const open = canExpand && manualOpen;
 
   return (
     <>
@@ -166,7 +265,7 @@ function EpicRow({ epic, expandable }: { epic: Epic; expandable: boolean }) {
               ? "red-rail hover:bg-danger/[0.05]"
               : "hover:bg-elevated/40",
         )}
-        onClick={canExpand ? () => setOpen((v) => !v) : undefined}
+        onClick={canExpand ? () => setManualOpen((v) => !v) : undefined}
         aria-expanded={canExpand ? open : undefined}
       >
         <td className="py-2 pl-2 pr-1 align-top">
@@ -188,12 +287,18 @@ function EpicRow({ epic, expandable }: { epic: Epic; expandable: boolean }) {
           <span className="line-clamp-2 text-[12.5px] text-fg/90">
             {epic.summary}
           </span>
-          {epic.stories.length ? (
-            <span className="mt-0.5 block text-[10.5px] text-faint">
-              {epic.stories.length}{" "}
-              {epic.stories.length === 1 ? "story" : "stories"}
-            </span>
-          ) : null}
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <StatePill state={epic.epic_state} />
+            {epic.stories.length ? (
+              <span className="text-[10.5px] text-faint">
+                {epic.stories.length}{" "}
+                {epic.stories.length === 1 ? "story" : "stories"}
+                {hasTypeMatch ? (
+                  <span className="ml-1 text-accent">· match</span>
+                ) : null}
+              </span>
+            ) : null}
+          </div>
         </td>
         <td className="px-2 py-2 align-top">
           <Assignee name={epic.assignee} flags={f} />
@@ -230,14 +335,14 @@ function EpicRow({ epic, expandable }: { epic: Epic; expandable: boolean }) {
           </div>
         </td>
         <td className="px-2 py-2 pr-3 align-top">
-          <FlagChips epic={epic} />
+          <FlagChips epic={epic} onFilter={onFilterRed} activeRed={activeReds} />
         </td>
       </tr>
-      {canExpand && open ? (
+      {open ? (
         <tr className="bg-bg/40">
-          <td colSpan={10} className="p-0">
+          <td colSpan={colSpan} className="p-0">
             <div className="border-l-2 border-accent/30 bg-surface/30">
-              <StoriesPanel epic={epic} />
+              <StoriesPanel epic={epic} activeType={activeType} />
             </div>
           </td>
         </tr>
@@ -246,41 +351,118 @@ function EpicRow({ epic, expandable }: { epic: Epic; expandable: boolean }) {
   );
 }
 
+/** Sort-aware column header (right-aligned numeric columns). */
+function SortHeader({
+  label,
+  sortKey,
+  align = "right",
+  className,
+}: {
+  label: string;
+  sortKey: SortKey;
+  align?: "left" | "right";
+  className?: string;
+}) {
+  const { filters, cycleSort } = useFilters();
+  const active = filters.sort?.key === sortKey;
+  const dir = active ? filters.sort!.dir : undefined;
+  return (
+    <th className={cn("px-2 py-2 font-semibold", className)}>
+      <button
+        type="button"
+        onClick={() => cycleSort(sortKey)}
+        aria-label={`Sort by ${label}${
+          active ? ` (${dir === "asc" ? "ascending" : "descending"})` : ""
+        }`}
+        className={cn(
+          "inline-flex items-center gap-1 rounded transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+          align === "right" && "flex-row-reverse",
+          active ? "text-accent" : "text-faint",
+        )}
+      >
+        {label}
+        {active ? (
+          dir === "asc" ? (
+            <ArrowUp className="size-3" />
+          ) : (
+            <ArrowDown className="size-3" />
+          )
+        ) : (
+          <ArrowDown className="size-3 opacity-0 transition-opacity group-hover:opacity-40" />
+        )}
+      </button>
+    </th>
+  );
+}
+
 /** Full section table with header + epic rows. */
 export function EffortTable({
   epics,
   expandable = true,
+  activeType = "",
 }: {
   epics: Epic[];
   expandable?: boolean;
+  /** Active child-type filter — drives auto-expand + child dimming. */
+  activeType?: string;
 }) {
+  const { filters, setRed, toggleRed } = useFilters();
+  const activeReds = filters.reds;
+
+  // Clicking a row's flag chip toggles that single RED filter (so click again
+  // clears it); if other RED filters are set we replace them for clarity.
+  const onFilterRed = React.useCallback(
+    (red: RedFilter) => {
+      if (filters.reds.length === 1 && filters.reds[0] === red) {
+        toggleRed(red); // clears it
+      } else {
+        setRed(red);
+      }
+    },
+    [filters.reds, setRed, toggleRed],
+  );
+
   if (!epics.length) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-surface/30 px-4 py-8 text-center text-[12.5px] text-faint">
-        No epics in this section.
+        No epics match in this section.
       </div>
     );
   }
+  const colSpan = 10;
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-surface/40 scroll-slim">
+    <div className="group overflow-x-auto rounded-lg border border-border bg-surface/40 scroll-slim">
       <table className="w-full min-w-[880px] border-collapse">
         <thead className="sticky top-0 z-10 bg-surface-2/95 backdrop-blur">
           <tr className="text-[10px] uppercase tracking-wide text-faint">
             <th className="py-2 pl-2 pr-1 text-left font-semibold">Epic</th>
             <th className="px-2 py-2 text-left font-semibold">Summary</th>
             <th className="px-2 py-2 text-left font-semibold">Assignee</th>
-            <th className="px-2 py-2 text-left font-semibold">Created</th>
+            <SortHeader label="Created" sortKey="created" align="left" className="text-left" />
             <th className="px-2 py-2 text-right font-semibold">Dev</th>
             <th className="px-2 py-2 text-right font-semibold">UI</th>
             <th className="px-2 py-2 text-right font-semibold">QA</th>
-            <th className="px-2 py-2 text-right font-semibold">Total</th>
-            <th className="px-2 py-2 text-right font-semibold">Spent</th>
-            <th className="px-2 py-2 pr-3 text-left font-semibold">Flags</th>
+            <SortHeader label="Total" sortKey="total" className="text-right" />
+            <SortHeader label="Spent" sortKey="spent" className="text-right" />
+            <SortHeader
+              label="Flags"
+              sortKey="overshoot"
+              align="left"
+              className="pr-3 text-left"
+            />
           </tr>
         </thead>
         <tbody>
           {epics.map((e) => (
-            <EpicRow key={e.id} epic={e} expandable={expandable} />
+            <EpicRow
+              key={e.id}
+              epic={e}
+              expandable={expandable}
+              activeType={activeType}
+              onFilterRed={onFilterRed}
+              activeReds={activeReds}
+              colSpan={colSpan}
+            />
           ))}
         </tbody>
       </table>

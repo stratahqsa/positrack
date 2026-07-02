@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Trophy, Sparkles, Activity, ShieldCheck } from "lucide-react";
+import { Trophy, Sparkles, Activity, ShieldCheck, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Gamification, PersonScore } from "@/lib/types";
+import { useFilters } from "@/components/filter-context";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CaveatBanner } from "@/components/caveat-banner";
@@ -25,13 +26,31 @@ function scoreTone(score: number): string {
   return "text-danger";
 }
 
-function PersonCard({ p }: { p: PersonScore }) {
+function PersonCard({
+  p,
+  onFilter,
+}: {
+  p: PersonScore;
+  onFilter: (person: string) => void;
+}) {
   const badges = earnedBadges(p);
   const podium = p.rank <= 3;
+  // Rendered as a role="button" div (not a real <button>) because the card
+  // contains block-level content (hygiene bars) which is invalid inside a button.
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onFilter(p.name)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onFilter(p.name);
+        }
+      }}
+      title={`Filter Effort by ${p.name}`}
       className={cn(
-        "relative overflow-hidden rounded-lg border bg-surface/50 p-4 transition-all hover:bg-surface",
+        "group relative w-full cursor-pointer overflow-hidden rounded-lg border bg-surface/50 p-4 text-left transition-all hover:-translate-y-px hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
         podium ? "border-border-strong" : "border-border",
       )}
     >
@@ -43,6 +62,9 @@ function PersonCard({ p }: { p: PersonScore }) {
           )}
         />
       ) : null}
+      <span className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1 text-[10px] font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
+        <Filter className="size-3" /> filter Effort
+      </span>
       <div className="relative flex items-center gap-3">
         <div
           className={cn(
@@ -105,7 +127,10 @@ function PersonCard({ p }: { p: PersonScore }) {
 }
 
 export function TabLeaderboard({ g }: { g: Gamification }) {
+  const { applyAndGoToEffort } = useFilters();
   const people = [...g.people].sort((a, b) => a.rank - b.rank);
+  const jumpToOwner = (person: string) =>
+    applyAndGoToEffort({ owners: [person] });
 
   return (
     <div className="space-y-4">
@@ -131,7 +156,7 @@ export function TabLeaderboard({ g }: { g: Gamification }) {
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {people.map((p) => (
-          <PersonCard key={p.key} p={p} />
+          <PersonCard key={p.key} p={p} onFilter={jumpToOwner} />
         ))}
       </div>
 
