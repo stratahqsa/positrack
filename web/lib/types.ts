@@ -30,6 +30,16 @@ export interface Story {
   assignee: string;
   created: number;
   est: Rollup;
+  /**
+   * Child issue type — "STORY" | "BUG" | "UI" | "DEVELOPMENT" | "QA & AUTOMATION".
+   * Optional: absent on older snapshots. Used by the Type filter.
+   */
+  type?: string;
+  /**
+   * Story priority — "Urgent" | "High" | "Medium" | "Low" | "". Optional on
+   * older snapshots.
+   */
+  priority?: string;
 }
 
 /** Section categories present in effort.sections. */
@@ -63,6 +73,13 @@ export interface Epic {
    * but not a real person). A subset of needs_owner. Optional on older snapshots.
    */
   role_owner?: boolean;
+  /**
+   * Epic priority — "Urgent" | "High" | "Medium" | "Low" | "". Optional: absent
+   * on older snapshots. Drives the Priority filter.
+   */
+  priority?: string;
+  /** Owning module/component label. Optional on older snapshots. */
+  module?: string;
 }
 
 export interface P2Item {
@@ -235,6 +252,17 @@ export interface Snapshot {
   hygiene?: unknown;
   gamification: Gamification;
   insights: Insights;
+  /**
+   * Sprints for which per-sprint time is available, oldest → newest
+   * (e.g. ["beta1-17","beta1-18","beta1-19","beta1-20"]). Optional: absent on
+   * older snapshots, in which case the sprint picker is hidden.
+   */
+  sprints_available?: string[];
+  /**
+   * Per-sprint logged-time breakdown, keyed by sprint name. Same shape as
+   * `timespent`. Optional on older snapshots.
+   */
+  timespent_by_sprint?: Record<string, TimeSpent>;
 }
 
 /** A dated trend point derived from snapshot-*.json files. */

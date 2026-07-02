@@ -1,11 +1,11 @@
 {
  "meta": {
-  "generated_at_iso": "2026-07-02T05:01:50.549857+00:00",
-  "generated_at_ms": 1782968510549,
+  "generated_at_iso": "2026-07-02T05:23:31.173816+00:00",
+  "generated_at_ms": 1782969811173,
   "project": "PXB1",
   "scope": "PHASE 1",
   "sprint": "beta1-20",
-  "as_of_hhmm": "05:01",
+  "as_of_hhmm": "05:23",
   "engine_version": "control-tower-b1"
  },
  "effort": {
@@ -18,21 +18,138 @@
    "PXB1-3295"
   ],
   "counts": {
-   "done": 9,
-   "pending": 50,
+   "done": 12,
+   "pending": 49,
    "mixed": 13,
    "no_stories": 0,
    "p2_backlog": 15,
-   "epics_discovered": 72
+   "epics_discovered": 74
   },
   "sections": {
    "done": [
+    {
+     "id": "PXB1-7843",
+     "summary": "Dashboard Spec",
+     "created": 1782968626830,
+     "resolved": 1782968993158,
+     "assignee": "Vishnu kv",
+     "priority": "Medium",
+     "module": "",
+     "epic_state": "DONE",
+     "stories": [],
+     "rollup_all": {
+      "server": 0,
+      "ui": 0,
+      "testing": 0
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 0,
+      "testing": 0
+     },
+     "category": "DONE",
+     "rollup": {
+      "server": 0,
+      "ui": 0,
+      "testing": 0
+     },
+     "missing_est": false,
+     "total": 0,
+     "spent": 240,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-7844",
+     "summary": "Menu Navigation spec",
+     "created": 1782968782381,
+     "resolved": 1782968967335,
+     "assignee": "Vishnu kv",
+     "priority": "Medium",
+     "module": "",
+     "epic_state": "DONE",
+     "stories": [],
+     "rollup_all": {
+      "server": 0,
+      "ui": 0,
+      "testing": 0
+     },
+     "epic_est": {
+      "server": 0,
+      "ui": 0,
+      "testing": 0
+     },
+     "category": "DONE",
+     "rollup": {
+      "server": 0,
+      "ui": 0,
+      "testing": 0
+     },
+     "missing_est": false,
+     "total": 0,
+     "spent": 180,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
+     "id": "PXB1-5161",
+     "summary": "Auto fill Register Name",
+     "created": 1778071623944,
+     "resolved": 1782968908633,
+     "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
+     "epic_state": "DONE",
+     "stories": [
+      {
+       "id": "PXB1-7605",
+       "summary": "Auto fill Register Name",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1782723351584,
+       "est": {
+        "server": 60,
+        "ui": 0,
+        "testing": 240
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 60,
+      "ui": 0,
+      "testing": 240
+     },
+     "epic_est": {
+      "server": 60,
+      "ui": 0,
+      "testing": 240
+     },
+     "category": "DONE",
+     "rollup": {
+      "server": 0,
+      "ui": 0,
+      "testing": 0
+     },
+     "missing_est": false,
+     "total": 0,
+     "spent": 80,
+     "overshoot": false,
+     "role_owner": false,
+     "needs_owner": false
+    },
     {
      "id": "PXB1-981",
      "summary": "Design Team Feedback (Payment Term screen)",
      "created": 1767429065954,
      "resolved": 1782876351340,
      "assignee": "UIX Lead",
+     "priority": "Low",
+     "module": "",
      "epic_state": "DONE",
      "stories": [
       {
@@ -40,6 +157,8 @@
        "summary": "Payment Term screen Design Changes",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782115966373,
        "est": {
@@ -78,6 +197,8 @@
      "created": 1781188574650,
      "resolved": 1782890512383,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "DONE",
      "stories": [
       {
@@ -85,6 +206,8 @@
        "summary": "Tool Tip for Payment Term field in Add Vendor modal",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782665650169,
        "est": {
@@ -123,6 +246,8 @@
      "created": 1768559052376,
      "resolved": 1782887634757,
      "assignee": "Aruna Saini",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "DONE",
      "stories": [
       {
@@ -130,6 +255,8 @@
        "summary": "Changes in Product Categlog screen",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1782737355179,
        "est": {
@@ -168,6 +295,8 @@
      "created": 1781599614090,
      "resolved": 1782810192379,
      "assignee": "Dev Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "DONE",
      "stories": [
       {
@@ -175,6 +304,8 @@
        "summary": "Icon changes for menus",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1782606686250,
        "est": {
@@ -213,6 +344,8 @@
      "created": 1781187963349,
      "resolved": 1782799486769,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "DONE",
      "stories": [
       {
@@ -220,6 +353,8 @@
        "summary": "Add Tool Tip for Distribute Discount Label",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782665556808,
        "est": {
@@ -258,6 +393,8 @@
      "created": 1781182372788,
      "resolved": 1782795581989,
      "assignee": "UIX Lead",
+     "priority": "Low",
+     "module": "",
      "epic_state": "DONE",
      "stories": [
       {
@@ -265,6 +402,8 @@
        "summary": "Toast message design change",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782668274093,
        "est": {
@@ -303,6 +442,8 @@
      "created": 1782223014689,
      "resolved": 1782737084666,
      "assignee": "Aruna Saini",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "DONE",
      "stories": [
       {
@@ -310,6 +451,8 @@
        "summary": "Changes to Menu Navigation",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1782457889674,
        "est": {
@@ -348,6 +491,8 @@
      "created": 1763636550833,
      "resolved": 1782729795954,
      "assignee": "Anjali M S",
+     "priority": "",
+     "module": "",
      "epic_state": "DONE",
      "stories": [],
      "rollup_all": {
@@ -379,6 +524,8 @@
      "created": 1768576140946,
      "resolved": 1782725655898,
      "assignee": "Jaseena A K",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "DONE",
      "stories": [],
      "rollup_all": {
@@ -412,6 +559,8 @@
      "created": 1782297360425,
      "resolved": null,
      "assignee": "Ajnas O",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -419,6 +568,8 @@
        "summary": "Default Bank Account No format",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Ajnas O",
        "created": 1782911463992,
        "est": {
@@ -457,6 +608,8 @@
      "created": 1778510321666,
      "resolved": null,
      "assignee": "Aruna Saini",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -464,6 +617,8 @@
        "summary": "Context specific titles for modals.",
        "state": "READY FOR TESTING",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1782718231813,
        "est": {
@@ -502,6 +657,8 @@
      "created": 1781183328066,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -509,6 +666,8 @@
        "summary": "Terminology changes in RG screen",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782665468773,
        "est": {
@@ -547,6 +706,8 @@
      "created": 1774350596093,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -554,6 +715,8 @@
        "summary": "Recieve Goods Report Screen UI Changes",
        "state": "UI INTEGRATION",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Shafeek M",
        "created": 1781853616794,
        "est": {
@@ -567,6 +730,8 @@
        "summary": "Create RG Screen UI Changes",
        "state": "READY FOR DEPLOYEMENT",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1781863051571,
        "est": {
@@ -605,6 +770,8 @@
      "created": 1781871743040,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -612,6 +779,8 @@
        "summary": "Purchase Order Design Changes",
        "state": "UI INTEGRATION",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "UIX Lead",
        "created": 1782381876512,
        "est": {
@@ -650,6 +819,8 @@
      "created": 1773210126319,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -657,6 +828,8 @@
        "summary": "Ageing Report",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782911005832,
        "est": {
@@ -670,6 +843,8 @@
        "summary": "Aging Report - AI Insights",
        "state": "OPEN",
        "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782911087084,
        "est": {
@@ -708,6 +883,8 @@
      "created": 1781530441842,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -715,6 +892,8 @@
        "summary": "Round off in POS",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782882007765,
        "est": {
@@ -753,6 +932,8 @@
      "created": 1774526504436,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -760,6 +941,8 @@
        "summary": "Stock Adjustment Report Design Changes",
        "state": "READY FOR TESTING",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Posibolt System Support",
        "created": 1782115680985,
        "est": {
@@ -773,6 +956,8 @@
        "summary": "Stock Adjustment Design Changes",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782115774919,
        "est": {
@@ -811,6 +996,8 @@
      "created": 1767428921230,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -818,6 +1005,8 @@
        "summary": "Common Design Changes Required",
        "state": "READY FOR TESTING",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "UIX Lead",
        "created": 1782455008056,
        "est": {
@@ -856,6 +1045,8 @@
      "created": 1781850305418,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -863,6 +1054,8 @@
        "summary": "Remove the Product Setup modal",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "UIX Lead",
        "created": 1782545496792,
        "est": {
@@ -901,6 +1094,8 @@
      "created": 1779701408990,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -908,6 +1103,8 @@
        "summary": "Changes to \"Exchange\" modal in POS screen.",
        "state": "READY FOR UI",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782716270085,
        "est": {
@@ -946,6 +1143,8 @@
      "created": 1775142164848,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -953,6 +1152,8 @@
        "summary": "Create Client with Initial License, License Change API & App Behavior Based on License",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1777294707047,
        "est": {
@@ -991,6 +1192,8 @@
      "created": 1782296658157,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -998,6 +1201,8 @@
        "summary": "Tool tip in Price List master screen.",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782380649773,
        "est": {
@@ -1031,56 +1236,13 @@
      "needs_owner": true
     },
     {
-     "id": "PXB1-5161",
-     "summary": "Auto fill Register Name",
-     "created": 1778071623944,
-     "resolved": null,
-     "assignee": "Sarjith Pullithodi",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-7605",
-       "summary": "Auto fill Register Name",
-       "state": "TESTING",
-       "scope": "PHASE 1",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1782723351584,
-       "est": {
-        "server": 60,
-        "ui": 0,
-        "testing": 240
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 60,
-      "ui": 0,
-      "testing": 240
-     },
-     "epic_est": {
-      "server": 60,
-      "ui": 0,
-      "testing": 240
-     },
-     "rollup": {
-      "server": 60,
-      "ui": 0,
-      "testing": 240
-     },
-     "category": "PENDING",
-     "missing_est": false,
-     "total": 300,
-     "spent": 40,
-     "overshoot": false,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
      "id": "PXB1-7021",
      "summary": "Add Receipt Paper Settings option in Register master",
      "created": 1781590822087,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1088,6 +1250,8 @@
        "summary": "Add Receipt Paper Settings option in Register master",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782814939013,
        "est": {
@@ -1101,6 +1265,8 @@
        "summary": "Impact of Receipt Paper Settings option in Web POS",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Pramod Saini",
        "created": 1782891001336,
        "est": {
@@ -1139,6 +1305,8 @@
      "created": 1781516548573,
      "resolved": null,
      "assignee": "Sarika Agrawal",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1146,6 +1314,8 @@
        "summary": "Change in Auto SKU Code Generation ",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarika Agrawal",
        "created": 1782737161956,
        "est": {
@@ -1184,6 +1354,8 @@
      "created": 1770451269250,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1191,6 +1363,8 @@
        "summary": "Design Change for the Side Panel Summary Table",
        "state": "READY FOR UI",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782722276751,
        "est": {
@@ -1229,6 +1403,8 @@
      "created": 1768572197629,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "High",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1236,6 +1412,8 @@
        "summary": "Label change in Cash Account screen.",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "High",
        "assignee": "Shafeek M",
        "created": 1782669200880,
        "est": {
@@ -1274,6 +1452,8 @@
      "created": 1779455668340,
      "resolved": null,
      "assignee": "Sarika Agrawal",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1281,6 +1461,8 @@
        "summary": "ExpenseCopy order should copy only the charge lines.",
        "state": "TESTING",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Posibolt System Support",
        "created": 1782736887276,
        "est": {
@@ -1319,6 +1501,8 @@
      "created": 1724312086894,
      "resolved": null,
      "assignee": "Pramod Saini",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1326,6 +1510,8 @@
        "summary": "Inter Terminal Data Synchronization",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Pramod Saini",
        "created": 1782881650719,
        "est": {
@@ -1364,6 +1550,8 @@
      "created": 1777541281452,
      "resolved": null,
      "assignee": "Shafeek M",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1371,6 +1559,8 @@
        "summary": "Back button in Web POS",
        "state": "UI INTEGRATION",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1782723283269,
        "est": {
@@ -1384,6 +1574,8 @@
        "summary": "Back button in Web POS",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782879671343,
        "est": {
@@ -1422,6 +1614,8 @@
      "created": 1768574001994,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1429,6 +1623,8 @@
        "summary": "Changes to RG report",
        "state": "TESTING",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782669056468,
        "est": {
@@ -1467,6 +1663,8 @@
      "created": 1782198195482,
      "resolved": null,
      "assignee": "Aruna Saini",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1474,6 +1672,8 @@
        "summary": "License expiry message in login screen",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1782723553615,
        "est": {
@@ -1512,6 +1712,8 @@
      "created": 1782390717821,
      "resolved": null,
      "assignee": "Shafeek M",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1519,6 +1721,8 @@
        "summary": "Design team feedback: KPI cards - Tax Report",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782795921238,
        "est": {
@@ -1532,6 +1736,8 @@
        "summary": "Design team feedback: KPI cards - Receivable/Payable",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782798215847,
        "est": {
@@ -1545,6 +1751,8 @@
        "summary": "Design team feedback: KPI cards - LayBuyReport",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782802416604,
        "est": {
@@ -1558,6 +1766,8 @@
        "summary": "Design team feedback: KPI cards - Home Dashboard",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782802572851,
        "est": {
@@ -1596,6 +1806,8 @@
      "created": 1779859954254,
      "resolved": null,
      "assignee": "Sarika Agrawal",
+     "priority": "Medium",
+     "module": "Stock",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1603,6 +1815,8 @@
        "summary": "Product price Import",
        "state": "UI INTEGRATION",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarika Agrawal",
        "created": 1782193227745,
        "est": {
@@ -1641,6 +1855,8 @@
      "created": 1779888171631,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1648,6 +1864,8 @@
        "summary": "Changes to Laybuy settlement flow",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782722183024,
        "est": {
@@ -1686,6 +1904,8 @@
      "created": 1781172902923,
      "resolved": null,
      "assignee": "Aruna Saini",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1693,6 +1913,8 @@
        "summary": "New design for account creation OTP emails",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1782725210814,
        "est": {
@@ -1731,6 +1953,8 @@
      "created": 1772624641621,
      "resolved": null,
      "assignee": "Aruna Saini",
+     "priority": "Low",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1738,6 +1962,8 @@
        "summary": "General UX changes in Location master",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Ajnas O",
        "created": 1782727995512,
        "est": {
@@ -1751,6 +1977,8 @@
        "summary": "General UX changes in bank master",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Ajnas O",
        "created": 1782728015387,
        "est": {
@@ -1764,6 +1992,8 @@
        "summary": "General UX changes in Customer master",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782728111254,
        "est": {
@@ -1802,6 +2032,8 @@
      "created": 1779787865311,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "High",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1809,6 +2041,8 @@
        "summary": "Update total section (disocunt / excl base amt/ tax amt)",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782747956407,
        "est": {
@@ -1847,6 +2081,8 @@
      "created": 1781870987115,
      "resolved": null,
      "assignee": "Sarika Agrawal",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1854,6 +2090,8 @@
        "summary": "Hide list price from system",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarika Agrawal",
        "created": 1782742070145,
        "est": {
@@ -1892,6 +2130,8 @@
      "created": 1779703396765,
      "resolved": null,
      "assignee": "Ajnas O",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1899,6 +2139,8 @@
        "summary": "Vendor Invoice: Reversed status in report",
        "state": "DEVELOPMENT",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Ajnas O",
        "created": 1782720813040,
        "est": {
@@ -1937,6 +2179,8 @@
      "created": 1780410184531,
      "resolved": null,
      "assignee": "Ajnas O",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1944,6 +2188,8 @@
        "summary": "Stock Adjustment: Reversed status in report",
        "state": "DEVELOPMENT",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Ajnas O",
        "created": 1782723311563,
        "est": {
@@ -1982,6 +2228,8 @@
      "created": 1781270973879,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -1989,6 +2237,8 @@
        "summary": "Changes to Product Catalog main screen",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782665091956,
        "est": {
@@ -2027,6 +2277,8 @@
      "created": 1781268278144,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2034,6 +2286,8 @@
        "summary": "Rename the button in purchase return screen",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782663090449,
        "est": {
@@ -2072,6 +2326,8 @@
      "created": 1779881028952,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2079,6 +2335,8 @@
        "summary": "Sales : POS - Payment Screen UX Improvements in Sales",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Pramod Saini",
        "created": 1782721730791,
        "est": {
@@ -2092,6 +2350,8 @@
        "summary": "Payment Screen UX Improvements in General",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Pramod Saini",
        "created": 1782721855344,
        "est": {
@@ -2130,6 +2390,8 @@
      "created": 1779887218135,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2137,6 +2399,8 @@
        "summary": "Changes to POS Credit Settlement – Partial Payment Flow Enhancement",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782722084903,
        "est": {
@@ -2175,6 +2439,8 @@
      "created": 1781270494124,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Low",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2182,6 +2448,8 @@
        "summary": "New design for \"Save\" button.",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782665226107,
        "est": {
@@ -2220,6 +2488,8 @@
      "created": 1781173078585,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2227,6 +2497,8 @@
        "summary": "Additional fields in Customer master",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782665374924,
        "est": {
@@ -2265,6 +2537,8 @@
      "created": 1781332723654,
      "resolved": null,
      "assignee": "Aruna Saini",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2272,6 +2546,8 @@
        "summary": "Product Catalog: Show tax rate in the tax category list box",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1782723665587,
        "est": {
@@ -2310,6 +2586,8 @@
      "created": 1781525345612,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2317,6 +2595,8 @@
        "summary": "Changes in Expense Report",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "UIX Lead",
        "created": 1782607248229,
        "est": {
@@ -2355,6 +2635,8 @@
      "created": 1781505957348,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2362,6 +2644,8 @@
        "summary": "Design for Button Focus",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "UIX Lead",
        "created": 1782606856069,
        "est": {
@@ -2400,6 +2684,8 @@
      "created": 1767429335293,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Low",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2407,6 +2693,8 @@
        "summary": "Design Team Feddback (Register Screen)",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782669366854,
        "est": {
@@ -2445,6 +2733,8 @@
      "created": 1779883380534,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2452,6 +2742,8 @@
        "summary": "Provision to create new charge from the service charge modal (RG/PO/PO_Return)",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1782716539995,
        "est": {
@@ -2490,6 +2782,8 @@
      "created": 1781862809662,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2497,6 +2791,8 @@
        "summary": "Sales cart need not show bundle components.",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782716327240,
        "est": {
@@ -2535,6 +2831,8 @@
      "created": 1782387289147,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2542,6 +2840,8 @@
        "summary": "Name and Address needs to separated by a line break",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1782715684313,
        "est": {
@@ -2580,6 +2880,8 @@
      "created": 1781334677743,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2587,6 +2889,8 @@
        "summary": "Improvements to the \"Add New\" functionality in Product Catalog screen.",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shafeek M",
        "created": 1782662211390,
        "est": {
@@ -2625,6 +2929,8 @@
      "created": 1781766332048,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2632,6 +2938,8 @@
        "summary": "Design change in Global Settings screen ",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "UIX Lead",
        "created": 1782606324140,
        "est": {
@@ -2670,6 +2978,8 @@
      "created": 1781778102012,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2677,6 +2987,8 @@
        "summary": "Map preview in \"Add Customer\" modal",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "UIX Lead",
        "created": 1782606434338,
        "est": {
@@ -2715,6 +3027,8 @@
      "created": 1781601247408,
      "resolved": null,
      "assignee": "UIX Lead",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2722,6 +3036,8 @@
        "summary": "Add map preview in the address section of location creation modal.",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "UIX Lead",
        "created": 1782606554328,
        "est": {
@@ -2760,6 +3076,8 @@
      "created": 1781847415669,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2767,6 +3085,8 @@
        "summary": "Register: Account selection for Payment modes",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "UIX Lead",
        "created": 1782552555007,
        "est": {
@@ -2802,11 +3122,122 @@
    ],
    "mixed": [
     {
+     "id": "PXB1-148",
+     "summary": "Laybuy",
+     "created": 1758520852142,
+     "resolved": null,
+     "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
+     "epic_state": "OPEN",
+     "stories": [
+      {
+       "id": "PXB1-590",
+       "summary": "Import/Export Laybuy",
+       "state": "DEVELOPMENT",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
+       "assignee": "Sarika Agrawal",
+       "created": 1765272958476,
+       "est": {
+        "server": 1440,
+        "ui": 480,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-173",
+       "summary": "Laybuy setup",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1759984776629,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-174",
+       "summary": "Laybuy Report",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Sarjith Pullithodi",
+       "created": 1759984791381,
+       "est": {
+        "server": 0,
+        "ui": 0,
+        "testing": 0
+       }
+      },
+      {
+       "id": "PXB1-591",
+       "summary": "Laybuy notification",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Dev Lead",
+       "created": 1765273080948,
+       "est": {
+        "server": 960,
+        "ui": 0,
+        "testing": 720
+       }
+      },
+      {
+       "id": "PXB1-592",
+       "summary": "Further actions from laybuy report",
+       "state": "DONE",
+       "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
+       "assignee": "Muhammed Safwan",
+       "created": 1765273143377,
+       "est": {
+        "server": 2880,
+        "ui": 240,
+        "testing": 720
+       }
+      }
+     ],
+     "rollup_all": {
+      "server": 5280,
+      "ui": 720,
+      "testing": 2160
+     },
+     "epic_est": {
+      "server": 5280,
+      "ui": 720,
+      "testing": 2160
+     },
+     "rollup": {
+      "server": 1440,
+      "ui": 480,
+      "testing": 720
+     },
+     "category": "MIXED",
+     "missing_est": false,
+     "total": 2640,
+     "spent": 12665,
+     "overshoot": true,
+     "role_owner": false,
+     "needs_owner": false
+    },
+    {
      "id": "PXB1-1787",
      "summary": "Close Register",
      "created": 1769579367004,
      "resolved": null,
      "assignee": "Ajnas O",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2814,6 +3245,8 @@
        "summary": "Close Register",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Ajnas O",
        "created": 1770017200063,
        "est": {
@@ -2827,6 +3260,8 @@
        "summary": "Close Register: Cash Denomination Calculator",
        "state": "OPEN",
        "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "Low",
        "assignee": "Ajnas O",
        "created": 1770361263801,
        "est": {
@@ -2840,6 +3275,8 @@
        "summary": "Register Sessions Listing & Quick View",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Ajnas O",
        "created": 1770016816882,
        "est": {
@@ -2853,6 +3290,8 @@
        "summary": "Transaction Details Screen(Cash Line)",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Ajnas O",
        "created": 1770016955936,
        "est": {
@@ -2891,6 +3330,8 @@
      "created": 1764687222979,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -2898,6 +3339,8 @@
        "summary": "Impact of general role configs",
        "state": "READY FOR TESTING",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1767159110830,
        "est": {
@@ -2911,6 +3354,8 @@
        "summary": "Impact of purchase related role configs",
        "state": "READY FOR DEPLOYEMENT",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Aruna Saini",
        "created": 1767929429935,
        "est": {
@@ -2924,6 +3369,8 @@
        "summary": "Important Role Configs for Sales order",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Dev Lead",
        "created": 1769497252822,
        "est": {
@@ -2937,6 +3384,8 @@
        "summary": "Product description in sales based on role config",
        "state": "OPEN",
        "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Dev Lead",
        "created": 1769498042619,
        "est": {
@@ -2950,6 +3399,8 @@
        "summary": "Impact of sales related configs in system",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1769498379193,
        "est": {
@@ -2963,6 +3414,8 @@
        "summary": "Impact of role config : Enable Sale of Unlisted Products",
        "state": "OPEN",
        "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Shad A M",
        "created": 1780998302307,
        "est": {
@@ -2976,6 +3429,8 @@
        "summary": "View Roles",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1767158887925,
        "est": {
@@ -2989,6 +3444,8 @@
        "summary": "Add or Edit Roles",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1767158981270,
        "est": {
@@ -3002,6 +3459,8 @@
        "summary": "Impact of Role privileges in all masters screen",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1767159022782,
        "est": {
@@ -3015,6 +3474,8 @@
        "summary": "Impact of role configs in sales",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1767159090458,
        "est": {
@@ -3028,6 +3489,8 @@
        "summary": "Making default entries for new client",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Muhammed Safwan",
        "created": 1767164378433,
        "est": {
@@ -3041,6 +3504,8 @@
        "summary": "Impact of Role privileges in Product Screen",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1773300611221,
        "est": {
@@ -3054,6 +3519,8 @@
        "summary": "Impact of Role privileges in Customer related Screen",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1773300714003,
        "est": {
@@ -3067,6 +3534,8 @@
        "summary": "Impact of Role privileges in purchase related Screen",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1773300870023,
        "est": {
@@ -3105,6 +3574,8 @@
      "created": 1768369289029,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3112,6 +3583,8 @@
        "summary": "Purchase Order Report – Search, Filters, Results Display & Export",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Posibolt System Support",
        "created": 1773404267745,
        "est": {
@@ -3125,6 +3598,8 @@
        "summary": "Purchase Order Report – PO Actions (Edit, Void & Close)",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Aruna Saini",
        "created": 1773404298685,
        "est": {
@@ -3163,6 +3638,8 @@
      "created": 1757483445532,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3170,6 +3647,8 @@
        "summary": "AI Suggestions in Customer Management",
        "state": "READY FOR TESTING",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1763018458720,
        "est": {
@@ -3183,6 +3662,8 @@
        "summary": "Customer Search & Filtering",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1763017905962,
        "est": {
@@ -3196,6 +3677,8 @@
        "summary": "View Customer Details ",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1763018128753,
        "est": {
@@ -3209,6 +3692,8 @@
        "summary": "Add/Edit Customer Details",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1763018195092,
        "est": {
@@ -3222,6 +3707,8 @@
        "summary": "Export Customer details",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1763018350663,
        "est": {
@@ -3235,6 +3722,8 @@
        "summary": "Import Customer Details",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1763018416162,
        "est": {
@@ -3248,6 +3737,8 @@
        "summary": "Send Notifications",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1763018513983,
        "est": {
@@ -3286,6 +3777,8 @@
      "created": 1771999665521,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3293,6 +3786,8 @@
        "summary": "Credit Settlement & Laybuy Settlement From POS",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Muhammed Safwan",
        "created": 1772632903601,
        "est": {
@@ -3306,6 +3801,8 @@
        "summary": "POS : Drop Cash",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1772634568624,
        "est": {
@@ -3319,6 +3816,8 @@
        "summary": "Implement Cash Refund in Sales",
        "state": "OPEN",
        "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Dev Lead",
        "created": 1778221681004,
        "est": {
@@ -3332,6 +3831,8 @@
        "summary": "Impact of Product Settings in Sales",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Ajnas O",
        "created": 1780990582070,
        "est": {
@@ -3345,6 +3846,8 @@
        "summary": "Implementation of Additional barcode in sales",
        "state": "READY FOR TESTING",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Ajnas O",
        "created": 1782123852842,
        "est": {
@@ -3358,6 +3861,8 @@
        "summary": "Web POS – Sales Transaction Handling (Normal / Credit / Laybuy / Parked)",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1772632542421,
        "est": {
@@ -3371,6 +3876,8 @@
        "summary": "Web POS – Sales Return & Exchange Processing",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1772632718473,
        "est": {
@@ -3384,6 +3891,8 @@
        "summary": "Customer Creation from sales screen",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1776685129049,
        "est": {
@@ -3422,6 +3931,8 @@
      "created": 1763615743657,
      "resolved": null,
      "assignee": "Muhammed Safwan",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3429,6 +3940,8 @@
        "summary": "Copy order in RG",
        "state": "OPEN",
        "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1764241705575,
        "est": {
@@ -3442,6 +3955,8 @@
        "summary": "Impact of Product Settings in Purchase screens",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Ajnas O",
        "created": 1781787737440,
        "est": {
@@ -3455,6 +3970,8 @@
        "summary": "Receive Goods",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Ajnas O",
        "created": 1764241118509,
        "est": {
@@ -3468,6 +3985,8 @@
        "summary": "Receive goods against PO",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Muhammed Safwan",
        "created": 1764241339616,
        "est": {
@@ -3481,6 +4000,8 @@
        "summary": "Vendor history in RG",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Ajnas O",
        "created": 1764241534669,
        "est": {
@@ -3494,6 +4015,8 @@
        "summary": "Product history in RG",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Ajnas O",
        "created": 1764241601779,
        "est": {
@@ -3507,6 +4030,8 @@
        "summary": "Receive Goods with Payment",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Muhammed Safwan",
        "created": 1770618644304,
        "est": {
@@ -3540,108 +4065,13 @@
      "needs_owner": false
     },
     {
-     "id": "PXB1-148",
-     "summary": "Laybuy",
-     "created": 1758520852142,
-     "resolved": null,
-     "assignee": "Sarjith Pullithodi",
-     "epic_state": "OPEN",
-     "stories": [
-      {
-       "id": "PXB1-590",
-       "summary": "Import/Export Laybuy",
-       "state": "DEVELOPMENT",
-       "scope": "PHASE 1",
-       "assignee": "Sarika Agrawal",
-       "created": 1765272958476,
-       "est": {
-        "server": 1440,
-        "ui": 480,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-173",
-       "summary": "Laybuy setup",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1759984776629,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      },
-      {
-       "id": "PXB1-174",
-       "summary": "Laybuy Report",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "assignee": "Sarjith Pullithodi",
-       "created": 1759984791381,
-       "est": {
-        "server": 0,
-        "ui": 0,
-        "testing": 0
-       }
-      },
-      {
-       "id": "PXB1-591",
-       "summary": "Laybuy notification",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "assignee": "Dev Lead",
-       "created": 1765273080948,
-       "est": {
-        "server": 960,
-        "ui": 0,
-        "testing": 720
-       }
-      },
-      {
-       "id": "PXB1-592",
-       "summary": "Further actions from laybuy report",
-       "state": "DONE",
-       "scope": "PHASE 1",
-       "assignee": "Muhammed Safwan",
-       "created": 1765273143377,
-       "est": {
-        "server": 2880,
-        "ui": 240,
-        "testing": 720
-       }
-      }
-     ],
-     "rollup_all": {
-      "server": 5280,
-      "ui": 720,
-      "testing": 2160
-     },
-     "epic_est": {
-      "server": 5280,
-      "ui": 720,
-      "testing": 2160
-     },
-     "rollup": {
-      "server": 1440,
-      "ui": 480,
-      "testing": 720
-     },
-     "category": "MIXED",
-     "missing_est": false,
-     "total": 2640,
-     "spent": 12605,
-     "overshoot": true,
-     "role_owner": false,
-     "needs_owner": false
-    },
-    {
      "id": "PXB1-2724",
      "summary": "Tax Report",
      "created": 1772449853171,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "Medium",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3649,6 +4079,8 @@
        "summary": "Tax Report – Export ",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1773734396168,
        "est": {
@@ -3662,6 +4094,8 @@
        "summary": "Tax Report – Period Summary & Drill-down",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1773734278007,
        "est": {
@@ -3700,6 +4134,8 @@
      "created": 1768976482960,
      "resolved": null,
      "assignee": "Muhammed Safwan",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3707,6 +4143,8 @@
        "summary": "Customer Statement: Export & Bulk Processing",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Ajnas O",
        "created": 1773736308845,
        "est": {
@@ -3720,6 +4158,8 @@
        "summary": "Customer Statement: Search and Listing",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Ajnas O",
        "created": 1773735588289,
        "est": {
@@ -3733,6 +4173,8 @@
        "summary": "Customer Statement: Side Panel & Detailed Statement",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Ajnas O",
        "created": 1773735791585,
        "est": {
@@ -3746,6 +4188,8 @@
        "summary": "Customer Statement: WhatsApp & Email",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1773736093613,
        "est": {
@@ -3784,6 +4228,8 @@
      "created": 1764686980717,
      "resolved": null,
      "assignee": "Sarika Agrawal",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3791,6 +4237,8 @@
        "summary": "Barcode Printing Workflow",
        "state": "RE-OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarika Agrawal",
        "created": 1768892185513,
        "est": {
@@ -3804,6 +4252,8 @@
        "summary": "save barcode as pdf",
        "state": "OPEN",
        "scope": "PHASE 2",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1773822204277,
        "est": {
@@ -3817,6 +4267,8 @@
        "summary": "Barcode Template Design",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1768891901079,
        "est": {
@@ -3830,6 +4282,8 @@
        "summary": "Installation & Initial Setup",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1768891968732,
        "est": {
@@ -3843,6 +4297,8 @@
        "summary": "Document-Based Loading",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1768892274463,
        "est": {
@@ -3856,6 +4312,8 @@
        "summary": "Import & Export Cart Data",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1768892338843,
        "est": {
@@ -3869,6 +4327,8 @@
        "summary": "Template CRUD Operaton and Backup & Restoration",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1768892468761,
        "est": {
@@ -3882,6 +4342,8 @@
        "summary": "Multi-Location & Template Sharing",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Posibolt System Support",
        "created": 1768892609234,
        "est": {
@@ -3895,6 +4357,8 @@
        "summary": "Session & Connectivity Management",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1768892770552,
        "est": {
@@ -3933,6 +4397,8 @@
      "created": 1757483559259,
      "resolved": null,
      "assignee": "Sarika Agrawal",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -3940,6 +4406,8 @@
        "summary": "AI Suggestion in Vendor Management",
        "state": "READY FOR TESTING",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1760259330220,
        "est": {
@@ -3953,6 +4421,8 @@
        "summary": "Add/Edit Vendor",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1760259029125,
        "est": {
@@ -3966,6 +4436,8 @@
        "summary": "Search and Get Vendor ",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1760259099571,
        "est": {
@@ -3979,6 +4451,8 @@
        "summary": "Save/Reset Vendor Filter ",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Aruna Saini",
        "created": 1760259159798,
        "est": {
@@ -3992,6 +4466,8 @@
        "summary": "Vendor Import Changes",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1760259190517,
        "est": {
@@ -4005,6 +4481,8 @@
        "summary": "Vendor Export Changes",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1760259209502,
        "est": {
@@ -4018,6 +4496,8 @@
        "summary": "Vendor Notification ",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1760259282977,
        "est": {
@@ -4031,6 +4511,8 @@
        "summary": "Transaction History in the vendor master",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarika Agrawal",
        "created": 1763101508208,
        "est": {
@@ -4069,6 +4551,8 @@
      "created": 1765347198172,
      "resolved": null,
      "assignee": "Sarjith Pullithodi",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -4076,6 +4560,8 @@
        "summary": "Impact of global settings in Sales modules",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1765820500161,
        "est": {
@@ -4089,6 +4575,8 @@
        "summary": "Client configuration management",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1765436579925,
        "est": {
@@ -4102,6 +4590,8 @@
        "summary": "impact of purchase related configs",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1765820707013,
        "est": {
@@ -4115,6 +4605,8 @@
        "summary": "Impact of customer configs",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1765820729811,
        "est": {
@@ -4128,6 +4620,8 @@
        "summary": "Update on Config",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1767685032694,
        "est": {
@@ -4166,6 +4660,8 @@
      "created": 1757483192762,
      "resolved": null,
      "assignee": "Dev Lead",
+     "priority": "",
+     "module": "",
      "epic_state": "OPEN",
      "stories": [
       {
@@ -4173,6 +4669,8 @@
        "summary": "Display Dashboards, AI Insights, and Quick Links",
        "state": "OPEN",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "Medium",
        "assignee": "Sarjith Pullithodi",
        "created": 1769006750354,
        "est": {
@@ -4186,6 +4684,8 @@
        "summary": "Menu layout and navigation ",
        "state": "DONE",
        "scope": "PHASE 1",
+       "type": "STORY",
+       "priority": "",
        "assignee": "Sarjith Pullithodi",
        "created": 1767762204052,
        "est": {
@@ -4360,18 +4860,18 @@
   },
   "totals": {
    "pending": {
-    "server": 15420,
+    "server": 15360,
     "ui": 20460,
-    "testing": 31200,
-    "total": 67080,
-    "spent": 6985
+    "testing": 30960,
+    "total": 66780,
+    "spent": 6945
    },
    "mixed": {
     "server": 28800,
     "ui": 25260,
     "testing": 14400,
     "total": 68460,
-    "spent": 156215
+    "spent": 156275
    },
    "no_stories": {
     "server": 0,
@@ -4385,37 +4885,37 @@
     "ui": 0,
     "testing": 0,
     "total": 0,
-    "spent": 605
+    "spent": 1105
    },
    "grand_total": {
-    "server": 44220,
+    "server": 44160,
     "ui": 45720,
-    "testing": 45600,
-    "total": 135540,
-    "spent": 163200,
-    "server_md": 92.1,
+    "testing": 45360,
+    "total": 135240,
+    "spent": 163220,
+    "server_md": 92.0,
     "ui_md": 95.2,
-    "testing_md": 95.0,
-    "total_md": 282.4,
+    "testing_md": 94.5,
+    "total_md": 281.8,
     "spent_md": 340.0
    }
   },
   "spend": {
    "scope_query": "project: PXB1",
-   "total_minutes": 1032135,
-   "unattributed_minutes": 868330,
+   "total_minutes": 1032490,
+   "unattributed_minutes": 868165,
    "excluded": {
-    "entries": 3071,
-    "minutes": 159720,
-    "total": "2662h 0m"
+    "entries": 3072,
+    "minutes": 159750,
+    "total": "2662h 30m"
    }
   }
  },
  "timespent": {
   "group_by": "author",
-  "count": 580,
-  "total_minutes": 69907,
-  "total": "1165h 7m",
+  "count": 585,
+  "total_minutes": 70082,
+  "total": "1168h 2m",
   "groups": [
    {
     "key": "Sameera K",
@@ -4435,11 +4935,11 @@
    },
    {
     "key": "Sarika Agrawal",
-    "minutes": 5375,
-    "presentation": "89h 35m",
-    "entries": 31,
+    "minutes": 5435,
+    "presentation": "90h 35m",
+    "entries": 32,
     "issues": 15,
-    "bar": "█████░░░░░░░░░"
+    "bar": "██████░░░░░░░░"
    },
    {
     "key": "Ramya Vadavalasa",
@@ -4547,9 +5047,9 @@
    },
    {
     "key": "Rejitha KP",
-    "minutes": 1305,
-    "presentation": "21h 45m",
-    "entries": 38,
+    "minutes": 1320,
+    "presentation": "22h 0m",
+    "entries": 39,
     "issues": 26,
     "bar": "█░░░░░░░░░░░░░"
    },
@@ -4571,10 +5071,10 @@
    },
    {
     "key": "Anugraha B M",
-    "minutes": 930,
-    "presentation": "15h 30m",
-    "entries": 32,
-    "issues": 30,
+    "minutes": 1030,
+    "presentation": "17h 10m",
+    "entries": 35,
+    "issues": 33,
     "bar": "█░░░░░░░░░░░░░"
    },
    {
@@ -4644,11 +5144,851 @@
   ],
   "scope": "project: PXB1 Sprints: {beta1-20}",
   "excluded": {
-   "entries": 313,
-   "minutes": 16090,
-   "total": "268h 10m"
+   "entries": 314,
+   "minutes": 16120,
+   "total": "268h 40m"
   }
  },
+ "timespent_by_sprint": {
+  "beta1-17": {
+   "group_by": "author",
+   "count": 1230,
+   "total_minutes": 75172,
+   "total": "1252h 52m",
+   "groups": [
+    {
+     "key": "Niranjan Babu",
+     "minutes": 6855,
+     "presentation": "114h 15m",
+     "entries": 94,
+     "issues": 67,
+     "bar": "██████████████"
+    },
+    {
+     "key": "Ramya Vadavalasa",
+     "minutes": 6065,
+     "presentation": "101h 5m",
+     "entries": 51,
+     "issues": 29,
+     "bar": "████████████░░"
+    },
+    {
+     "key": "Vivek P",
+     "minutes": 4910,
+     "presentation": "81h 50m",
+     "entries": 77,
+     "issues": 55,
+     "bar": "██████████░░░░"
+    },
+    {
+     "key": "Shafeek M",
+     "minutes": 4885,
+     "presentation": "81h 25m",
+     "entries": 41,
+     "issues": 31,
+     "bar": "██████████░░░░"
+    },
+    {
+     "key": "Arshad P P",
+     "minutes": 4845,
+     "presentation": "80h 45m",
+     "entries": 59,
+     "issues": 51,
+     "bar": "██████████░░░░"
+    },
+    {
+     "key": "Muhammed Suhail CH",
+     "minutes": 4830,
+     "presentation": "80h 30m",
+     "entries": 45,
+     "issues": 27,
+     "bar": "██████████░░░░"
+    },
+    {
+     "key": "Mohammed Irfan KT",
+     "minutes": 4750,
+     "presentation": "79h 10m",
+     "entries": 31,
+     "issues": 21,
+     "bar": "██████████░░░░"
+    },
+    {
+     "key": "Aleena",
+     "minutes": 4335,
+     "presentation": "72h 15m",
+     "entries": 121,
+     "issues": 67,
+     "bar": "█████████░░░░░"
+    },
+    {
+     "key": "Rejitha KP",
+     "minutes": 3875,
+     "presentation": "64h 35m",
+     "entries": 122,
+     "issues": 65,
+     "bar": "████████░░░░░░"
+    },
+    {
+     "key": "Shabbir Hussain",
+     "minutes": 3800,
+     "presentation": "63h 20m",
+     "entries": 77,
+     "issues": 52,
+     "bar": "████████░░░░░░"
+    },
+    {
+     "key": "Fazalu Rahman P",
+     "minutes": 3760,
+     "presentation": "62h 40m",
+     "entries": 51,
+     "issues": 37,
+     "bar": "████████░░░░░░"
+    },
+    {
+     "key": "Sarika Agrawal",
+     "minutes": 3665,
+     "presentation": "61h 5m",
+     "entries": 39,
+     "issues": 30,
+     "bar": "███████░░░░░░░"
+    },
+    {
+     "key": "Mehanas M K",
+     "minutes": 3235,
+     "presentation": "53h 55m",
+     "entries": 126,
+     "issues": 74,
+     "bar": "███████░░░░░░░"
+    },
+    {
+     "key": "Ajnas O",
+     "minutes": 3180,
+     "presentation": "53h 0m",
+     "entries": 26,
+     "issues": 14,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Aswin C P",
+     "minutes": 3155,
+     "presentation": "52h 35m",
+     "entries": 35,
+     "issues": 18,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Anjali M S",
+     "minutes": 2780,
+     "presentation": "46h 20m",
+     "entries": 97,
+     "issues": 68,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Shafdar Sadan",
+     "minutes": 2670,
+     "presentation": "44h 30m",
+     "entries": 52,
+     "issues": 28,
+     "bar": "█████░░░░░░░░░"
+    },
+    {
+     "key": "Rajesh Kumar Sahoo",
+     "minutes": 1877,
+     "presentation": "31h 17m",
+     "entries": 30,
+     "issues": 23,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Anugraha B M",
+     "minutes": 875,
+     "presentation": "14h 35m",
+     "entries": 49,
+     "issues": 44,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Sarjith Pullithodi",
+     "minutes": 720,
+     "presentation": "12h 0m",
+     "entries": 2,
+     "issues": 2,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Akash Sreedharan",
+     "minutes": 60,
+     "presentation": "1h 0m",
+     "entries": 1,
+     "issues": 1,
+     "bar": "░░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Muhammed Faris",
+     "minutes": 30,
+     "presentation": "0h 30m",
+     "entries": 3,
+     "issues": 3,
+     "bar": "░░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Sooraj C",
+     "minutes": 15,
+     "presentation": "0h 15m",
+     "entries": 1,
+     "issues": 1,
+     "bar": "░░░░░░░░░░░░░░"
+    }
+   ],
+   "scope": "project: PXB1 Sprints: {beta1-17}",
+   "excluded": {
+    "entries": 348,
+    "minutes": 17505,
+    "total": "291h 45m"
+   }
+  },
+  "beta1-18": {
+   "group_by": "author",
+   "count": 926,
+   "total_minutes": 62740,
+   "total": "1045h 40m",
+   "groups": [
+    {
+     "key": "Sarjith Pullithodi",
+     "minutes": 6840,
+     "presentation": "114h 0m",
+     "entries": 5,
+     "issues": 4,
+     "bar": "██████████████"
+    },
+    {
+     "key": "Aruna Saini",
+     "minutes": 5280,
+     "presentation": "88h 0m",
+     "entries": 11,
+     "issues": 1,
+     "bar": "███████████░░░"
+    },
+    {
+     "key": "Niranjan Babu",
+     "minutes": 4195,
+     "presentation": "69h 55m",
+     "entries": 60,
+     "issues": 50,
+     "bar": "█████████░░░░░"
+    },
+    {
+     "key": "Sarika Agrawal",
+     "minutes": 4110,
+     "presentation": "68h 30m",
+     "entries": 24,
+     "issues": 19,
+     "bar": "████████░░░░░░"
+    },
+    {
+     "key": "Shabbir Hussain",
+     "minutes": 3890,
+     "presentation": "64h 50m",
+     "entries": 34,
+     "issues": 12,
+     "bar": "████████░░░░░░"
+    },
+    {
+     "key": "Aleena",
+     "minutes": 3540,
+     "presentation": "59h 0m",
+     "entries": 117,
+     "issues": 62,
+     "bar": "███████░░░░░░░"
+    },
+    {
+     "key": "Shafeek M",
+     "minutes": 3025,
+     "presentation": "50h 25m",
+     "entries": 31,
+     "issues": 23,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Vivek P",
+     "minutes": 2810,
+     "presentation": "46h 50m",
+     "entries": 33,
+     "issues": 22,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Mehanas M K",
+     "minutes": 2755,
+     "presentation": "45h 55m",
+     "entries": 115,
+     "issues": 69,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Fazalu Rahman P",
+     "minutes": 2715,
+     "presentation": "45h 15m",
+     "entries": 39,
+     "issues": 26,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Anugraha B M",
+     "minutes": 2660,
+     "presentation": "44h 20m",
+     "entries": 110,
+     "issues": 87,
+     "bar": "█████░░░░░░░░░"
+    },
+    {
+     "key": "Mohammed Irfan KT",
+     "minutes": 2415,
+     "presentation": "40h 15m",
+     "entries": 30,
+     "issues": 21,
+     "bar": "█████░░░░░░░░░"
+    },
+    {
+     "key": "Rajesh Kumar Sahoo",
+     "minutes": 2365,
+     "presentation": "39h 25m",
+     "entries": 29,
+     "issues": 21,
+     "bar": "█████░░░░░░░░░"
+    },
+    {
+     "key": "Shafdar Sadan",
+     "minutes": 2250,
+     "presentation": "37h 30m",
+     "entries": 37,
+     "issues": 18,
+     "bar": "█████░░░░░░░░░"
+    },
+    {
+     "key": "Rejitha KP",
+     "minutes": 2175,
+     "presentation": "36h 15m",
+     "entries": 70,
+     "issues": 40,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Aswin C P",
+     "minutes": 2130,
+     "presentation": "35h 30m",
+     "entries": 23,
+     "issues": 15,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Ramya Vadavalasa",
+     "minutes": 2110,
+     "presentation": "35h 10m",
+     "entries": 33,
+     "issues": 29,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Muhammed Suhail CH",
+     "minutes": 2100,
+     "presentation": "35h 0m",
+     "entries": 25,
+     "issues": 20,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Arshad P P",
+     "minutes": 1995,
+     "presentation": "33h 15m",
+     "entries": 49,
+     "issues": 44,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Anjali M S",
+     "minutes": 1745,
+     "presentation": "29h 5m",
+     "entries": 33,
+     "issues": 21,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Ajnas O",
+     "minutes": 1515,
+     "presentation": "25h 15m",
+     "entries": 13,
+     "issues": 6,
+     "bar": "███░░░░░░░░░░░"
+    },
+    {
+     "key": "Muhammed Faris",
+     "minutes": 90,
+     "presentation": "1h 30m",
+     "entries": 4,
+     "issues": 4,
+     "bar": "░░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Akash Sreedharan",
+     "minutes": 30,
+     "presentation": "0h 30m",
+     "entries": 1,
+     "issues": 1,
+     "bar": "░░░░░░░░░░░░░░"
+    }
+   ],
+   "scope": "project: PXB1 Sprints: {beta1-18}",
+   "excluded": {
+    "entries": 589,
+    "minutes": 28560,
+    "total": "476h 0m"
+   }
+  },
+  "beta1-19": {
+   "group_by": "author",
+   "count": 742,
+   "total_minutes": 39275,
+   "total": "654h 35m",
+   "groups": [
+    {
+     "key": "Shafeek M",
+     "minutes": 3940,
+     "presentation": "65h 40m",
+     "entries": 32,
+     "issues": 24,
+     "bar": "██████████████"
+    },
+    {
+     "key": "Niranjan Babu",
+     "minutes": 3085,
+     "presentation": "51h 25m",
+     "entries": 54,
+     "issues": 50,
+     "bar": "███████████░░░"
+    },
+    {
+     "key": "Fazalu Rahman P",
+     "minutes": 3040,
+     "presentation": "50h 40m",
+     "entries": 31,
+     "issues": 22,
+     "bar": "███████████░░░"
+    },
+    {
+     "key": "Sarika Agrawal",
+     "minutes": 2760,
+     "presentation": "46h 0m",
+     "entries": 21,
+     "issues": 16,
+     "bar": "██████████░░░░"
+    },
+    {
+     "key": "Rejitha KP",
+     "minutes": 2660,
+     "presentation": "44h 20m",
+     "entries": 85,
+     "issues": 45,
+     "bar": "█████████░░░░░"
+    },
+    {
+     "key": "Ajnas O",
+     "minutes": 2580,
+     "presentation": "43h 0m",
+     "entries": 15,
+     "issues": 4,
+     "bar": "█████████░░░░░"
+    },
+    {
+     "key": "Anugraha B M",
+     "minutes": 2545,
+     "presentation": "42h 25m",
+     "entries": 89,
+     "issues": 66,
+     "bar": "█████████░░░░░"
+    },
+    {
+     "key": "Aleena",
+     "minutes": 2360,
+     "presentation": "39h 20m",
+     "entries": 76,
+     "issues": 41,
+     "bar": "████████░░░░░░"
+    },
+    {
+     "key": "Mehanas M K",
+     "minutes": 2275,
+     "presentation": "37h 55m",
+     "entries": 90,
+     "issues": 46,
+     "bar": "████████░░░░░░"
+    },
+    {
+     "key": "Vivek P",
+     "minutes": 2085,
+     "presentation": "34h 45m",
+     "entries": 41,
+     "issues": 28,
+     "bar": "███████░░░░░░░"
+    },
+    {
+     "key": "Aswin C P",
+     "minutes": 1985,
+     "presentation": "33h 5m",
+     "entries": 48,
+     "issues": 36,
+     "bar": "███████░░░░░░░"
+    },
+    {
+     "key": "Muhammed Suhail CH",
+     "minutes": 1860,
+     "presentation": "31h 0m",
+     "entries": 25,
+     "issues": 19,
+     "bar": "███████░░░░░░░"
+    },
+    {
+     "key": "Mohammed Irfan KT",
+     "minutes": 1795,
+     "presentation": "29h 55m",
+     "entries": 16,
+     "issues": 12,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Ramya Vadavalasa",
+     "minutes": 1585,
+     "presentation": "26h 25m",
+     "entries": 25,
+     "issues": 20,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Arshad P P",
+     "minutes": 1220,
+     "presentation": "20h 20m",
+     "entries": 37,
+     "issues": 30,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Aruna Saini",
+     "minutes": 900,
+     "presentation": "15h 0m",
+     "entries": 4,
+     "issues": 4,
+     "bar": "███░░░░░░░░░░░"
+    },
+    {
+     "key": "Rajesh Kumar Sahoo",
+     "minutes": 725,
+     "presentation": "12h 5m",
+     "entries": 11,
+     "issues": 9,
+     "bar": "███░░░░░░░░░░░"
+    },
+    {
+     "key": "Anjali M S",
+     "minutes": 660,
+     "presentation": "11h 0m",
+     "entries": 30,
+     "issues": 26,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Shafdar Sadan",
+     "minutes": 510,
+     "presentation": "8h 30m",
+     "entries": 6,
+     "issues": 5,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Sarjith Pullithodi",
+     "minutes": 510,
+     "presentation": "8h 30m",
+     "entries": 3,
+     "issues": 3,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Akash Sreedharan",
+     "minutes": 120,
+     "presentation": "2h 0m",
+     "entries": 1,
+     "issues": 1,
+     "bar": "░░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Shabbir Hussain",
+     "minutes": 60,
+     "presentation": "1h 0m",
+     "entries": 1,
+     "issues": 1,
+     "bar": "░░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Muhammed Faris",
+     "minutes": 15,
+     "presentation": "0h 15m",
+     "entries": 1,
+     "issues": 1,
+     "bar": "░░░░░░░░░░░░░░"
+    }
+   ],
+   "scope": "project: PXB1 Sprints: {beta1-19}",
+   "excluded": {
+    "entries": 118,
+    "minutes": 5605,
+    "total": "93h 25m"
+   }
+  },
+  "beta1-20": {
+   "group_by": "author",
+   "count": 585,
+   "total_minutes": 70082,
+   "total": "1168h 2m",
+   "groups": [
+    {
+     "key": "Sameera K",
+     "minutes": 13830,
+     "presentation": "230h 30m",
+     "entries": 39,
+     "issues": 13,
+     "bar": "██████████████"
+    },
+    {
+     "key": "Amina Shifa P K",
+     "minutes": 10245,
+     "presentation": "170h 45m",
+     "entries": 31,
+     "issues": 5,
+     "bar": "██████████░░░░"
+    },
+    {
+     "key": "Sarika Agrawal",
+     "minutes": 5435,
+     "presentation": "90h 35m",
+     "entries": 32,
+     "issues": 15,
+     "bar": "██████░░░░░░░░"
+    },
+    {
+     "key": "Ramya Vadavalasa",
+     "minutes": 5317,
+     "presentation": "88h 37m",
+     "entries": 37,
+     "issues": 21,
+     "bar": "█████░░░░░░░░░"
+    },
+    {
+     "key": "Shabbir Hussain",
+     "minutes": 3680,
+     "presentation": "61h 20m",
+     "entries": 23,
+     "issues": 5,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Niranjan Babu",
+     "minutes": 3480,
+     "presentation": "58h 0m",
+     "entries": 47,
+     "issues": 35,
+     "bar": "████░░░░░░░░░░"
+    },
+    {
+     "key": "Fazalu Rahman P",
+     "minutes": 3330,
+     "presentation": "55h 30m",
+     "entries": 32,
+     "issues": 14,
+     "bar": "███░░░░░░░░░░░"
+    },
+    {
+     "key": "Ajnas O",
+     "minutes": 2820,
+     "presentation": "47h 0m",
+     "entries": 8,
+     "issues": 2,
+     "bar": "███░░░░░░░░░░░"
+    },
+    {
+     "key": "Shafeek M",
+     "minutes": 2310,
+     "presentation": "38h 30m",
+     "entries": 25,
+     "issues": 23,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Mohammed Irfan KT",
+     "minutes": 2140,
+     "presentation": "35h 40m",
+     "entries": 12,
+     "issues": 7,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Arshad P P",
+     "minutes": 2080,
+     "presentation": "34h 40m",
+     "entries": 18,
+     "issues": 12,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Aruna Saini",
+     "minutes": 1860,
+     "presentation": "31h 0m",
+     "entries": 7,
+     "issues": 6,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Aleena",
+     "minutes": 1755,
+     "presentation": "29h 15m",
+     "entries": 42,
+     "issues": 30,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Vivek P",
+     "minutes": 1750,
+     "presentation": "29h 10m",
+     "entries": 34,
+     "issues": 27,
+     "bar": "██░░░░░░░░░░░░"
+    },
+    {
+     "key": "Rajesh Kumar Sahoo",
+     "minutes": 1435,
+     "presentation": "23h 55m",
+     "entries": 12,
+     "issues": 10,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Sarjith Pullithodi",
+     "minutes": 1380,
+     "presentation": "23h 0m",
+     "entries": 4,
+     "issues": 4,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Rejitha KP",
+     "minutes": 1320,
+     "presentation": "22h 0m",
+     "entries": 39,
+     "issues": 26,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Muhammed Suhail CH",
+     "minutes": 1140,
+     "presentation": "19h 0m",
+     "entries": 13,
+     "issues": 11,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Mehanas M K",
+     "minutes": 1105,
+     "presentation": "18h 25m",
+     "entries": 43,
+     "issues": 35,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Anugraha B M",
+     "minutes": 1030,
+     "presentation": "17h 10m",
+     "entries": 35,
+     "issues": 33,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Akash Sreedharan",
+     "minutes": 780,
+     "presentation": "13h 0m",
+     "entries": 7,
+     "issues": 5,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Aswin C P",
+     "minutes": 580,
+     "presentation": "9h 40m",
+     "entries": 11,
+     "issues": 8,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Anjali M S",
+     "minutes": 525,
+     "presentation": "8h 45m",
+     "entries": 16,
+     "issues": 11,
+     "bar": "█░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Shafdar Sadan",
+     "minutes": 420,
+     "presentation": "7h 0m",
+     "entries": 10,
+     "issues": 6,
+     "bar": "░░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Muhammed Faris",
+     "minutes": 230,
+     "presentation": "3h 50m",
+     "entries": 5,
+     "issues": 5,
+     "bar": "░░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Vishnu kv",
+     "minutes": 60,
+     "presentation": "1h 0m",
+     "entries": 1,
+     "issues": 1,
+     "bar": "░░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Sooraj C",
+     "minutes": 30,
+     "presentation": "0h 30m",
+     "entries": 1,
+     "issues": 1,
+     "bar": "░░░░░░░░░░░░░░"
+    },
+    {
+     "key": "Sreeraj P Nair",
+     "minutes": 15,
+     "presentation": "0h 15m",
+     "entries": 1,
+     "issues": 1,
+     "bar": "░░░░░░░░░░░░░░"
+    }
+   ],
+   "scope": "project: PXB1 Sprints: {beta1-20}",
+   "excluded": {
+    "entries": 314,
+    "minutes": 16120,
+    "total": "268h 40m"
+   }
+  }
+ },
+ "sprints_available": [
+  "beta1-17",
+  "beta1-18",
+  "beta1-19",
+  "beta1-20"
+ ],
  "hygiene": {
   "blocks": [
    {
@@ -4669,10 +6009,10 @@
     "rows": [
      [
       "PXB1",
-      2154,
+      2150,
       1035,
       5,
-      1973,
+      1971,
       "52%",
       "███████░░░░░░░"
      ]
@@ -4680,7 +6020,7 @@
    },
    {
     "kind": "raw",
-    "s": "\n**3013 item(s) need attention (stale / unassigned / unestimated) — clear them to push hygiene toward 100%.**"
+    "s": "\n**3011 item(s) need attention (stale / unassigned / unestimated) — clear them to push hygiene toward 100%.**"
    }
   ]
  },
@@ -4702,26 +6042,6 @@
   "stale_days": 30,
   "people": [
    {
-    "key": "vishnukv@posibolt.com",
-    "name": "Vishnu kv",
-    "score": 100,
-    "signals": {
-     "stale_free": 1.0,
-     "estimated": 1.0,
-     "moving": 1.0,
-     "on_time_logging": 1.0
-    },
-    "counts": {
-     "open": 0,
-     "stale": 0,
-     "unestimated": 0,
-     "moved": 0
-    },
-    "logged_recently": true,
-    "red_reduction": 0,
-    "rank": 1
-   },
-   {
     "key": "Sameera",
     "name": "Sameera K",
     "score": 97,
@@ -4739,7 +6059,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 2
+    "rank": 1
    },
    {
     "key": "Ajnas",
@@ -4759,7 +6079,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 3
+    "rank": 2
    },
    {
     "key": "aruna@posibolt.com",
@@ -4779,7 +6099,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 4
+    "rank": 3
    },
    {
     "key": "shafeek@posibolt.com",
@@ -4799,7 +6119,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 5
+    "rank": 4
    },
    {
     "key": "sarika@posibolt.com",
@@ -4819,7 +6139,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 6
+    "rank": 5
    },
    {
     "key": "Fazalu_Rahman_P",
@@ -4839,7 +6159,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 7
+    "rank": 6
    },
    {
     "key": "Mohammed_Irfan_KT",
@@ -4859,7 +6179,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 8
+    "rank": 7
    },
    {
     "key": "Niranjan",
@@ -4879,7 +6199,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 9
+    "rank": 8
    },
    {
     "key": "Rajesh_Kumar_Sahoo",
@@ -4899,7 +6219,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 10
+    "rank": 9
    },
    {
     "key": "RamyaVadavalasa",
@@ -4919,7 +6239,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 11
+    "rank": 10
    },
    {
     "key": "aaqqash",
@@ -4939,7 +6259,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 12
+    "rank": 11
    },
    {
     "key": "aleena",
@@ -4959,7 +6279,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 13
+    "rank": 12
    },
    {
     "key": "anjali",
@@ -4972,14 +6292,14 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 40,
+     "open": 37,
      "stale": 0,
-     "unestimated": 40,
-     "moved": 40
+     "unestimated": 37,
+     "moved": 37
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 14
+    "rank": 13
    },
    {
     "key": "arshad@posibolt.com",
@@ -4999,7 +6319,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 15
+    "rank": 14
    },
    {
     "key": "aswin@posibolt.com",
@@ -5012,14 +6332,14 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 5,
+     "open": 8,
      "stale": 0,
-     "unestimated": 5,
-     "moved": 5
+     "unestimated": 8,
+     "moved": 8
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 16
+    "rank": 15
    },
    {
     "key": "mehanas@posibolt.com",
@@ -5039,7 +6359,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 17
+    "rank": 16
    },
    {
     "key": "safwan@posibolt.com",
@@ -5059,7 +6379,7 @@
     },
     "logged_recently": false,
     "red_reduction": 0,
-    "rank": 18
+    "rank": 17
    },
    {
     "key": "suhailch",
@@ -5079,7 +6399,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 19
+    "rank": 18
    },
    {
     "key": "vivek@posibolt.com",
@@ -5092,34 +6412,14 @@
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 4,
-     "stale": 0,
-     "unestimated": 4,
-     "moved": 4
-    },
-    "logged_recently": true,
-    "red_reduction": 0,
-    "rank": 20
-   },
-   {
-    "key": "Anugraha_B_M",
-    "name": "Anugraha B M",
-    "score": 65,
-    "signals": {
-     "stale_free": 0.8,
-     "estimated": 0.0,
-     "moving": 0.8,
-     "on_time_logging": 1.0
-    },
-    "counts": {
      "open": 5,
-     "stale": 1,
+     "stale": 0,
      "unestimated": 5,
-     "moved": 4
+     "moved": 5
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 21
+    "rank": 19
    },
    {
     "key": "sarjith@posibolt.com",
@@ -5139,7 +6439,7 @@
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 22
+    "rank": 20
    },
    {
     "key": "Pramod_Saini",
@@ -5159,7 +6459,27 @@
     },
     "logged_recently": false,
     "red_reduction": 0,
-    "rank": 23
+    "rank": 21
+   },
+   {
+    "key": "Anugraha_B_M",
+    "name": "Anugraha B M",
+    "score": 50,
+    "signals": {
+     "stale_free": 0.5,
+     "estimated": 0.0,
+     "moving": 0.5,
+     "on_time_logging": 1.0
+    },
+    "counts": {
+     "open": 2,
+     "stale": 1,
+     "unestimated": 2,
+     "moved": 1
+    },
+    "logged_recently": true,
+    "red_reduction": 0,
+    "rank": 22
    },
    {
     "key": "Shafdar_Sadan",
@@ -5179,7 +6499,7 @@
     },
     "logged_recently": false,
     "red_reduction": 0,
-    "rank": 24
+    "rank": 23
    },
    {
     "key": "amina",
@@ -5199,7 +6519,7 @@
     },
     "logged_recently": false,
     "red_reduction": 0,
-    "rank": 25
+    "rank": 24
    },
    {
     "key": "suhail@posibolt.com",
@@ -5219,7 +6539,7 @@
     },
     "logged_recently": false,
     "red_reduction": 0,
-    "rank": 26
+    "rank": 25
    },
    {
     "key": "shad@posibolt.com",
@@ -5239,47 +6559,47 @@
     },
     "logged_recently": false,
     "red_reduction": 0,
-    "rank": 27
+    "rank": 26
    },
    {
     "key": "Rejitha_KP",
     "name": "Rejitha KP",
-    "score": 41,
+    "score": 40,
     "signals": {
-     "stale_free": 0.4,
+     "stale_free": 0.375,
      "estimated": 0.0,
-     "moving": 0.24,
+     "moving": 0.208,
      "on_time_logging": 1.0
     },
     "counts": {
-     "open": 25,
+     "open": 24,
      "stale": 15,
-     "unestimated": 25,
-     "moved": 6
+     "unestimated": 24,
+     "moved": 5
     },
     "logged_recently": true,
     "red_reduction": 0,
-    "rank": 28
+    "rank": 27
    },
    {
     "key": "jaseena",
     "name": "Jaseena A K",
     "score": 20,
     "signals": {
-     "stale_free": 0.422,
+     "stale_free": 0.423,
      "estimated": 0.0,
-     "moving": 0.377,
+     "moving": 0.378,
      "on_time_logging": 0.0
     },
     "counts": {
-     "open": 1412,
+     "open": 1414,
      "stale": 816,
-     "unestimated": 1412,
-     "moved": 533
+     "unestimated": 1414,
+     "moved": 535
     },
     "logged_recently": false,
     "red_reduction": 0,
-    "rank": 29
+    "rank": 28
    },
    {
     "key": "shaijal",
@@ -5299,18 +6619,18 @@
     },
     "logged_recently": false,
     "red_reduction": 0,
-    "rank": 30
+    "rank": 29
    }
   ],
   "teams": [
    {
     "key": "All",
-    "score": 67,
+    "score": 66,
     "signals": {
-     "stale_free": 0.892,
-     "estimated": 0.21,
-     "moving": 0.864,
-     "on_time_logging": 0.733
+     "stale_free": 0.877,
+     "estimated": 0.182,
+     "moving": 0.848,
+     "on_time_logging": 0.724
     },
     "members": [
      "Ajnas",
@@ -5341,10 +6661,9 @@
      "shaijal",
      "suhail@posibolt.com",
      "suhailch",
-     "vishnukv@posibolt.com",
      "vivek@posibolt.com"
     ],
-    "members_scored": 30,
+    "members_scored": 29,
     "red_reduction": 0,
     "rank": 1
    }
@@ -5444,9 +6763,9 @@
    }
   ],
   "owner_gap": {
-   "open_epics": 63,
+   "open_epics": 62,
    "unowned_epics": 30,
-   "note": "30 of 63 open epics have no individual owner (blank or parked on a role placeholder like Dev Lead/UIX Lead) — assign a person so someone is accountable."
+   "note": "30 of 62 open epics have no individual owner (blank or parked on a role placeholder like Dev Lead/UIX Lead) — assign a person so someone is accountable."
   }
  },
  "insights": {
@@ -5460,7 +6779,14 @@
    "total_red": 53,
    "stale_days": 30
   },
-  "red_delta": null,
-  "compared_to": null
+  "red_delta": {
+   "unowned": 0,
+   "unestimated": 0,
+   "stale": 0,
+   "blocked": 0,
+   "overshoot": 0,
+   "total_red": 0
+  },
+  "compared_to": "snapshot-2026-07-02.json"
  }
 }

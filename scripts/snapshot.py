@@ -128,6 +128,32 @@ def latest_active_sprint(ctx, project, fallback=FALLBACK_SPRINT):
     return names[-1]
 
 
+def recent_sprints(ctx, project, n=4, fallback=FALLBACK_SPRINT):
+    """The last `n` sprint names for `project` (most-recent last), INCLUDING archived
+    ones so the UI picker can review past sprints. Sorted by finish/start date."""
+    try:
+        ags = yt.GET(ctx, "/api/agiles?fields=name,projects(shortName),"
+                          "sprints(name,archived,start,finish)&$top=100")
+    except yt.YTError:
+        return [fallback]
+    want = (project or "").upper()
+    by_name = {}  # name -> latest finish/start ms (0 if undated)
+    for ag in (ags or []):
+        codes = [(p.get("shortName") or "").upper() for p in (ag.get("projects") or [])]
+        if want not in codes:
+            continue
+        for s in (ag.get("sprints") or []):
+            nm = s.get("name")
+            if not nm:
+                continue
+            key = s.get("finish") or s.get("start") or 0
+            by_name[nm] = max(by_name.get(nm, 0), key)
+    if not by_name:
+        return [fallback]
+    ordered = sorted(by_name, key=lambda nm: by_name[nm])  # ascending by date
+    return ordered[-n:]
+
+
 # ---------------------------------------------------------------- RED counts (insights)
 def _red_counts_from_effort(effort):
     """Absolute RED counts derived from the effort_report data (Consensus Rev #8):
@@ -397,6 +423,21 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     timespent = yt.time_spent(ctx, project=project, sprint=sprint, group_by="author")
     effort["_sprint"] = sprint  # thread the sprint to gamification's worklog window
 
+    # 2b) per-sprint time for the UI sprint picker (last few active sprints).
+    sprints_available = recent_sprints(ctx, project, n=4)
+    if sprint not in sprints_available:
+        sprints_available = sprints_available + [sprint]
+    timespent_by_sprint = {}
+    for sp in sprints_available:
+        if sp == sprint:
+            timespent_by_sprint[sp] = timespent  # reuse the sweep we already did
+            continue
+        try:
+            timespent_by_sprint[sp] = yt.time_spent(ctx, project=project, sprint=sp,
+                                                     group_by="author")
+        except yt.YTError:
+            pass
+
     # 3) hygiene — board hygiene blocks (report shape) for the project.
     hygiene_blocks = yt.report(ctx, "hygiene", project=project)
 
@@ -422,6 +463,8 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
         "meta": meta,
         "effort": effort,
         "timespent": timespent,
+        "timespent_by_sprint": timespent_by_sprint,
+        "sprints_available": sprints_available,
         "hygiene": {"blocks": hygiene_blocks},
         "gamification": gamification,
         "insights": insights,

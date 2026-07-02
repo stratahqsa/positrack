@@ -387,6 +387,8 @@ def _epic_stories(epic):
                     "summary": s.get("summary") or "",
                     "state": _cf_str(s, "State"),
                     "scope": _cf_str(s, "Scope"),
+                    "type": _cf_str(s, "TaskType"),
+                    "priority": _cf_str(s, "Priority"),
                     "assignee": _cf_str(s, "Assignee"),
                     "created": s.get("created"),
                     "est": {"server": _cf_minutes(s, "Server Estimation"),
@@ -414,6 +416,7 @@ def categorize_epic(epic):
     rec = {"id": epic.get("idReadable"), "summary": epic.get("summary") or "",
            "created": epic.get("created"), "resolved": epic.get("resolved"),
            "assignee": _cf_str(epic, "Assignee"),
+           "priority": _cf_str(epic, "Priority"), "module": _cf_str(epic, "Module"),
            "epic_state": epic_state, "stories": stories, "rollup_all": rollup_all,
            "epic_est": epic_est}
     if is_done_state(epic_state):
