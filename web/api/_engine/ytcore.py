@@ -404,6 +404,14 @@ def categorize_epic(epic):
     estimate rollup {server,ui,testing} with epic-level fallback, the missing-est
     flag, and the child story list. No network."""
     stories = _epic_stories(epic)
+    # Scope-leakage signals (v15 parity): stories deferred to Phase 2 under a P1 epic,
+    # plus how many P1 stories are still pending. Derived from child scopes/states we
+    # already fetched — no extra calls. A P1 epic with P2 stories is being partially
+    # deferred ("hollowed out"), which the tower should surface as a watch item.
+    p2_stories = sum(1 for s in stories if "PHASE 2" in (s.get("scope") or "").upper())
+    p1_pending = sum(1 for s in stories
+                     if "PHASE 2" not in (s.get("scope") or "").upper()
+                     and not is_done_state(s.get("state")))
     epic_state = _cf_str(epic, "State")
     epic_est = {"server": _cf_minutes(epic, "Server Estimation"),
                 "ui": _cf_minutes(epic, "UI Estimation"),
@@ -417,6 +425,7 @@ def categorize_epic(epic):
            "created": epic.get("created"), "resolved": epic.get("resolved"),
            "assignee": _cf_str(epic, "Assignee"),
            "priority": _cf_str(epic, "Priority"), "module": _cf_str(epic, "Module"),
+           "p2_stories": p2_stories, "p1_pending": p1_pending, "has_p2": p2_stories > 0,
            "epic_state": epic_state, "stories": stories, "rollup_all": rollup_all,
            "epic_est": epic_est}
     if is_done_state(epic_state):

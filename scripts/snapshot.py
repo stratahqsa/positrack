@@ -177,6 +177,7 @@ def _red_counts_from_effort(effort):
     unowned = sum(1 for e in epics if _needs_owner(e))
     role_owned = sum(1 for e in epics
                      if (e.get("assignee") or "").strip() and is_role_account(name=e["assignee"]))
+    deferred = sum(1 for e in epics if e.get("has_p2"))  # P1 epics with stories pushed to P2
     unestimated = sum(1 for e in epics if e.get("missing_est"))
     blocked = sum(1 for e in epics
                   if re.search(r"block|hold", (e.get("epic_state") or ""), re.I))
@@ -192,6 +193,7 @@ def _red_counts_from_effort(effort):
         "blocked": blocked,
         "overshoot": overshoot,
         "role_owned": role_owned,
+        "deferred": deferred,
         "total_red": unowned + unestimated + stale + blocked + overshoot,
         "stale_days": STALE_DAYS,
     }

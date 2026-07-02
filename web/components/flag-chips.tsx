@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { UserX, UserCog, AlertTriangle, FileWarning } from "lucide-react";
+import { UserX, UserCog, AlertTriangle, FileWarning, Split } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Epic } from "@/lib/types";
 import type { RedFilter } from "@/lib/filter";
@@ -28,7 +28,7 @@ export function FlagChips({
   activeRed?: RedFilter[];
 }) {
   const f = epicFlags(epic);
-  if (!f.red) {
+  if (!f.red && epic.has_p2 !== true) {
     return (
       <span className="text-[11px] text-faint" aria-label="No flags">
         —
@@ -93,6 +93,17 @@ export function FlagChips({
             "unestimated",
             <Badge variant="info" title="No estimate on stories/epic">
               <FileWarning className="size-3" /> no est
+            </Badge>,
+          )
+        : null}
+      {epic.has_p2
+        ? wrap(
+            "deferred",
+            <Badge
+              variant="warn"
+              title={`${epic.p2_stories ?? 0} story(ies) deferred to Phase 2 — this P1 epic is being partially deferred`}
+            >
+              <Split className="size-3" /> {epic.p2_stories ?? 0}→P2
             </Badge>,
           )
         : null}
