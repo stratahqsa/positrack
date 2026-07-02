@@ -1,18 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { ListChecks, UserX, AlertTriangle, FileWarning } from "lucide-react";
+import {
+  ListChecks,
+  UserX,
+  UserCog,
+  AlertTriangle,
+  FileWarning,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Epic } from "@/lib/types";
 import { epicFlags, overspend, md, overspendLabel } from "@/lib/format";
 import { IssueLink } from "@/components/issue-link";
 import { Card } from "@/components/ui/card";
 
-type Filter = "all" | "unowned" | "overshoot" | "no-est";
+type Filter = "all" | "needs-owner" | "overshoot" | "no-est";
 
 const FILTERS: { key: Filter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "all", label: "All", icon: ListChecks },
-  { key: "unowned", label: "Unowned", icon: UserX },
+  { key: "needs-owner", label: "Needs owner", icon: UserX },
   { key: "overshoot", label: "Overshoot", icon: AlertTriangle },
   { key: "no-est", label: "No estimate", icon: FileWarning },
 ];
@@ -25,9 +31,12 @@ function reasonChips(epic: Epic) {
       label: `over by ${overspendLabel(overspend(epic))}`,
       className: "bg-warn/12 text-warn ring-warn/25",
     });
-  if (f.unowned)
+  if (f.needsOwner)
     chips.push({
-      label: "needs owner",
+      // Transparent when parked on a role placeholder, plain "needs owner" when blank.
+      label: f.roleOwner
+        ? `needs owner · ${epic.assignee.trim()}`
+        : "needs owner",
       className: "bg-danger/12 text-danger ring-danger/25",
     });
   if (f.missingEst)
@@ -56,16 +65,22 @@ export function Worklist({ epics }: { epics: Epic[] }) {
   const counts = React.useMemo(
     () => ({
       all: flagged.length,
-      unowned: flagged.filter((x) => x.f.unowned).length,
+      "needs-owner": flagged.filter((x) => x.f.needsOwner).length,
       overshoot: flagged.filter((x) => x.f.overshoot).length,
       "no-est": flagged.filter((x) => x.f.missingEst).length,
     }),
     [flagged],
   );
 
+  // How many flagged epics are parked on a role account (subset of needs-owner).
+  const roleParked = React.useMemo(
+    () => flagged.filter((x) => x.f.roleOwner).length,
+    [flagged],
+  );
+
   const visible = flagged.filter(({ f }) => {
     if (filter === "all") return true;
-    if (filter === "unowned") return f.unowned;
+    if (filter === "needs-owner") return f.needsOwner;
     if (filter === "overshoot") return f.overshoot;
     return f.missingEst;
   });
@@ -102,6 +117,16 @@ export function Worklist({ epics }: { epics: Epic[] }) {
           ))}
         </div>
       </div>
+
+      {roleParked > 0 ? (
+        <div className="flex items-center gap-1.5 border-b border-border/60 bg-danger/[0.03] px-4 py-1.5 text-[11px] text-muted">
+          <UserCog className="size-3 text-danger/80" />
+          <span>
+            <span className="font-semibold text-danger/90">{roleParked}</span>{" "}
+            parked on a role account — assign a person.
+          </span>
+        </div>
+      ) : null}
 
       <div className="max-h-[380px] overflow-y-auto scroll-slim">
         {visible.length === 0 ? (

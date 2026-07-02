@@ -72,6 +72,14 @@ export function isUnowned(assignee: string | null | undefined): boolean {
 }
 
 export interface EpicFlags {
+  /**
+   * The epic has no individual owner — blank assignee OR parked on a role/system
+   * placeholder. This is the RED "needs owner" condition.
+   */
+  needsOwner: boolean;
+  /** Parked on a role/system account (non-blank assignee, but not a person). */
+  roleOwner: boolean;
+  /** Assignee is literally blank (a stricter subset of needsOwner). */
   unowned: boolean;
   overshoot: boolean;
   missingEst: boolean;
@@ -83,22 +91,29 @@ export interface EpicFlags {
 
 /**
  * Per-epic RED flag derivation. Only flags that exist per-row in the snapshot:
- * unowned (empty assignee), overshoot (spent>total), missing estimate.
+ * needs-owner (blank OR role-parked assignee), overshoot (spent>total), missing
+ * estimate. Prefers the data-layer's `needs_owner`/`role_owner` booleans and
+ * falls back gracefully on older snapshots that predate those fields.
  * (Stale/blocked are aggregate-only in this snapshot and not attributable per epic.)
  */
 export function epicFlags(e: Epic): EpicFlags {
-  const unowned = isUnowned(e.assignee);
+  // Resilient: use the snapshot's honest flags when present, else derive.
+  const needsOwner = e.needs_owner ?? isUnowned(e.assignee);
+  const roleOwner = e.role_owner ?? false;
+  // "unowned" = truly blank (needs an owner, and not parked on a role account).
+  // Drives the strict "unowned" label vs. the "needs owner · <role>" label.
+  const unowned = needsOwner && !roleOwner;
   const overshoot = !!e.overshoot;
   const missingEst = !!e.missing_est;
-  const red = unowned || overshoot || missingEst;
+  const red = needsOwner || overshoot || missingEst;
   // Weighting: overshoot (real overspend) hurts most, then no owner, then no estimate.
   const severity =
     (overshoot ? 4 : 0) +
-    (unowned ? 2 : 0) +
+    (needsOwner ? 2 : 0) +
     (missingEst ? 1 : 0) +
     // tie-break: larger overspend magnitude nudges higher
     (overshoot && e.total ? Math.min(1, (e.spent - e.total) / e.total) : 0);
-  return { unowned, overshoot, missingEst, red, severity };
+  return { needsOwner, roleOwner, unowned, overshoot, missingEst, red, severity };
 }
 
 /** Overspend in minutes (spent beyond total estimate), or 0. */

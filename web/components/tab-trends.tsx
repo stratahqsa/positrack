@@ -18,7 +18,7 @@ import { Card } from "@/components/ui/card";
 
 const SERIES: { key: keyof TrendPoint; label: string; color: string }[] = [
   { key: "total_red", label: "Total RED", color: "var(--color-danger)" },
-  { key: "unowned", label: "Unowned", color: "var(--color-warn)" },
+  { key: "unowned", label: "Needs owner", color: "var(--color-warn)" },
   { key: "overshoot", label: "Overshoot", color: "var(--color-violet)" },
   { key: "stale", label: "Stale", color: "var(--color-info)" },
 ];

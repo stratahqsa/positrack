@@ -38,7 +38,7 @@ def _effort_fixture():
         "sections": {
             "done": [_epic("E-DONE")],
             "pending": [
-                _epic("E-1", assignee="Lead", missing_est=True),
+                _epic("E-1", assignee="Dev Lead", missing_est=True),  # role-parked -> needs owner
                 _epic("E-2", assignee="", state="On Hold"),        # unowned + blocked
                 _epic("E-3", assignee="Dev", overshoot=True, spent=999, created=old),
             ],
@@ -53,7 +53,8 @@ def _effort_fixture():
 # ---------- RED counts from effort ----------
 def test_red_counts_from_effort_fixture():
     red = snap._red_counts_from_effort(_effort_fixture())
-    assert red["unowned"] == 2          # E-2 (pending) + E-4 (mixed)
+    assert red["unowned"] == 3          # E-1 "Dev Lead" (role) + E-2 + E-4 (blank)
+    assert red["role_owned"] == 1       # E-1 parked on a role placeholder
     assert red["unestimated"] == 1      # E-1 missing_est
     assert red["blocked"] == 1          # E-2 On Hold
     assert red["overshoot"] == 1        # E-3
@@ -75,10 +76,10 @@ def test_build_insights_delta_uses_prior_snapshot(tmp_path, monkeypatch):
     (tmp_path / "snapshot-2026-06-30.json").write_text(json.dumps(prior))
 
     insights = snap.build_insights(_effort_fixture(), "PXB1", "PHASE 1")
-    assert insights["red_counts"]["unowned"] == 2
+    assert insights["red_counts"]["unowned"] == 3
     assert insights["compared_to"] == "snapshot-2026-06-30.json"
-    # delta = today - prior (2-5 = -3 unowned, i.e. improved)
-    assert insights["red_delta"]["unowned"] == 2 - 5
+    # delta = today - prior (3-5 = -2 unowned, i.e. improved)
+    assert insights["red_delta"]["unowned"] == 3 - 5
     assert insights["red_delta"]["unestimated"] == 1 - 4
     assert insights["red_delta"]["overshoot"] == 1 - 1
     assert set(insights["red_delta"]) == {"unowned", "unestimated", "stale",

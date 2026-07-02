@@ -1,12 +1,14 @@
 import * as React from "react";
-import { UserX, AlertTriangle, FileWarning } from "lucide-react";
+import { UserX, UserCog, AlertTriangle, FileWarning } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Epic } from "@/lib/types";
 import { epicFlags, overspend, overspendLabel } from "@/lib/format";
 
 /**
  * RED flag chips for an epic row. Only renders flags derivable per-epic in the
- * snapshot: unowned, overshoot (with magnitude), missing estimate.
+ * snapshot: needs-owner (blank OR role-parked), overshoot (with magnitude),
+ * missing estimate. A role-parked epic reads "needs owner · <role>" so it is
+ * transparent it is parked on a placeholder, not truly owned.
  */
 export function FlagChips({ epic }: { epic: Epic }) {
   const f = epicFlags(epic);
@@ -25,10 +27,20 @@ export function FlagChips({ epic }: { epic: Epic }) {
           <AlertTriangle className="size-3" /> +{overspendLabel(over)}
         </Badge>
       ) : null}
-      {f.unowned ? (
-        <Badge variant="danger" title="No assignee">
-          <UserX className="size-3" /> unowned
-        </Badge>
+      {f.needsOwner ? (
+        f.roleOwner ? (
+          <Badge
+            variant="danger"
+            title={`Parked on a role account (${epic.assignee.trim()}) — assign a person`}
+          >
+            <UserCog className="size-3" /> needs owner ·{" "}
+            {epic.assignee.trim()}
+          </Badge>
+        ) : (
+          <Badge variant="danger" title="No assignee">
+            <UserX className="size-3" /> unowned
+          </Badge>
+        )
       ) : null}
       {f.missingEst ? (
         <Badge variant="info" title="No estimate on stories/epic">
