@@ -5,11 +5,17 @@ name: Snapshot
 # the whole snapshot here (or locally) and commit web/data/*.json back to the repo;
 # that push triggers a Vercel redeploy and the Next.js UI reads the JSON server-side.
 #
-# SETUP REQUIRED (one time): add a repository secret named `YT_TOKEN` — a YouTrack
-# permanent token. Use a LEAST-PRIVILEGE, READ-ONLY service account token (the
-# snapshot only READS: effort/worklog/hygiene). Never use an admin write token here.
-#   Settings -> Secrets and variables -> Actions -> New repository secret
-#     Name: YT_TOKEN   Value: perm-...
+# SETUP REQUIRED (one time), two repository secrets:
+#   1. YT_TOKEN — a YouTrack permanent token. Use a LEAST-PRIVILEGE, READ-ONLY
+#      service account token (the snapshot only READS: effort/worklog/hygiene).
+#      Never use an admin write token here.
+#   2. SNAPSHOT_PUSH_TOKEN — a token allowed to push the data commit to the
+#      protected `master` branch (the default GITHUB_TOKEN is blocked by branch
+#      protection: "Changes must be made through a pull request"). Use a
+#      least-privilege fine-grained PAT scoped to THIS repo only, Contents:
+#      read+write, whose owner is added to master's bypass list
+#      (Settings -> Branches / Rulesets -> Bypass list). Data-only, machine commit.
+#   Add both at: Settings -> Secrets and variables -> Actions -> New repository secret.
 # Optionally set `YT_BASE` (defaults to https://support.posibolt.com in the engine).
 
 on:
@@ -44,6 +50,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Push the nightly data commit with a token that can bypass branch
+          # protection on master (the default GITHUB_TOKEN cannot — the push is
+          # rejected with GH006). Falls back to GITHUB_TOKEN when the secret is
+          # unset, so "Produce snapshot" still runs; the push just keeps failing
+          # until SNAPSHOT_PUSH_TOKEN is added (see the header for setup).
+          token: ${{ secrets.SNAPSHOT_PUSH_TOKEN || github.token }}
+          persist-credentials: true
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v6
