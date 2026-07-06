@@ -1,45 +1,50 @@
 import "server-only";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import type { Snapshot, TrendPoint } from "./types";
 
 /**
- * Server-only snapshot access. Reads web/data/*.json from disk at request time.
- * NEVER import this from a Client Component and never re-export the raw JSON to
- * the browser — pages must project only the fields they render.
+ * Server-only snapshot access. Reads the Control Tower snapshot from the
+ * machine-managed GitHub Release `snapshot-latest`, which the nightly Snapshot
+ * workflow updates. The repo is public, so the asset URLs are public — no token.
+ * Pages are force-dynamic, so each request sees the latest release data without a
+ * redeploy. Override the base with SNAPSHOT_DATA_URL if the repo/tag ever changes.
  */
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const BASE =
+  process.env.SNAPSHOT_DATA_URL ??
+  "https://github.com/stratahqsa/positrack/releases/download/snapshot-latest";
+const DATED = /^snapshot-\d{4}-\d{2}-\d{2}\.json$/;
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`snapshot fetch failed (${res.status}) for ${url}`);
+  return (await res.json()) as T;
+}
 
 export async function loadSnapshot(): Promise<Snapshot> {
-  const raw = await fs.readFile(path.join(DATA_DIR, "latest.json"), "utf8");
-  return JSON.parse(raw) as Snapshot;
+  return fetchJson<Snapshot>(`${BASE}/latest.json`);
 }
 
 /**
- * Build the RED-count trend series from dated snapshot files.
- * De-duplicates by date (keeps the last file seen for a given date) so an
- * identical `snapshot-YYYY-MM-DD.json` copy of latest does not create a fake
- * second data point. Sorted ascending by date.
+ * Build the RED-count trend series from the dated snapshots listed in index.json
+ * (maintained by the workflow). De-duplicates by date (a same-date entry wins the
+ * later position) and sorts ascending. Returns [] on any failure so the Trends tab
+ * degrades to "collecting data" rather than crashing the page.
  */
 export async function loadTrend(): Promise<TrendPoint[]> {
-  let files: string[] = [];
+  let index: string[];
   try {
-    files = await fs.readdir(DATA_DIR);
+    index = await fetchJson<string[]>(`${BASE}/index.json`);
   } catch {
     return [];
   }
 
-  const dated = files
-    .filter((f) => /^snapshot-\d{4}-\d{2}-\d{2}\.json$/.test(f))
-    .sort();
+  const dated = index.filter((f) => DATED.test(f)).sort();
 
   const byDate = new Map<string, TrendPoint>();
   for (const file of dated) {
     const date = file.slice("snapshot-".length, -".json".length);
     try {
-      const raw = await fs.readFile(path.join(DATA_DIR, file), "utf8");
-      const snap = JSON.parse(raw) as Snapshot;
+      const snap = await fetchJson<Snapshot>(`${BASE}/${file}`);
       const rc = snap.insights?.red_counts;
       if (!rc) continue;
       byDate.set(date, {

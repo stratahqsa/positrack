@@ -15,19 +15,25 @@ all behind a shared-code access gate.
 
 ## Data flow (server-side only)
 
-The dashboard reads `web/data/latest.json` **on the server** via `fs` at request
-time (`lib/data.ts`, marked `server-only`). The raw snapshot is **never** exposed
-as a public URL and is **never** shipped to the client bundle — pages project
-only the fields they render, and those flow to client components as props at
-render time. Verified: no snapshot values, names, or the `perm-` token appear in
-`.next/static`.
+The dashboard reads the snapshot **on the server** at request time (`lib/data.ts`,
+marked `server-only`) from the machine-managed **GitHub Release `snapshot-latest`**,
+whose assets the nightly [`Snapshot` workflow](../.github/workflows/snapshot.yml)
+updates. Pages are `force-dynamic`, so each request sees the latest release data
+**without a redeploy**. The snapshot is **not** committed to git (it used to live in
+`web/data/*.json`); it is published to the release instead, so the nightly bot needs
+only its built-in token — no push to protected master, no PAT, no external store.
+Override the source with `SNAPSHOT_DATA_URL` if the repo/tag changes.
 
-- `web/data/latest.json` — current snapshot (top-level: `meta`, `effort`,
+- `snapshot-latest/latest.json` — current snapshot (top-level: `meta`, `effort`,
   `timespent`, `gamification`, `insights`).
-- `web/data/snapshot-YYYY-MM-DD.json` — dated history. The Trends tab charts
-  RED-count over time once **≥2 distinct dates** exist; otherwise it shows
-  "collecting data". (Identical copies of the same date are de-duplicated so a
-  mirror of `latest` does not fake a second point.)
+- `snapshot-latest/snapshot-YYYY-MM-DD.json` — dated history, indexed by
+  `snapshot-latest/index.json`. The Trends tab charts RED-count over time once
+  **≥2 distinct dates** exist; otherwise it shows "collecting data". (Same-date
+  entries are de-duplicated so a mirror of `latest` does not fake a second point.)
+
+> Because the repo is public, the release assets (which include per-person effort
+> data) are publicly readable. To make them private, take the repo private and
+> point `SNAPSHOT_DATA_URL`/`lib/data.ts` at an authenticated source.
 
 All `*_minutes` fields ÷ 480 = man-days.
 
