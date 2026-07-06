@@ -4,8 +4,8 @@ snapshot.py — the POSX Control Tower snapshot PRODUCER (Phase B data layer).
 
 WHY PRECOMPUTE, NOT LIVE: a full effort_report takes ~285s against YouTrack, which
 blows the 60s ceiling of a Vercel Hobby function. So the data path is: this producer
-runs ONCE (nightly in GitHub Actions, or locally), composes a single JSON snapshot,
-and commits it under web/data/. The Next.js UI reads that JSON SERVER-SIDE — no
+runs hourly in GitHub Actions (or locally), composes a single JSON snapshot, and
+commits it under web/data/. The Next.js UI reads that JSON SERVER-SIDE — no
 Python on Vercel, no raw-data endpoints, no token in the browser.
 
 It composes ONE snapshot dict from the shared engine (core/ytcore.py):
@@ -20,9 +20,10 @@ It composes ONE snapshot dict from the shared engine (core/ytcore.py):
                      prior snapshot (Consensus Rev #8).
   * meta           — generated_at + project/scope/sprint + as-of HH:MM + engine_version.
 
-Output: web/data/snapshot-<UTCdate>.json (kept for history) AND web/data/latest.json
-(overwritten each run). These are read server-side by the UI; they are NOT in
-web/public and are never shipped to the browser.
+Output: web/data/snapshot-<UTCdate>.json (kept for history, frozen on the first run
+of each UTC day) AND web/data/latest.json (overwritten every run, hourly). These
+are read server-side by the UI; they are NOT in web/public and are never shipped
+to the browser.
 
 Run:
     set -a; . ~/.positrack-yt.env; set +a
@@ -490,14 +491,22 @@ def _load_roster():
 
 def write_snapshot(snapshot):
     """Write web/data/snapshot-<UTCdate>.json (history) AND overwrite latest.json.
+
+    The producer now runs hourly, but day-over-day RED delta (build_insights) and
+    the trend chart both assume exactly one historical file per calendar day. So
+    the dated file is written ONCE per day (first run after UTC midnight freezes
+    it) and left alone on every later run that day; latest.json always reflects
+    the most recent run so the live dashboard is hourly-fresh regardless.
+
     Returns the two paths."""
     os.makedirs(DATA_DIR, exist_ok=True)
     date = snapshot["meta"]["generated_at_iso"][:10]  # UTC YYYY-MM-DD
     dated = os.path.join(DATA_DIR, "snapshot-%s.json" % date)
     latest = os.path.join(DATA_DIR, "latest.json")
     blob = json.dumps(snapshot, indent=1, ensure_ascii=False)
-    with open(dated, "w", encoding="utf-8") as f:
-        f.write(blob)
+    if not os.path.exists(dated):
+        with open(dated, "w", encoding="utf-8") as f:
+            f.write(blob)
     with open(latest, "w", encoding="utf-8") as f:
         f.write(blob)
     return dated, latest

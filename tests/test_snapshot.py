@@ -145,6 +145,30 @@ def test_write_snapshot_writes_dated_and_latest(tmp_path, monkeypatch):
             assert json.load(f) == fake
 
 
+def test_write_snapshot_freezes_dated_file_within_same_day(tmp_path, monkeypatch):
+    """Hourly runs must not keep rewriting the day's history file — day-over-day
+    RED delta and the trend chart both depend on exactly one snapshot per day."""
+    monkeypatch.setattr(snap, "DATA_DIR", str(tmp_path))
+    morning = {
+        "meta": {"generated_at_iso": "2026-07-01T02:00:00+00:00", "generated_at_ms": 1,
+                 "project": "PXB1", "scope": "PHASE 1", "sprint": "beta1-19",
+                 "as_of_hhmm": "02:00", "engine_version": snap.ENGINE_VERSION},
+        "effort": {"counts": {}}, "timespent": {}, "hygiene": {"blocks": []},
+        "gamification": {"people": [], "teams": []}, "insights": {"red_counts": {}},
+    }
+    afternoon = {**morning, "meta": {**morning["meta"],
+                 "generated_at_iso": "2026-07-01T14:00:00+00:00", "as_of_hhmm": "14:00"}}
+
+    dated1, latest1 = snap.write_snapshot(morning)
+    dated2, latest2 = snap.write_snapshot(afternoon)
+    assert dated1 == dated2  # same day -> same path
+
+    with open(dated2, encoding="utf-8") as f:
+        assert json.load(f) == morning  # dated file kept the FIRST run of the day
+    with open(latest2, encoding="utf-8") as f:
+        assert json.load(f) == afternoon  # latest.json always reflects the newest run
+
+
 # ---------- gamification block uses ONLY allowlisted signals (integration guard) ----------
 def test_person_signal_keys_are_allowlisted():
     # The producer must only ever emit allowlisted signal keys per person; feeding
