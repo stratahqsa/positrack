@@ -34,3 +34,7 @@ yt_projects*.json
 # (uploaded nightly), not committed. Local `python3 scripts/snapshot.py` output
 # stays untracked.
 web/data/
+
+# Claude Code local project config (personal tooling; the committed web/.claude/ is
+# separate and unaffected by this root-anchored rule).
+/.claude/
