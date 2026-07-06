@@ -1,45 +1,58 @@
 import "server-only";
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { list } from "@vercel/blob";
 import type { Snapshot, TrendPoint } from "./types";
 
 /**
- * Server-only snapshot access. Reads web/data/*.json from disk at request time.
- * NEVER import this from a Client Component and never re-export the raw JSON to
- * the browser — pages must project only the fields they render.
+ * Server-only snapshot access. Reads the Control Tower snapshot from Vercel Blob
+ * (uploaded nightly by the Snapshot workflow) at request time. Enumeration is
+ * token-gated via BLOB_READ_WRITE_TOKEN (server-side only); resolved blob URLs are
+ * NEVER re-exported to the browser — pages project only the fields they render.
+ * Pages are force-dynamic, so each request sees fresh Blob data without a redeploy.
  */
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const PREFIX = "control-tower/";
+const DATED = /snapshot-(\d{4}-\d{2}-\d{2})\.json$/;
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`blob fetch failed (${res.status})`);
+  return (await res.json()) as T;
+}
 
 export async function loadSnapshot(): Promise<Snapshot> {
-  const raw = await fs.readFile(path.join(DATA_DIR, "latest.json"), "utf8");
-  return JSON.parse(raw) as Snapshot;
+  const { blobs } = await list({ prefix: `${PREFIX}latest.json`, limit: 1 });
+  const latest = blobs.find((b) => b.pathname === `${PREFIX}latest.json`) ?? blobs[0];
+  if (!latest) {
+    throw new Error(
+      "No snapshot in the Blob store yet — run Actions → Snapshot → Run workflow.",
+    );
+  }
+  return fetchJson<Snapshot>(latest.url);
 }
 
 /**
- * Build the RED-count trend series from dated snapshot files.
- * De-duplicates by date (keeps the last file seen for a given date) so an
- * identical `snapshot-YYYY-MM-DD.json` copy of latest does not create a fake
- * second data point. Sorted ascending by date.
+ * Build the RED-count trend series from dated snapshots in Blob. De-duplicates by
+ * date (last pathname for a date wins) so a same-date re-upload does not create a
+ * fake second point. Sorted ascending by date. Empty on any listing failure.
  */
 export async function loadTrend(): Promise<TrendPoint[]> {
-  let files: string[] = [];
+  let listed;
   try {
-    files = await fs.readdir(DATA_DIR);
+    listed = await list({ prefix: `${PREFIX}snapshot-` });
   } catch {
     return [];
   }
 
-  const dated = files
-    .filter((f) => /^snapshot-\d{4}-\d{2}-\d{2}\.json$/.test(f))
-    .sort();
+  const dated = listed.blobs
+    .filter((b) => DATED.test(b.pathname))
+    .sort((a, b) => a.pathname.localeCompare(b.pathname));
 
   const byDate = new Map<string, TrendPoint>();
-  for (const file of dated) {
-    const date = file.slice("snapshot-".length, -".json".length);
+  for (const b of dated) {
+    const date = b.pathname.match(DATED)?.[1];
+    if (!date) continue;
     try {
-      const raw = await fs.readFile(path.join(DATA_DIR, file), "utf8");
-      const snap = JSON.parse(raw) as Snapshot;
+      const snap = await fetchJson<Snapshot>(b.url);
       const rc = snap.insights?.red_counts;
       if (!rc) continue;
       byDate.set(date, {

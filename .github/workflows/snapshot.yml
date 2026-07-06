@@ -1,22 +1,19 @@
 name: Snapshot
 
-# Nightly PRECOMPUTE for the POSX Control Tower. A full effort_report takes ~285s
-# live, which cannot run inside a Vercel Hobby function (60s ceiling). So we compute
-# the whole snapshot here (or locally) and commit web/data/*.json back to the repo;
-# that push triggers a Vercel redeploy and the Next.js UI reads the JSON server-side.
+# Nightly PRECOMPUTE for the POSX Control Tower. A full snapshot takes ~285s live,
+# which cannot run inside a Vercel function (60s ceiling). We compute it here and
+# UPLOAD the JSON to Vercel Blob; the force-dynamic Next.js app reads it from Blob
+# server-side on the next request. No data is committed to git and nothing is
+# pushed to the (protected) master branch — so no push token / bypass is needed.
 #
 # SETUP REQUIRED (one time), two repository secrets:
-#   1. YT_TOKEN — a YouTrack permanent token. Use a LEAST-PRIVILEGE, READ-ONLY
-#      service account token (the snapshot only READS: effort/worklog/hygiene).
-#      Never use an admin write token here.
-#   2. SNAPSHOT_PUSH_TOKEN — a token allowed to push the data commit to the
-#      protected `master` branch (the default GITHUB_TOKEN is blocked by branch
-#      protection: "Changes must be made through a pull request"). Use a
-#      least-privilege fine-grained PAT scoped to THIS repo only, Contents:
-#      read+write, whose owner is added to master's bypass list
-#      (Settings -> Branches / Rulesets -> Bypass list). Data-only, machine commit.
+#   1. YT_TOKEN — a YouTrack permanent token. LEAST-PRIVILEGE, READ-ONLY service
+#      account (the snapshot only READS: effort/worklog/hygiene). Never an admin token.
+#   2. BLOB_READ_WRITE_TOKEN — from the Vercel Blob store connected to the Control
+#      Tower project (Vercel -> Storage -> the Blob store -> read/write token; the
+#      same token Vercel injects into the app's env so it can READ the snapshot).
 #   Add both at: Settings -> Secrets and variables -> Actions -> New repository secret.
-# Optionally set `YT_BASE` (defaults to https://support.posibolt.com in the engine).
+# Optionally set YT_BASE (defaults to https://support.posibolt.com in the engine).
 
 on:
   schedule:
@@ -36,10 +33,9 @@ on:
         required: false
         default: ""
 
-# Least-privilege token for the workflow itself: it only needs to push the committed
-# snapshot back to the branch.
+# The snapshot goes to Vercel Blob, not git — no repo write access needed.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: snapshot-${{ github.ref }}
@@ -50,22 +46,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          # Push the nightly data commit with a token that can bypass branch
-          # protection on master (the default GITHUB_TOKEN cannot — the push is
-          # rejected with GH006). Falls back to GITHUB_TOKEN when the secret is
-          # unset, so "Produce snapshot" still runs; the push just keeps failing
-          # until SNAPSHOT_PUSH_TOKEN is added (see the header for setup).
-          token: ${{ secrets.SNAPSHOT_PUSH_TOKEN || github.token }}
-          persist-credentials: true
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      # The engine is stdlib-only, so there are no runtime deps to install for the
-      # producer. (pytest etc. are not needed for the snapshot job.)
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Blob uploader deps
+        run: npm --prefix scripts/blob ci
+
+      - name: Seed prior snapshot (for day-over-day deltas)
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: |
+          if [ -z "${BLOB_READ_WRITE_TOKEN}" ]; then
+            echo "::error::BLOB_READ_WRITE_TOKEN secret is not set (see workflow header)."
+            exit 1
+          fi
+          mkdir -p web/data
+          node scripts/blob/sync.mjs pull
 
       - name: Produce snapshot
         # Dispatch inputs are routed through env (never interpolated into the shell)
@@ -90,14 +94,7 @@ jobs:
             python3 scripts/snapshot.py --project "$PROJECT" --scope "$SCOPE"
           fi
 
-      - name: Commit updated snapshot
-        run: |
-          git config user.name  "positrack-snapshot[bot]"
-          git config user.email "positrack-snapshot@users.noreply.github.com"
-          git add web/data/*.json
-          if git diff --staged --quiet; then
-            echo "No snapshot changes to commit."
-          else
-            git commit -m "chore(snapshot): nightly POSX Control Tower data ($(date -u +%Y-%m-%dT%H:%MZ))"
-            git push
-          fi
+      - name: Upload snapshot to Vercel Blob
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: node scripts/blob/sync.mjs push

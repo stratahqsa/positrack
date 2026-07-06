@@ -1,0 +1,10 @@
+{
+  "name": "positrack-blob-sync",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CI-only helper: sync POSX Control Tower snapshots to/from Vercel Blob.",
+  "dependencies": {
+    "@vercel/blob": "^2.5.0"
+  }
+}

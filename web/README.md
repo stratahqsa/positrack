@@ -15,19 +15,27 @@ all behind a shared-code access gate.
 
 ## Data flow (server-side only)
 
-The dashboard reads `web/data/latest.json` **on the server** via `fs` at request
-time (`lib/data.ts`, marked `server-only`). The raw snapshot is **never** exposed
-as a public URL and is **never** shipped to the client bundle — pages project
-only the fields they render, and those flow to client components as props at
-render time. Verified: no snapshot values, names, or the `perm-` token appear in
-`.next/static`.
+The dashboard reads the snapshot from **Vercel Blob** on the server at request time
+(`lib/data.ts`, marked `server-only`). It `list()`s the `control-tower/` prefix using
+`BLOB_READ_WRITE_TOKEN` (server-side only) and fetches the JSON; the blob URLs are
+resolved server-side and **never** shipped to the client bundle — pages project only
+the fields they render, and those flow to client components as props. Pages are
+`force-dynamic`, so each request sees the latest Blob data **without a redeploy**.
+The snapshot is **not** committed to git (it used to live in `web/data/*.json`; that
+was moved to Blob so per-person data never lands in this public repo).
 
-- `web/data/latest.json` — current snapshot (top-level: `meta`, `effort`,
+- `control-tower/latest.json` — current snapshot (top-level: `meta`, `effort`,
   `timespent`, `gamification`, `insights`).
-- `web/data/snapshot-YYYY-MM-DD.json` — dated history. The Trends tab charts
+- `control-tower/snapshot-YYYY-MM-DD.json` — dated history. The Trends tab charts
   RED-count over time once **≥2 distinct dates** exist; otherwise it shows
   "collecting data". (Identical copies of the same date are de-duplicated so a
   mirror of `latest` does not fake a second point.)
+
+The nightly [`Snapshot` workflow](../.github/workflows/snapshot.yml) produces the JSON
+(too slow for a Vercel function) and uploads it to Blob via `scripts/blob/sync.mjs`.
+Requires `BLOB_READ_WRITE_TOKEN` (from the Vercel Blob store) both in the app's Vercel
+env and as a GitHub Actions secret. Local dev: `python3 scripts/snapshot.py …` writes
+to `web/data/` (gitignored) and `node scripts/blob/sync.mjs push` uploads it.
 
 All `*_minutes` fields ÷ 480 = man-days.
 

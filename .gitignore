@@ -29,3 +29,10 @@ yt_projects*.json
 
 # OMC build-process state (specs/plans kept on disk, not in product history)
 .omc/
+
+# Control Tower snapshot data lives in Vercel Blob (uploaded nightly), not git.
+# Local `python3 scripts/snapshot.py` output stays untracked.
+web/data/
+
+# Node dependencies (web app + the scripts/blob CI helper)
+node_modules/
