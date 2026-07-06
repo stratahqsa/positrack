@@ -29,3 +29,8 @@ yt_projects*.json
 
 # OMC build-process state (specs/plans kept on disk, not in product history)
 .omc/
+
+# Control Tower snapshot data is published to the `snapshot-latest` GitHub Release
+# (uploaded nightly), not committed. Local `python3 scripts/snapshot.py` output
+# stays untracked.
+web/data/

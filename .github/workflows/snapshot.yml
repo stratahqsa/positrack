@@ -1,22 +1,18 @@
 name: Snapshot
 
-# Nightly PRECOMPUTE for the POSX Control Tower. A full effort_report takes ~285s
-# live, which cannot run inside a Vercel Hobby function (60s ceiling). So we compute
-# the whole snapshot here (or locally) and commit web/data/*.json back to the repo;
-# that push triggers a Vercel redeploy and the Next.js UI reads the JSON server-side.
+# Nightly PRECOMPUTE for the POSX Control Tower. A full snapshot takes ~285s live,
+# too slow for a Vercel function (60s ceiling). We compute it here and publish the
+# JSON as assets on the machine-managed GitHub Release `snapshot-latest`; the
+# force-dynamic Next.js app reads those public asset URLs server-side on the next
+# request. Nothing is committed to git and nothing is pushed to protected master,
+# so the workflow's built-in GITHUB_TOKEN is all that is needed — no PAT, no bypass,
+# no external storage.
 #
-# SETUP REQUIRED (one time), two repository secrets:
-#   1. YT_TOKEN — a YouTrack permanent token. Use a LEAST-PRIVILEGE, READ-ONLY
-#      service account token (the snapshot only READS: effort/worklog/hygiene).
-#      Never use an admin write token here.
-#   2. SNAPSHOT_PUSH_TOKEN — a token allowed to push the data commit to the
-#      protected `master` branch (the default GITHUB_TOKEN is blocked by branch
-#      protection: "Changes must be made through a pull request"). Use a
-#      least-privilege fine-grained PAT scoped to THIS repo only, Contents:
-#      read+write, whose owner is added to master's bypass list
-#      (Settings -> Branches / Rulesets -> Bypass list). Data-only, machine commit.
-#   Add both at: Settings -> Secrets and variables -> Actions -> New repository secret.
-# Optionally set `YT_BASE` (defaults to https://support.posibolt.com in the engine).
+# SETUP REQUIRED (one time): a single repository secret:
+#   YT_TOKEN — a YouTrack permanent token. LEAST-PRIVILEGE, READ-ONLY service
+#   account (the snapshot only READS: effort/worklog/hygiene). Never an admin token.
+#   Settings -> Secrets and variables -> Actions -> New repository secret.
+# Optionally set YT_BASE (defaults to https://support.posibolt.com in the engine).
 
 on:
   schedule:
@@ -36,8 +32,7 @@ on:
         required: false
         default: ""
 
-# Least-privilege token for the workflow itself: it only needs to push the committed
-# snapshot back to the branch.
+# Publishing to a Release needs contents:write; no branch is pushed.
 permissions:
   contents: write
 
@@ -48,24 +43,31 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: snapshot-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          # Push the nightly data commit with a token that can bypass branch
-          # protection on master (the default GITHUB_TOKEN cannot — the push is
-          # rejected with GH006). Falls back to GITHUB_TOKEN when the secret is
-          # unset, so "Produce snapshot" still runs; the push just keeps failing
-          # until SNAPSHOT_PUSH_TOKEN is added (see the header for setup).
-          token: ${{ secrets.SNAPSHOT_PUSH_TOKEN || github.token }}
-          persist-credentials: true
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      # The engine is stdlib-only, so there are no runtime deps to install for the
-      # producer. (pytest etc. are not needed for the snapshot job.)
+      - name: Seed prior snapshot (for day-over-day deltas)
+        run: |
+          mkdir -p web/data
+          # Pull just the most recent prior dated snapshot so scripts/snapshot.py can
+          # diff against it (the runner has no committed history).
+          if gh release download "$TAG" --pattern "index.json" --dir /tmp/idx --clobber 2>/dev/null; then
+            PRIOR=$(python3 -c "import json; a=json.load(open('/tmp/idx/index.json')); print(a[-1] if a else '')")
+            if [ -n "$PRIOR" ]; then
+              gh release download "$TAG" --pattern "$PRIOR" --dir web/data --clobber 2>/dev/null || true
+              echo "seeded prior $PRIOR"
+            fi
+          else
+            echo "no release yet — first run; deltas begin next run"
+          fi
 
       - name: Produce snapshot
         # Dispatch inputs are routed through env (never interpolated into the shell)
@@ -90,14 +92,28 @@ jobs:
             python3 scripts/snapshot.py --project "$PROJECT" --scope "$SCOPE"
           fi
 
-      - name: Commit updated snapshot
+      - name: Publish snapshot to the release
         run: |
-          git config user.name  "positrack-snapshot[bot]"
-          git config user.email "positrack-snapshot@users.noreply.github.com"
-          git add web/data/*.json
-          if git diff --staged --quiet; then
-            echo "No snapshot changes to commit."
-          else
-            git commit -m "chore(snapshot): nightly POSX Control Tower data ($(date -u +%Y-%m-%dT%H:%MZ))"
-            git push
-          fi
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" \
+              --title "POSX Control Tower data (machine-managed)" \
+              --notes "Nightly snapshot assets for the Control Tower dashboard. Auto-updated by the Snapshot workflow — do not edit." \
+              --latest=false
+          # index.json = every dated snapshot (existing release assets ∪ new local ones).
+          python3 - <<'PY'
+          import json, glob, os, subprocess
+          existing = []
+          try:
+              out = subprocess.check_output(
+                  ["gh", "release", "view", os.environ["TAG"], "--json", "assets", "-q", ".assets[].name"],
+                  text=True)
+              existing = [n.strip() for n in out.splitlines()
+                          if n.strip().startswith("snapshot-") and n.strip().endswith(".json")]
+          except Exception:
+              pass
+          local = [os.path.basename(p) for p in glob.glob("web/data/snapshot-*.json")]
+          names = sorted(set(existing) | set(local))
+          json.dump(names, open("web/data/index.json", "w"))
+          print("index.json:", names)
+          PY
+          gh release upload "$TAG" web/data/latest.json web/data/index.json web/data/snapshot-*.json --clobber
