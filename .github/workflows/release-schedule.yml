@@ -1,0 +1,60 @@
+name: Release Schedule
+
+# 3x/day (9am/12pm/6pm IST) PRECOMPUTE for the PXB1 Phase 1 Release Schedule
+# Tracker. Same shape as the Snapshot workflow: no browser/LLM in the loop, a
+# stored read-only YouTrack token, publish to a machine-managed GitHub Release
+# (its own tag, isolated from `snapshot-latest` — a failure here can never block
+# or corrupt the Control Tower's own data refresh, and vice versa). Nothing is
+# committed to git and nothing is pushed to protected master, so the workflow's
+# built-in GITHUB_TOKEN is all that is needed.
+#
+# SETUP: reuses the same repository secret as the Snapshot workflow —
+#   YT_TOKEN — a YouTrack permanent token. LEAST-PRIVILEGE, READ-ONLY service
+#   account. No second secret is needed; this is the same read-only account.
+
+on:
+  schedule:
+    - cron: "30 3,6,12 * * *"   # 9am / 12pm / 6pm IST (UTC+5:30)
+  workflow_dispatch: {}
+
+# Publishing to a Release needs contents:write; no branch is pushed.
+permissions:
+  contents: write
+
+concurrency:
+  group: release-schedule-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-schedule:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: release-schedule-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Produce release schedule report
+        env:
+          YT_TOKEN: ${{ secrets.YT_TOKEN }}
+          YT_BASE: ${{ secrets.YT_BASE }}   # optional; engine defaults if unset
+        run: |
+          if [ -z "${YT_TOKEN}" ]; then
+            echo "::error::YT_TOKEN secret is not set. Add a read-only YouTrack token as the YT_TOKEN Actions secret."
+            exit 1
+          fi
+          python3 scripts/release_schedule.py --out dist/release-schedule.html
+
+      - name: Publish report to the release
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" \
+              --title "PXB1 Phase 1 Release Schedule Tracker (machine-managed)" \
+              --notes "Auto-updated 3x/day by the Release Schedule workflow — do not edit." \
+              --latest=false
+          gh release upload "$TAG" dist/release-schedule.html --clobber
