@@ -64,7 +64,7 @@ function EmptyState() {
           Collecting data — trends appear soon
         </h3>
         <p className="max-w-md text-[12.5px] leading-relaxed text-muted">
-          The RED-count trend needs at least two nightly snapshots to draw a
+          The RED-count trend needs at least two daily snapshots to draw a
           line. Once the next snapshot lands, this chart will show how unowned,
           overshoot, and stale counts move day over day.
         </p>
