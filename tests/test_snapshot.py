@@ -103,6 +103,28 @@ def test_prior_snapshot_ignores_other_project_scope(tmp_path, monkeypatch):
     assert insights["red_delta"] is None   # different project -> not comparable
 
 
+def test_build_insights_excludes_todays_own_seeded_file_from_delta(tmp_path, monkeypatch):
+    """Regression test: with the hourly producer, a run's OWN frozen file for
+    today may already be on disk (seeded from the release so write_snapshot()'s
+    freeze check can see it — see .github/workflows/snapshot.yml's seed step).
+    Without excluding today's date, the 2nd+ run of a day would diff against
+    itself (delta ~0) instead of yesterday's file, silently breaking the
+    "day-over-day" label on every run after the first each day."""
+    monkeypatch.setattr(snap, "DATA_DIR", str(tmp_path))
+    yesterday = {"meta": {"project": "PXB1", "scope": "PHASE 1"},
+                 "insights": {"red_counts": {"unowned": 5, "unestimated": 4, "stale": 3,
+                                             "blocked": 2, "overshoot": 1, "total_red": 15}}}
+    todays_own_seeded_copy = {"meta": {"project": "PXB1", "scope": "PHASE 1"},
+                               "insights": {"red_counts": {"unowned": 3, "unestimated": 1, "stale": 1,
+                                                           "blocked": 0, "overshoot": 1, "total_red": 6}}}
+    (tmp_path / "snapshot-2026-06-30.json").write_text(json.dumps(yesterday))
+    (tmp_path / "snapshot-2026-07-01.json").write_text(json.dumps(todays_own_seeded_copy))
+
+    insights = snap.build_insights(_effort_fixture(), "PXB1", "PHASE 1", today_date="2026-07-01")
+    assert insights["compared_to"] == "snapshot-2026-06-30.json"  # yesterday, not itself
+    assert insights["red_delta"]["unowned"] == 3 - 5
+
+
 # ---------- pure signal fraction helper ----------
 def test_frac_health_semantics():
     assert snap._frac(8, 10) == 0.8

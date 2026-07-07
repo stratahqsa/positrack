@@ -200,12 +200,21 @@ def _red_counts_from_effort(effort):
     }
 
 
-def _prior_snapshot_red(project, scope):
+def _prior_snapshot_red(project, scope, exclude_date=None):
     """The most recent PRIOR snapshot-*.json (not latest.json) for the same
     project+scope, and its RED counts, for a day-over-day delta. Returns
-    (path, red_dict) or (None, None)."""
+    (path, red_dict) or (None, None).
+
+    `exclude_date` (a "YYYY-MM-DD" string) skips today's own dated file. This
+    matters now that the producer runs hourly and a run's own frozen file for
+    today may already be on disk (seeded from the release so write_snapshot()'s
+    freeze check can see it) — without this exclusion, the 2nd+ run of a day
+    would diff today's snapshot against itself (delta ~0) instead of against
+    yesterday's, silently breaking the "day-over-day" label."""
     paths = sorted(glob.glob(os.path.join(DATA_DIR, "snapshot-*.json")))
     for p in reversed(paths):
+        if exclude_date and os.path.basename(p) == "snapshot-%s.json" % exclude_date:
+            continue
         try:
             with open(p, encoding="utf-8") as f:
                 prev = json.load(f)
@@ -219,10 +228,10 @@ def _prior_snapshot_red(project, scope):
     return None, None
 
 
-def build_insights(effort, project, scope):
+def build_insights(effort, project, scope, today_date=None):
     """RED counts + day-over-day delta vs the most recent prior snapshot (Rev #8)."""
     red = _red_counts_from_effort(effort)
-    prior_path, prior_red = _prior_snapshot_red(project, scope)
+    prior_path, prior_red = _prior_snapshot_red(project, scope, exclude_date=today_date)
     delta = None
     if prior_red:
         delta = {k: red[k] - prior_red.get(k, 0)
@@ -448,7 +457,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     gamification = build_gamification(ctx, project, effort, roster=roster)
 
     # 5) insights — RED counts + day-over-day delta.
-    insights = build_insights(effort, project, scope)
+    insights = build_insights(effort, project, scope, today_date=now.strftime("%Y-%m-%d"))
 
     effort.pop("_sprint", None)  # keep it out of the serialized effort block
 
