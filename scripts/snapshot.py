@@ -4,8 +4,8 @@ snapshot.py — the POSX Control Tower snapshot PRODUCER (Phase B data layer).
 
 WHY PRECOMPUTE, NOT LIVE: a full effort_report takes ~285s against YouTrack, which
 blows the 60s ceiling of a Vercel Hobby function. So the data path is: this producer
-runs ONCE (nightly in GitHub Actions, or locally), composes a single JSON snapshot,
-and commits it under web/data/. The Next.js UI reads that JSON SERVER-SIDE — no
+runs hourly in GitHub Actions (or locally), composes a single JSON snapshot, and
+commits it under web/data/. The Next.js UI reads that JSON SERVER-SIDE — no
 Python on Vercel, no raw-data endpoints, no token in the browser.
 
 It composes ONE snapshot dict from the shared engine (core/ytcore.py):
@@ -20,9 +20,10 @@ It composes ONE snapshot dict from the shared engine (core/ytcore.py):
                      prior snapshot (Consensus Rev #8).
   * meta           — generated_at + project/scope/sprint + as-of HH:MM + engine_version.
 
-Output: web/data/snapshot-<UTCdate>.json (kept for history) AND web/data/latest.json
-(overwritten each run). These are read server-side by the UI; they are NOT in
-web/public and are never shipped to the browser.
+Output: web/data/snapshot-<UTCdate>.json (kept for history, frozen on the first run
+of each UTC day) AND web/data/latest.json (overwritten every run, hourly). These
+are read server-side by the UI; they are NOT in web/public and are never shipped
+to the browser.
 
 Run:
     set -a; . ~/.positrack-yt.env; set +a
@@ -199,12 +200,21 @@ def _red_counts_from_effort(effort):
     }
 
 
-def _prior_snapshot_red(project, scope):
+def _prior_snapshot_red(project, scope, exclude_date=None):
     """The most recent PRIOR snapshot-*.json (not latest.json) for the same
     project+scope, and its RED counts, for a day-over-day delta. Returns
-    (path, red_dict) or (None, None)."""
+    (path, red_dict) or (None, None).
+
+    `exclude_date` (a "YYYY-MM-DD" string) skips today's own dated file. This
+    matters now that the producer runs hourly and a run's own frozen file for
+    today may already be on disk (seeded from the release so write_snapshot()'s
+    freeze check can see it) — without this exclusion, the 2nd+ run of a day
+    would diff today's snapshot against itself (delta ~0) instead of against
+    yesterday's, silently breaking the "day-over-day" label."""
     paths = sorted(glob.glob(os.path.join(DATA_DIR, "snapshot-*.json")))
     for p in reversed(paths):
+        if exclude_date and os.path.basename(p) == "snapshot-%s.json" % exclude_date:
+            continue
         try:
             with open(p, encoding="utf-8") as f:
                 prev = json.load(f)
@@ -218,10 +228,10 @@ def _prior_snapshot_red(project, scope):
     return None, None
 
 
-def build_insights(effort, project, scope):
+def build_insights(effort, project, scope, today_date=None):
     """RED counts + day-over-day delta vs the most recent prior snapshot (Rev #8)."""
     red = _red_counts_from_effort(effort)
-    prior_path, prior_red = _prior_snapshot_red(project, scope)
+    prior_path, prior_red = _prior_snapshot_red(project, scope, exclude_date=today_date)
     delta = None
     if prior_red:
         delta = {k: red[k] - prior_red.get(k, 0)
@@ -447,7 +457,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     gamification = build_gamification(ctx, project, effort, roster=roster)
 
     # 5) insights — RED counts + day-over-day delta.
-    insights = build_insights(effort, project, scope)
+    insights = build_insights(effort, project, scope, today_date=now.strftime("%Y-%m-%d"))
 
     effort.pop("_sprint", None)  # keep it out of the serialized effort block
 
@@ -490,14 +500,22 @@ def _load_roster():
 
 def write_snapshot(snapshot):
     """Write web/data/snapshot-<UTCdate>.json (history) AND overwrite latest.json.
+
+    The producer now runs hourly, but day-over-day RED delta (build_insights) and
+    the trend chart both assume exactly one historical file per calendar day. So
+    the dated file is written ONCE per day (first run after UTC midnight freezes
+    it) and left alone on every later run that day; latest.json always reflects
+    the most recent run so the live dashboard is hourly-fresh regardless.
+
     Returns the two paths."""
     os.makedirs(DATA_DIR, exist_ok=True)
     date = snapshot["meta"]["generated_at_iso"][:10]  # UTC YYYY-MM-DD
     dated = os.path.join(DATA_DIR, "snapshot-%s.json" % date)
     latest = os.path.join(DATA_DIR, "latest.json")
     blob = json.dumps(snapshot, indent=1, ensure_ascii=False)
-    with open(dated, "w", encoding="utf-8") as f:
-        f.write(blob)
+    if not os.path.exists(dated):
+        with open(dated, "w", encoding="utf-8") as f:
+            f.write(blob)
     with open(latest, "w", encoding="utf-8") as f:
         f.write(blob)
     return dated, latest
