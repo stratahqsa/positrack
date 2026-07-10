@@ -2,7 +2,7 @@
 # FastMCP is PINNED to an exact version: the dual-transport mount (streamable
 # HTTP + SSE) and the explicit /health route are version-sensitive, so any bump
 # must re-run the Step-6 dual-transport smoke test before release.
-fastmcp==3.4.2
+fastmcp==3.4.4
 # Persistent OAuth Dynamic-Client-Registration storage (DiskStore on a Railway volume)
 # so connector registrations survive redeploys. py-key-value-aio ships with fastmcp;
 # the [disk] extra adds diskcache. Keep the version aligned with fastmcp's resolved dep.
