@@ -1,12 +1,16 @@
 /**
  * Shared display/format helpers for the schedule-based views (Weekly Deadline,
- * Release Schedule). Pure, no I/O. Rules ported from docs/reports-dashboard/
- * reference/specs/Examples_4_Weekly_Deadline_View_Implementation_Guide.md §9.
+ * Release Schedule) and the Bug Analysis view. Pure, no I/O. Rules ported from
+ * docs/reports-dashboard/reference/specs/Examples_4_Weekly_Deadline_View_
+ * Implementation_Guide.md §9 and Examples_1_PXB1_Bug_Analysis_Implementation_
+ * Guide.md §4/§18.
  */
 
 import { MAN_DAY_MINUTES } from "./types";
 
 const DAY_MS = 86_400_000;
+/** IST = UTC+5:30, always — a fixed offset, never the runner's local TZ. */
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -37,6 +41,28 @@ export function fmtDate(ms: number | null): string {
   const day = String(d.getUTCDate()).padStart(2, "0");
   const month = MONTHS[d.getUTCMonth()];
   return `${day} ${month}`;
+}
+
+/**
+ * Epoch ms -> "DD Mon YYYY, h:mm AM/PM" rendered in IST (e.g. bug `created`
+ * 1783941449646 -> "13 Jul 2026, 4:47 PM"); null -> "—". Adds the fixed
+ * +5:30 IST offset to the ms value up front, then reads UTC calendar/clock
+ * parts off the shifted instant — the same "shift then read UTC getters"
+ * trick fmtDate uses, extended from date-only to full date-time so the
+ * result is independent of the runner's local timezone. Used for the Bug
+ * Analysis view's bug listing tables (Examples_1 §4/§18).
+ */
+export function fmtDateTimeIst(ms: number | null): string {
+  if (ms == null) return "—";
+  const d = new Date(ms + IST_OFFSET_MS);
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const month = MONTHS[d.getUTCMonth()];
+  const year = d.getUTCFullYear();
+  const hours24 = d.getUTCHours();
+  const minutes = String(d.getUTCMinutes()).padStart(2, "0");
+  const period = hours24 >= 12 ? "PM" : "AM";
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  return `${day} ${month} ${year}, ${hours12}:${minutes} ${period}`;
 }
 
 /**

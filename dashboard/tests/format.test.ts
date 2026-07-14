@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtDate, fmtHours, fmtMd, verdictVsQa } from "../lib/format";
+import { fmtDate, fmtDateTimeIst, fmtHours, fmtMd, verdictVsQa } from "../lib/format";
 
 /**
  * Display/format helpers. Cases lifted from docs/reports-dashboard/reference/specs/
@@ -52,6 +52,46 @@ describe("fmtDate", () => {
 
   it("a June date renders with the correct month abbreviation", () => {
     expect(fmtDate(Date.UTC(2026, 5, 30))).toBe("30 Jun");
+  });
+});
+
+describe("fmtDateTimeIst", () => {
+  // Examples_1_PXB1_Bug_Analysis_Implementation_Guide.md §4/§18 gives
+  // 1751971500000 -> "08 Jul 2026, 4:15 PM" as the worked example. Independent
+  // verification (fixed UTC+5:30 offset, cross-checked against Node's Date
+  // and against a real bug `created` value from dashboard/data/latest.json —
+  // see below) shows that ms value is actually 08 Jul *2025*, 4:15 PM IST:
+  // day/month/hour/minute match the doc exactly, only the year is off by
+  // one — consistent with a stale fixture left over from when the doc's
+  // fictional "today" was mid-2025, before the project's snapshot data moved
+  // to 2026. Asserting the mathematically-correct value (flagged to the
+  // orchestrator rather than silently building broken +5:30 math that would
+  // also mis-render every real 2026 timestamp in the live snapshot).
+  it("epoch ms -> 'DD Mon YYYY, h:mm AM/PM' in IST (Examples_1 §4 constant, year-corrected — see comment above)", () => {
+    expect(fmtDateTimeIst(1751971500000)).toBe("08 Jul 2025, 4:15 PM");
+  });
+
+  it("a real 2026 bug `created` timestamp from the live snapshot renders the correct year", () => {
+    expect(fmtDateTimeIst(1783941449646)).toBe("13 Jul 2026, 4:47 PM");
+  });
+
+  it("null -> em dash", () => {
+    expect(fmtDateTimeIst(null)).toBe("—");
+  });
+
+  it("midnight IST -> '12:00 AM' (not '0:00 AM')", () => {
+    const ms = Date.UTC(2026, 6, 10, 0, 0) - 5.5 * 60 * 60 * 1000;
+    expect(fmtDateTimeIst(ms)).toBe("10 Jul 2026, 12:00 AM");
+  });
+
+  it("noon IST -> '12:00 PM' (not '0:00 PM')", () => {
+    const ms = Date.UTC(2026, 6, 10, 12, 0) - 5.5 * 60 * 60 * 1000;
+    expect(fmtDateTimeIst(ms)).toBe("10 Jul 2026, 12:00 PM");
+  });
+
+  it("minutes are always zero-padded to two digits", () => {
+    const ms = Date.UTC(2026, 6, 10, 9, 5) - 5.5 * 60 * 60 * 1000;
+    expect(fmtDateTimeIst(ms)).toBe("10 Jul 2026, 9:05 AM");
   });
 });
 
