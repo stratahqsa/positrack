@@ -14,14 +14,15 @@ interface Surface {
 }
 
 /**
- * The 5 report surfaces. Health and Weekly Deadline have real routes today
- * (Plans 4-6 wire the rest) — the other 3 render as disabled "soon" items so
- * the full shape of the dashboard is visible from day one without dead links.
+ * The 5 report surfaces. Health, Weekly Deadline, and Release Schedule have
+ * real routes today (Plans 5-6 wire the rest) — the other 2 render as
+ * disabled "soon" items so the full shape of the dashboard is visible from
+ * day one without dead links.
  */
 const SURFACES: Surface[] = [
   { key: "health", label: "Health", icon: Activity, href: "/" },
   { key: "weekly-deadline", label: "Weekly Deadline", icon: CalendarClock, href: "/weekly" },
-  { key: "release-schedule", label: "Release Schedule", icon: Rocket },
+  { key: "release-schedule", label: "Release Schedule", icon: Rocket, href: "/schedule" },
   { key: "bug-analysis", label: "Bug Analysis", icon: Bug },
   { key: "effort", label: "Effort", icon: Gauge },
 ];
