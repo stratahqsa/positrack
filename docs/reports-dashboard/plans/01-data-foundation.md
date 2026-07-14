@@ -654,7 +654,12 @@ def build_schedule(ctx, yt, cfg):
          "customFields(name,value(name,text,minutes,id)),"
          "links(direction,linkType(name),issues(id,idReadable))")
     raw = yt.get_issues(ctx, "project: %s TaskType: Story Scope: {%s}" % (cfg.project, cfg.scope), fields=F)
-    stories = [parse_story(r) for r in raw]
+    excluded = set(cfg.exclude_ids)
+    # Drop stories whose direct parent is an EXCLUDED epic (e.g. PXB1-3295 POS
+    # Android) so excluded work can't leak into any view. Remaining orphans are
+    # stories under no TRACKED epic (unlinked, or under an old-done/Phase-2 epic) —
+    # the story-centric Weekly Deadline View still includes them.
+    stories = [s for s in (parse_story(r) for r in raw) if s["parentId"] not in excluded]
     matched, orphans = match_epics(stories, epics.keys())
     for s in stories:
         s["epicId"] = matched.get(s["storyId"])

@@ -105,3 +105,30 @@ def test_story_missing_deadline_date_field_yields_ddts_none():
     s = schedule.parse_story(raw)
     assert s["ddTs"] is None
     assert s["qaTs"] == _ms("2026-07-20")
+
+def test_build_schedule_drops_children_of_excluded_epic():
+    # Live verification found ~50% of stories were children of the excluded epic
+    # PXB1-3295 (POS Android), leaking in as orphans. The exclusion must apply at
+    # the data layer so no view sees them and orphan_count means "truly unlinked".
+    from reports.config import ReportsConfig
+    cfg = ReportsConfig()  # excludes PXB1-3295 by default
+    good = _raw_story("PXB1-3412", "OPEN", None, "2026-07-08", "2026-07-14", 960, 0, 240)
+    good["links"] = [{"direction": "INWARD", "linkType": {"name": "Subtask"},
+                      "issues": [{"id": "2-41200", "idReadable": "PXB1-3101"}]}]
+    excluded_child = _raw_story("PXB1-9000", "OPEN", None, "2026-07-08", "2026-07-14", 480, 0, 240)
+    excluded_child["links"] = [{"direction": "INWARD", "linkType": {"name": "Subtask"},
+                                "issues": [{"id": "2-41355", "idReadable": "PXB1-3295"}]}]
+    epic_raw = {"id": "2-41200", "idReadable": "PXB1-3101", "summary": "Real epic",
+                "resolved": None, "created": 1}
+    class FakeYT:
+        def get_issues(self, ctx, query, fields=None, **k):
+            if "TaskType: Epic" in query:
+                return [epic_raw] if "#Unresolved" in query else []
+            if "TaskType: Story" in query:
+                return [good, excluded_child]
+            return []
+    block = schedule.build_schedule(ctx=None, yt=FakeYT(), cfg=cfg)
+    ids = [s["storyId"] for s in block["stories"]]
+    assert "PXB1-3412" in ids
+    assert "PXB1-9000" not in ids       # child of excluded PXB1-3295 dropped at data layer
+    assert block["orphan_count"] == 0   # the remaining story matched its epic
