@@ -1,4 +1,4 @@
-import type { Snapshot } from "../lib/types";
+import type { ScheduleStory, Snapshot } from "../lib/types";
 
 const EMPTY_SECTION_TOTAL = { server: 0, ui: 0, testing: 0, total: 0, spent: 0 };
 
@@ -103,5 +103,34 @@ export function baseSnapshot(): Snapshot {
       },
     },
     schedule: { epics: [], stories: [], orphan_count: 0 },
+  };
+}
+
+/**
+ * A minimal, fully-typed ScheduleStory. Defaults to a plain OPEN story with a
+ * non-zero dev estimate (so it clears the ">=1 estimate" inclusion test by
+ * default); tests override just the fields the case under test cares about.
+ */
+export function baseStory(overrides: Partial<ScheduleStory> = {}): ScheduleStory {
+  return {
+    storyId: "PXB1-0000",
+    summary: "Fixture story",
+    state: "OPEN",
+    done: false,
+    assignee: "Fixture Assignee",
+    scope: "PHASE 1",
+    created: null,
+    resolved: null,
+    devEst: 100,
+    uiEst: 0,
+    qaEst: 0,
+    spent: 0,
+    ddTs: null,
+    qaTs: null,
+    sprint: "beta1-21",
+    parentId: null,
+    epicId: null,
+    bugs: [],
+    ...overrides,
   };
 }
