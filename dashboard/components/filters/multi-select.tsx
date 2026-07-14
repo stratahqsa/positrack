@@ -74,7 +74,7 @@ export function MultiSelect({
         <div
           role="listbox"
           aria-label={label}
-          className="absolute left-0 top-[calc(100%+4px)] z-20 max-h-64 w-56 overflow-y-auto rounded-lg border border-border-strong bg-surface-2 p-1.5 shadow-xl scroll-slim"
+          className="absolute left-0 top-[calc(100%+4px)] z-50 max-h-64 w-56 overflow-y-auto rounded-lg border border-border-strong bg-surface-2 p-1.5 shadow-xl scroll-slim"
         >
           {options.map((opt) => {
             const active = selected.includes(opt);

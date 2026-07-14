@@ -107,7 +107,7 @@ export function FilterBar({
   const count = activeFilterCount(filters);
 
   return (
-    <Card className="p-3">
+    <Card className="relative z-30 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 hidden shrink-0 items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-faint sm:inline-flex">
           <FilterIcon className="size-3.5" />
