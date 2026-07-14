@@ -6,6 +6,5 @@
   "jun29_cutoff_iso": "2026-06-29T10:30:00Z",
   "mtg_cutoff_iso": "2026-07-03T10:30:00Z",
   "week1_anchor": "2026-06-30",
-  "done_states": ["done", "fixed", "verified", "closed", "won't fix", "duplicate", "obsolete"],
   "youtrack_base": "https://support.posibolt.com"
 }

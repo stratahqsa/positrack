@@ -11,7 +11,6 @@ def test_defaults_when_no_file(tmp_path):
     assert cfg.jun29_cutoff_iso == "2026-06-29T10:30:00Z"
     assert cfg.mtg_cutoff_iso == "2026-07-03T10:30:00Z"
     assert cfg.week1_anchor == "2026-06-30"
-    assert "fixed" in cfg.done_states
 
 def test_file_overrides_defaults(tmp_path):
     p = tmp_path / "reports.json"

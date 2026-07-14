@@ -87,7 +87,6 @@ def test_defaults_when_no_file(tmp_path):
     assert cfg.jun29_cutoff_iso == "2026-06-29T10:30:00Z"
     assert cfg.mtg_cutoff_iso == "2026-07-03T10:30:00Z"
     assert cfg.week1_anchor == "2026-06-30"
-    assert "fixed" in cfg.done_states
 
 def test_file_overrides_defaults(tmp_path):
     p = tmp_path / "reports.json"
@@ -117,7 +116,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 _DEFAULT_PATH = os.path.join(_ROOT, "web", "config", "reports.json")
 
-DEFAULT_DONE_STATES = ["done", "fixed", "verified", "closed", "won't fix", "duplicate", "obsolete"]
+# NOTE: "done" detection is a stable, phase-independent definition — the single
+# source of truth is parse.DONE_STATES, deliberately NOT a per-phase config knob.
 
 @dataclass
 class ReportsConfig:
@@ -128,7 +128,6 @@ class ReportsConfig:
     jun29_cutoff_iso: str = "2026-06-29T10:30:00Z"   # 29 Jun 2026 4:00 PM IST
     mtg_cutoff_iso: str = "2026-07-03T10:30:00Z"     # 3 Jul 2026 4:00 PM IST
     week1_anchor: str = "2026-06-30"                 # Tue→Mon week 1 start
-    done_states: list = field(default_factory=lambda: list(DEFAULT_DONE_STATES))
     youtrack_base: str = "https://support.posibolt.com"
 
 def load_config(path=_DEFAULT_PATH):
@@ -154,7 +153,6 @@ def load_config(path=_DEFAULT_PATH):
   "jun29_cutoff_iso": "2026-06-29T10:30:00Z",
   "mtg_cutoff_iso": "2026-07-03T10:30:00Z",
   "week1_anchor": "2026-06-30",
-  "done_states": ["done", "fixed", "verified", "closed", "won't fix", "duplicate", "obsolete"],
   "youtrack_base": "https://support.posibolt.com"
 }
 ```
@@ -863,7 +861,6 @@ Inside `build_snapshot(...)`, after `insights = build_insights(...)` (line 450) 
         "project": rcfg.project, "scope": rcfg.scope, "exclude_ids": rcfg.exclude_ids,
         "man_day_minutes": rcfg.man_day_minutes, "jun29_cutoff_iso": rcfg.jun29_cutoff_iso,
         "mtg_cutoff_iso": rcfg.mtg_cutoff_iso, "week1_anchor": rcfg.week1_anchor,
-        "done_states": rcfg.done_states,
     }
 ```
 
@@ -882,7 +879,7 @@ Append these interfaces and extend `Snapshot`:
 ```typescript
 export interface ReportsConfigBlock {
   project: string; scope: string; exclude_ids: string[]; man_day_minutes: number;
-  jun29_cutoff_iso: string; mtg_cutoff_iso: string; week1_anchor: string; done_states: string[];
+  jun29_cutoff_iso: string; mtg_cutoff_iso: string; week1_anchor: string;
 }
 export interface Bug {
   id: string; summary: string; created: number; state: string; priority: string;

@@ -9,7 +9,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 _DEFAULT_PATH = os.path.join(_ROOT, "web", "config", "reports.json")
 
-DEFAULT_DONE_STATES = ["done", "fixed", "verified", "closed", "won't fix", "duplicate", "obsolete"]
+# NOTE: "done" detection is a stable, phase-independent definition — the single
+# source of truth is parse.DONE_STATES, deliberately NOT a per-phase config knob.
 
 @dataclass
 class ReportsConfig:
@@ -20,7 +21,6 @@ class ReportsConfig:
     jun29_cutoff_iso: str = "2026-06-29T10:30:00Z"   # 29 Jun 2026 4:00 PM IST
     mtg_cutoff_iso: str = "2026-07-03T10:30:00Z"     # 3 Jul 2026 4:00 PM IST
     week1_anchor: str = "2026-06-30"                 # Tue→Mon week 1 start
-    done_states: list = field(default_factory=lambda: list(DEFAULT_DONE_STATES))
     youtrack_base: str = "https://support.posibolt.com"
 
 def load_config(path=_DEFAULT_PATH):
