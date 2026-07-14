@@ -14,17 +14,18 @@ interface Surface {
 }
 
 /**
- * The 5 report surfaces. Health, Weekly Deadline, Release Schedule, and Bug
- * Analysis have real routes today (Plan 6 wires the last one) — Effort
- * still renders as a disabled "soon" item so the full shape of the
- * dashboard is visible from day one without dead links.
+ * The 5 report surfaces — Health, Weekly Deadline, Release Schedule, Bug
+ * Analysis, and Effort all have real routes now (Plan 6 wires the last
+ * one). `href` stays optional on `Surface` so a future surface without a
+ * route yet can still render as a disabled "soon" item, same as every
+ * surface here did before its own plan wired it up.
  */
 const SURFACES: Surface[] = [
   { key: "health", label: "Health", icon: Activity, href: "/" },
   { key: "weekly-deadline", label: "Weekly Deadline", icon: CalendarClock, href: "/weekly" },
   { key: "release-schedule", label: "Release Schedule", icon: Rocket, href: "/schedule" },
   { key: "bug-analysis", label: "Bug Analysis", icon: Bug, href: "/bugs" },
-  { key: "effort", label: "Effort", icon: Gauge },
+  { key: "effort", label: "Effort", icon: Gauge, href: "/effort" },
 ];
 
 /**
