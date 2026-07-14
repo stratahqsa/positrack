@@ -18,7 +18,7 @@ export function BugPressureTile({
       label="Bug pressure"
       icon={Bug}
       tone={openHigh > 0 ? "danger" : "info"}
-      href="#"
+      href="/bugs"
       linkLabel="View Bug Analysis"
     >
       <div className="tabular text-2xl font-bold leading-none text-fg">

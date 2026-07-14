@@ -17,7 +17,7 @@ export function DeadlinesTile({
       label="This week's deadlines"
       icon={CalendarClock}
       tone={late > 0 ? "danger" : "info"}
-      href="#"
+      href="/weekly"
       linkLabel="View Weekly Deadline"
     >
       <div className="tabular text-2xl font-bold leading-none text-fg">

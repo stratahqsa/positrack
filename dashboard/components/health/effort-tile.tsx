@@ -18,7 +18,7 @@ export function EffortTile({
   overshoot: number;
 }) {
   return (
-    <StatTile label="Remaining effort" icon={Timer} tone="violet" href="#" linkLabel="View Effort">
+    <StatTile label="Remaining effort" icon={Timer} tone="violet" href="/effort" linkLabel="View Effort">
       <div className="tabular text-2xl font-bold leading-none text-fg">
         {manDays.toFixed(1)}
         <span className="ml-1 text-[12px] font-medium text-muted">md</span>

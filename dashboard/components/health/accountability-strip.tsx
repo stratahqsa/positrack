@@ -71,7 +71,7 @@ export function AccountabilityStrip({
           Accountability
         </CardTitle>
         <Link
-          href="#"
+          href="/schedule"
           className="group inline-flex items-center gap-1 text-[11px] font-medium text-faint transition-colors hover:text-accent"
         >
           View details
