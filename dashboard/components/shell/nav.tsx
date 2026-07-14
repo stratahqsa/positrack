@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Activity, CalendarClock, Rocket, Bug, Gauge } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -11,32 +14,43 @@ interface Surface {
 }
 
 /**
- * The 5 report surfaces. Only Health has a real route today (Plans 3-6 wire
- * the rest) — the other 4 render as disabled "soon" items so the full shape
- * of the dashboard is visible from day one without dead links.
+ * The 5 report surfaces. Health and Weekly Deadline have real routes today
+ * (Plans 4-6 wire the rest) — the other 3 render as disabled "soon" items so
+ * the full shape of the dashboard is visible from day one without dead links.
  */
 const SURFACES: Surface[] = [
   { key: "health", label: "Health", icon: Activity, href: "/" },
-  { key: "weekly-deadline", label: "Weekly Deadline", icon: CalendarClock },
+  { key: "weekly-deadline", label: "Weekly Deadline", icon: CalendarClock, href: "/weekly" },
   { key: "release-schedule", label: "Release Schedule", icon: Rocket },
   { key: "bug-analysis", label: "Bug Analysis", icon: Bug },
   { key: "effort", label: "Effort", icon: Gauge },
 ];
 
+/**
+ * `usePathname()`-driven active state — needed now that there are two real
+ * routes: hardcoding `aria-current="page"` on every linked item (fine when
+ * only one route existed) would mislabel Health as "current" while viewing
+ * Weekly Deadline and vice versa.
+ */
 export function Nav() {
+  const pathname = usePathname();
   return (
     <nav aria-label="Report views" className="border-b border-border/60 bg-surface/30">
       <div className="mx-auto flex max-w-[1400px] gap-1 overflow-x-auto px-4 py-2 no-scrollbar sm:px-6">
         {SURFACES.map((s) => {
           const Icon = s.icon;
           if (s.href) {
+            const active = pathname === s.href;
             return (
               <Link
                 key={s.key}
                 href={s.href}
-                aria-current="page"
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent/12 px-3 py-1.5 text-[12.5px] font-semibold text-accent ring-1 ring-accent/30",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition-colors",
+                  active
+                    ? "bg-accent/12 text-accent ring-1 ring-accent/30"
+                    : "text-muted hover:bg-elevated/60 hover:text-fg",
                 )}
               >
                 <Icon className="size-3.5" />
