@@ -274,6 +274,112 @@ export interface Snapshot {
    * `timespent`. Optional on older snapshots.
    */
   timespent_by_sprint?: Record<string, TimeSpent>;
+  /** Re-baseline-able reports config (project/scope/baselines). Optional: absent on older snapshots. */
+  config?: ReportsConfigBlock;
+  /** Bug Analysis data block. Optional: absent on older snapshots. */
+  bugs?: BugsBlock;
+  /** Release Schedule / Weekly Deadline data block (epics+stories+drilldown). Optional: absent on older snapshots. */
+  schedule?: ScheduleBlock;
+}
+
+/** Re-baseline-able config for the PXB1 reports (scripts/reports/config.py). */
+export interface ReportsConfigBlock {
+  project: string;
+  scope: string;
+  exclude_ids: string[];
+  man_day_minutes: number;
+  jun29_cutoff_iso: string;
+  mtg_cutoff_iso: string;
+  week1_anchor: string;
+}
+
+/** A single bug row (Bug Analysis source, scripts/reports/bugs.py::parse_bug). */
+export interface Bug {
+  id: string;
+  summary: string;
+  created: number;
+  state: string;
+  priority: string;
+  module: string | null;
+  submodule: string | null;
+  assignee: string;
+  reporter: string;
+}
+
+export interface StateBreakdownRow {
+  state: string;
+  count: number;
+  bar: number;
+  pct: number;
+}
+
+export interface ModuleInsight {
+  module: string;
+  count: number;
+  submodules: { submodule: string; count: number }[];
+}
+
+export interface BugsBlock {
+  window: { start_ms: number; end_ms: number; label: string };
+  new_in_window: { High: Bug[]; Medium: Bug[]; Low: Bug[] };
+  open_high_older: Bug[];
+  medium_by_state: StateBreakdownRow[];
+  low_by_state: StateBreakdownRow[];
+  module_insights: ModuleInsight[];
+  kpi: {
+    new_high: number;
+    new_medium: number;
+    open_high: number;
+    open_medium: number;
+    open_low: number;
+    total_open: number;
+    modules_hit: number;
+  };
+}
+
+/** An open bug surfaced by the RE-OPEN story → dev ticket drill-down. */
+export interface DrillBug {
+  bugId: string;
+  summary: string;
+  state: string;
+  assignee: string;
+  priority: string;
+  devTicketId: string;
+}
+
+/** A story row shared by Release Schedule + Weekly Deadline views (scripts/reports/schedule.py::parse_story). */
+export interface ScheduleStory {
+  storyId: string;
+  summary: string;
+  state: string;
+  done: boolean;
+  assignee: string;
+  scope: string;
+  created: number | null;
+  resolved: number | null;
+  devEst: number;
+  uiEst: number;
+  qaEst: number;
+  spent: number;
+  ddTs: number | null;
+  qaTs: number | null;
+  sprint: string;
+  parentId: string | null;
+  epicId: string | null;
+  bugs: DrillBug[];
+}
+
+export interface ScheduleEpic {
+  id: string;
+  summary: string;
+  resolved: number | null;
+  created: number | null;
+}
+
+export interface ScheduleBlock {
+  epics: ScheduleEpic[];
+  stories: ScheduleStory[];
+  orphan_count: number;
 }
 
 /** A dated trend point derived from snapshot-*.json files. */

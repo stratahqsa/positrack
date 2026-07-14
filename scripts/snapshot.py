@@ -53,6 +53,8 @@ for _p in (os.path.join(_ROOT, "core"), _HERE):
 sys.path.insert(0, _HERE)  # for gamification.py
 import ytcore as yt  # noqa: E402
 import gamification as gam  # noqa: E402
+from reports.config import load_config  # scripts/ is already on sys.path (line 53)
+from reports import bugs as rbugs, schedule as rsched, drilldown as rdrill  # noqa: E402
 
 ENGINE_VERSION = "control-tower-b1"
 DATA_DIR = os.path.join(_ROOT, "web", "data")
@@ -449,6 +451,18 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     # 5) insights — RED counts + day-over-day delta.
     insights = build_insights(effort, project, scope)
 
+    # 6) reports data foundation (Bug Analysis + schedule for Release/Weekly views)
+    rcfg = load_config()
+    now_ms = int(now.timestamp() * 1000)
+    bugs_block = rbugs.build_bugs(ctx, yt, rcfg, now_ms)
+    schedule_block = rsched.build_schedule(ctx, yt, rcfg)
+    rdrill.attach_drilldown(ctx, yt, schedule_block["stories"])
+    config_block = {
+        "project": rcfg.project, "scope": rcfg.scope, "exclude_ids": rcfg.exclude_ids,
+        "man_day_minutes": rcfg.man_day_minutes, "jun29_cutoff_iso": rcfg.jun29_cutoff_iso,
+        "mtg_cutoff_iso": rcfg.mtg_cutoff_iso, "week1_anchor": rcfg.week1_anchor,
+    }
+
     effort.pop("_sprint", None)  # keep it out of the serialized effort block
 
     meta = {
@@ -470,6 +484,9 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
         "hygiene": {"blocks": hygiene_blocks},
         "gamification": gamification,
         "insights": insights,
+        "config": config_block,
+        "bugs": bugs_block,
+        "schedule": schedule_block,
     }
 
 
