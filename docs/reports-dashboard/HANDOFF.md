@@ -16,7 +16,8 @@ feat/reports-dashboard (all 5 views done, 140 tests passing, build passes). It
 is NOT yet deployed. The old web/ dashboard is untouched and still live.
 
 Help me ship it:
-1. Confirm the branch state (git status; we should be on feat/reports-dashboard).
+1. Confirm the branch state and PUSH it (git push -u origin feat/reports-dashboard) —
+   all ~37 commits are local; both the Action and Vercel deploy from GitHub.
 2. Walk me through the deploy in HANDOFF.md §5 — Step 1 is the snapshot refresh
    (gh workflow run "Snapshot" --ref feat/reports-dashboard; gh is authed as
    stratahqsa). Step 2 is the Vercel project (I'll do the clicks; the Vercel CLI
@@ -75,7 +76,12 @@ The vendored engine `core/ytcore.py` was **never touched** (it's 3-way sync-gate
 
 ## 5. DEPLOY (the remaining task)
 
-**Do Step 1 before Step 2** — the deployed app reads its data from the Release, so the Release must carry the new-format snapshot first.
+**⚠️ All ~37 commits are currently LOCAL on `feat/reports-dashboard` — the branch is not on GitHub yet.** Both the GitHub Action and Vercel deploy from the *remote*, so **push first (Step 0)**, then do Step 1 before Step 2 (the app reads its data from the Release, so the Release must carry the new-format snapshot before the site is useful).
+
+### Step 0 — push the branch to GitHub
+```bash
+git push -u origin feat/reports-dashboard
+```
 
 ### Step 1 — refresh the live data (GitHub Action, ~5–8 min)
 ```bash
