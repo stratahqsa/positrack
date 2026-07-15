@@ -7,7 +7,7 @@
 ## ✅ STATUS: SHIPPED (2026-07-15)
 
 **This dashboard is DEPLOYED and LIVE.** The deploy walkthrough in §5 below is now
-*historical* (kept for reference) — the work is done. **For the PM, read [PM-GUIDE.md](PM-GUIDE.md).**
+*historical* (kept for reference) — the work is done. **Whoever runs/changes the dashboard should read [MAINTAINER-GUIDE.md](MAINTAINER-GUIDE.md)** (role-based: viewer / maintainer / approver).
 
 - **Live (gated):** https://posxphase1.positrack.live · code `posx2026` · also `https://positrack-reports.vercel.app`
 - **Vercel project:** `positrack-reports` (team `groworx-ais-projects`); the old `positrack`→`positrack-flame` project is untouched. **Not Git-integrated** — deploys via `vercel --prod` from `dashboard/`.
