@@ -137,3 +137,34 @@ jobs:
           print("index.json:", names)
           PY
           gh release upload "$TAG" web/data/latest.json web/data/index.json web/data/snapshot-*.json --clobber
+
+      - name: Publish latest.json to Vercel Blob (fresh source for the reports dashboard)
+        # The reports dashboard (dashboard/, positrack-reports.vercel.app) reads its
+        # snapshot from Vercel Blob, NOT the GitHub Release asset above. GitHub's
+        # release-asset CDN caches by path and does not reliably purge on clobber, so
+        # a force-dynamic page can serve a stale snapshot for a long time. Blob with a
+        # stable pathname + cache-control:max-age=0 is always fresh. This is ADDITIVE:
+        # the old web/ dashboard keeps reading the Release; only the new app uses Blob.
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: |
+          if [ -z "${BLOB_READ_WRITE_TOKEN}" ]; then
+            echo "::warning::BLOB_READ_WRITE_TOKEN not set — skipping Blob publish; the reports dashboard will lag until the secret is configured."
+            exit 0
+          fi
+          # Use the @vercel/blob SDK, not the `vercel` CLI: the CLI requires full
+          # account login (VERCEL_TOKEN) even for blob ops, whereas the SDK
+          # authenticates with only BLOB_READ_WRITE_TOKEN — the right fit for CI.
+          npm install --no-save @vercel/blob@1
+          node -e '
+          const { put } = require("@vercel/blob");
+          const fs = require("fs");
+          put("latest.json", fs.readFileSync("web/data/latest.json"), {
+            access: "public",
+            addRandomSuffix: false,
+            allowOverwrite: true,
+            cacheControlMaxAge: 0,
+            contentType: "application/json",
+          }).then((r) => console.log("Published to Blob:", r.url))
+            .catch((e) => { console.error("Blob publish failed:", e.message || e); process.exit(1); });
+          '

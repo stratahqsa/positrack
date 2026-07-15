@@ -1,0 +1,5 @@
+# The Vercel CLI does NOT honor .gitignore, so exclude the local dev snapshot
+# copy explicitly. If data/latest.json ships, loadSnapshot() reads it instead of
+# fetching SNAPSHOT_DATA_URL (Vercel Blob) — pinning the live site to stale data.
+# Production must always fetch the snapshot at request time.
+data/

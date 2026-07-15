@@ -1,0 +1,247 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+@custom-variant light (&:is(.light *));
+
+/*
+  POSX Control Tower — dual design system (dark default + polished light).
+  Slate-zinc base, cyan accent, semantic RED/amber/green for accountability.
+  Tailwind v4 CSS-first theme. Colors are HSL channels so /alpha works.
+
+  Tokens are declared in @theme with the DARK values (the historical default),
+  which is what generates the utility classes. The active palette is then
+  overridden at runtime by re-binding the same --color-* custom properties:
+  html.light gets the light palette, html.dark keeps the @theme defaults.
+  Every token is retuned by hand for light — not an inverted dark theme —
+  so surfaces stay bright, text stays high-contrast, and RED/amber still
+  read as urgent against a light ground.
+*/
+@theme {
+  --color-bg: hsl(222 47% 5%);
+  --color-surface: hsl(222 40% 8%);
+  --color-surface-2: hsl(220 38% 11%);
+  --color-elevated: hsl(220 34% 14%);
+  --color-border: hsl(218 30% 18%);
+  --color-border-strong: hsl(216 28% 26%);
+
+  --color-fg: hsl(210 40% 96%);
+  --color-muted: hsl(215 20% 65%);
+  --color-faint: hsl(216 16% 47%);
+
+  --color-accent: hsl(190 95% 55%);
+  --color-accent-soft: hsl(190 90% 60%);
+
+  --color-danger: hsl(0 84% 62%);
+  --color-danger-dim: hsl(0 72% 45%);
+  --color-warn: hsl(38 92% 55%);
+  --color-good: hsl(152 62% 47%);
+  --color-info: hsl(217 91% 62%);
+  --color-violet: hsl(266 85% 66%);
+
+  --radius-lg: 0.85rem;
+  --radius-md: 0.6rem;
+  --radius-sm: 0.4rem;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo,
+    monospace;
+}
+
+/*
+  LIGHT PALETTE — cool paper-white surfaces on a soft slate wash.
+  Surfaces climb bg → surface → surface-2 → elevated (each a touch cooler/
+  deeper) so cards and headers layer cleanly. Text is near-slate-900 for the
+  body, with muted/faint stepping down but staying AA-legible. Semantic hues
+  are darkened + saturated vs. the dark theme so the same /12–/15 alpha fills
+  used across the UI still land as confident color on white, and the borders
+  (/40) read as real outlines.
+*/
+:root.light {
+  --color-bg: hsl(210 40% 98%);
+  --color-surface: hsl(0 0% 100%);
+  --color-surface-2: hsl(210 40% 97%);
+  --color-elevated: hsl(214 32% 92%);
+  --color-border: hsl(214 28% 88%);
+  --color-border-strong: hsl(215 22% 76%);
+
+  --color-fg: hsl(222 47% 11%);
+  --color-muted: hsl(215 19% 39%);
+  --color-faint: hsl(215 16% 52%);
+
+  --color-accent: hsl(191 91% 33%);
+  --color-accent-soft: hsl(191 85% 40%);
+
+  --color-danger: hsl(0 74% 47%);
+  --color-danger-dim: hsl(0 70% 40%);
+  --color-warn: hsl(30 90% 40%);
+  --color-good: hsl(152 62% 32%);
+  --color-info: hsl(217 79% 48%);
+  --color-violet: hsl(266 70% 52%);
+
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    color-scheme: dark;
+  }
+  html.light {
+    color-scheme: light;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Ambient gradient glow anchored top so long pages stay grounded */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(
+        1100px 620px at 82% -8%,
+        hsl(190 95% 55% / 0.09),
+        transparent 60%
+      ),
+      radial-gradient(
+        900px 560px at 8% -4%,
+        hsl(266 85% 66% / 0.07),
+        transparent 55%
+      );
+    pointer-events: none;
+  }
+  /* Lighter, cooler wash for the light theme so the glow tints rather than
+     muddies the white ground. */
+  html.light body::before {
+    background:
+      radial-gradient(
+        1100px 620px at 82% -8%,
+        hsl(191 91% 45% / 0.08),
+        transparent 60%
+      ),
+      radial-gradient(
+        900px 560px at 8% -4%,
+        hsl(266 70% 60% / 0.06),
+        transparent 55%
+      );
+  }
+  ::selection {
+    background: hsl(190 95% 55% / 0.28);
+  }
+  html.light ::selection {
+    background: hsl(191 91% 45% / 0.22);
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  .glass {
+    background: color-mix(in oklab, var(--color-surface) 82%, transparent);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
+  html.light .glass {
+    background: color-mix(in oklab, var(--color-surface) 88%, transparent);
+    backdrop-filter: blur(14px) saturate(1.05);
+  }
+  .card-ring {
+    box-shadow:
+      0 0 0 1px var(--color-border),
+      0 1px 0 0 hsl(0 0% 100% / 0.02) inset,
+      0 18px 40px -24px hsl(0 0% 0% / 0.8);
+  }
+  /* Light elevation: crisp hairline ring + a soft, short slate drop shadow
+     instead of the deep black glow the dark theme uses. */
+  html.light .card-ring {
+    box-shadow:
+      0 0 0 1px var(--color-border),
+      0 1px 2px 0 hsl(215 25% 27% / 0.06),
+      0 12px 28px -20px hsl(215 25% 27% / 0.28);
+  }
+  .hairline {
+    box-shadow: 0 0 0 1px var(--color-border);
+  }
+  /* Left rail marker for RED rows */
+  .red-rail {
+    box-shadow: inset 3px 0 0 0 var(--color-danger);
+  }
+  .amber-rail {
+    box-shadow: inset 3px 0 0 0 var(--color-warn);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .grid-fade {
+    -webkit-mask-image: linear-gradient(to bottom, black 82%, transparent);
+    mask-image: linear-gradient(to bottom, black 82%, transparent);
+  }
+}
+
+/* Custom slim scrollbar for scroll regions */
+.scroll-slim::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.scroll-slim::-webkit-scrollbar-thumb:hover {
+  background: var(--color-faint);
+  background-clip: content-box;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 hsl(0 84% 62% / 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px hsl(0 84% 62% / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsl(0 84% 62% / 0);
+  }
+}
+/* Same pulse, tuned to the darker light-theme danger so it reads on white. */
+@keyframes pulse-ring-light {
+  0% {
+    box-shadow: 0 0 0 0 hsl(0 74% 47% / 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px hsl(0 74% 47% / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsl(0 74% 47% / 0);
+  }
+}
+.pulse-danger {
+  animation: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+html.light .pulse-danger {
+  animation-name: pulse-ring-light;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse-danger {
+    animation: none;
+  }
+}
