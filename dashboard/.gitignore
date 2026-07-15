@@ -9,3 +9,4 @@ data/
 
 # typescript
 *.tsbuildinfo
+.vercel
