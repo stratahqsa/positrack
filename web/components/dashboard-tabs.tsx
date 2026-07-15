@@ -7,6 +7,7 @@ import {
   Users,
   Trophy,
   TrendingUp,
+  Rocket,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -103,18 +104,26 @@ function DashboardInner({
               <TrendingUp className="size-3.5" />
               Trends
             </TabsTrigger>
+            <TabsTrigger value="release-schedule">
+              <Rocket className="size-3.5" />
+              Phase 1 Release Schedule Tracker
+            </TabsTrigger>
           </TabsList>
         </div>
 
         {/* Global filter bar — cross-filters the Effort view. Sticky under the
-            tab strip so leads keep it in view while scrolling long sections. */}
-        <div className="mt-4">
-          <FilterBar
-            epics={openEpics}
-            totalEpics={openCount}
-            visibleEpics={visibleCount}
-          />
-        </div>
+            tab strip so leads keep it in view while scrolling long sections.
+            Hidden on the Release Schedule tab, which is a standalone static
+            report the filters have no bearing on. */}
+        {tab !== "release-schedule" ? (
+          <div className="mt-4">
+            <FilterBar
+              epics={openEpics}
+              totalEpics={openCount}
+              visibleEpics={visibleCount}
+            />
+          </div>
+        ) : null}
 
         <TabsContent value="effort">
           <TabEffort effort={effort} />
@@ -135,6 +144,17 @@ function DashboardInner({
         </TabsContent>
         <TabsContent value="trends">
           <TabTrends trend={trend} />
+        </TabsContent>
+        <TabsContent value="release-schedule">
+          {/* Live report, refreshed 3x/day by the Release Schedule workflow and
+              proxied through /api/release-schedule (see that route for why: raw
+              GitHub release-asset URLs can't be trusted to render inline).
+              Isolated in an iframe so its own styles/scripts never touch this app. */}
+          <iframe
+            src="/api/release-schedule"
+            title="Phase 1 Release Schedule Tracker"
+            className="h-[calc(100vh-160px)] w-full rounded-lg border border-border"
+          />
         </TabsContent>
       </Tabs>
     </TooltipProvider>

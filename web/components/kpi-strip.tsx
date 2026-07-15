@@ -333,7 +333,7 @@ export function KpiStrip({
         {!delta ? (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-faint">
             <FileWarning className="size-3" />
-            Day-over-day deltas appear after the next nightly snapshot.
+            Day-over-day deltas appear after the next daily snapshot.
           </span>
         ) : null}
       </div>
