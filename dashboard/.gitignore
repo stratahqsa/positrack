@@ -1,0 +1,12 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+
+# snapshot data (published to the GitHub Release; local dev copy stays untracked)
+data/
+
+# typescript
+*.tsbuildinfo
+.vercel

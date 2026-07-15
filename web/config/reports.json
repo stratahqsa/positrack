@@ -1,0 +1,10 @@
+{
+  "project": "PXB1",
+  "scope": "PHASE 1",
+  "exclude_ids": ["PXB1-3295"],
+  "man_day_minutes": 480,
+  "jun29_cutoff_iso": "2026-06-29T10:30:00Z",
+  "mtg_cutoff_iso": "2026-07-03T10:30:00Z",
+  "week1_anchor": "2026-06-30",
+  "youtrack_base": "https://support.posibolt.com"
+}
