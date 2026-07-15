@@ -132,9 +132,19 @@ jobs:
             echo "::warning::BLOB_READ_WRITE_TOKEN not set — skipping Blob publish; the reports dashboard will lag until the secret is configured."
             exit 0
           fi
-          npx --yes vercel@latest blob put web/data/latest.json \
-            --pathname latest.json \
-            --add-random-suffix false \
-            --allow-overwrite true \
-            --cache-control-max-age 0 \
-            --content-type application/json
+          # Use the @vercel/blob SDK, not the `vercel` CLI: the CLI requires full
+          # account login (VERCEL_TOKEN) even for blob ops, whereas the SDK
+          # authenticates with only BLOB_READ_WRITE_TOKEN — the right fit for CI.
+          npm install --no-save @vercel/blob@1
+          node -e '
+          const { put } = require("@vercel/blob");
+          const fs = require("fs");
+          put("latest.json", fs.readFileSync("web/data/latest.json"), {
+            access: "public",
+            addRandomSuffix: false,
+            allowOverwrite: true,
+            cacheControlMaxAge: 0,
+            contentType: "application/json",
+          }).then((r) => console.log("Published to Blob:", r.url))
+            .catch((e) => { console.error("Blob publish failed:", e.message || e); process.exit(1); });
+          '
