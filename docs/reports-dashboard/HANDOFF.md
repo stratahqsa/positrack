@@ -4,6 +4,19 @@
 
 ---
 
+## ✅ STATUS: SHIPPED (2026-07-15)
+
+**This dashboard is DEPLOYED and LIVE.** The deploy walkthrough in §5 below is now
+*historical* (kept for reference) — the work is done. **For the PM, read [PM-GUIDE.md](PM-GUIDE.md).**
+
+- **Live (gated):** https://posxphase1.positrack.live · code `posx2026` · also `https://positrack-reports.vercel.app`
+- **Vercel project:** `positrack-reports` (team `groworx-ais-projects`); the old `positrack`→`positrack-flame` project is untouched. **Not Git-integrated** — deploys via `vercel --prod` from `dashboard/`.
+- **Data source is now Vercel Blob** (store `posx-snapshot`), pointed to by the `SNAPSHOT_DATA_URL` env var. The nightly **Snapshot** workflow publishes `latest.json` to Blob via the **`@vercel/blob` SDK** (auth = `BLOB_READ_WRITE_TOKEN` GitHub secret — the `vercel` CLI can't do blob ops in CI). We moved OFF the GitHub Release read because its CDN served the same-named asset **stale for >1h** (caches by path, no purge on clobber). Blob clamps cache to `max-age=60` and invalidates on overwrite. `blob-republish.yml` = manual "push current Release latest.json to Blob without a regen".
+- **The freshness root-cause (subtle):** the Vercel CLI does **not** honor `.gitignore`, so the local dev copy `dashboard/data/latest.json` was uploaded on every deploy, and `loadSnapshot()` reads a local `data/latest.json` *before* fetching — pinning the live site to that stale file. Fixed with **`dashboard/.vercelignore`** (`data/`). Also `dashboard/vercel.json` pins `framework: nextjs` (CLI-created project defaulted to "Other").
+- **Verified live:** all 5 views, sort + 3-level drill, shareable filters, KPI reconciliations, **mobile 375px**, fresh data (from Blob), zero console errors. CI green; merged to `master`.
+
+---
+
 ## 0. Initial prompt (paste this into a fresh session)
 
 ```
