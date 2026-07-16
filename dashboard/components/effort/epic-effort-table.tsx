@@ -26,6 +26,13 @@ import { stateVariant } from "@/components/weekly/badge-tone";
  *    "totals" prop is threaded in; the TOTAL row below is computed by
  *    summing the same per-row accessor used for the cells above it, so rows
  *    and their total can never visually disagree.
+ *
+ *    Spent is the exception for "mixed": `Epic.spent` is a whole-epic,
+ *    all-stories-ever total (a work-item sweep — see core/ytcore.py), which
+ *    would mismatch a Total that's already pending-P1-only. So "mixed" scopes
+ *    Spent down to `pendingP1Spent()` — summing each pending-P1 story's own
+ *    `spent` field — matching the PM's already-validated scheduled-report
+ *    recipe. "pending"/"done" keep the whole-epic `Epic.spent` unchanged.
  */
 export type EpicTableVariant = "done" | "pending" | "mixed";
 
@@ -81,10 +88,28 @@ function isDoneState(state: string | null | undefined): boolean {
  *  "pending" show ALL stories (PENDING epics have zero done stories by the
  *  category rule itself — PRD_3 §4 "PENDING: has stories, none done"); only
  *  "mixed" filters down to the pending ones (PRD_3 §5 "expandable pending
- *  sub-rows"). */
+ *  sub-rows"). This still includes pending Phase-2 stories (for visibility —
+ *  the epic's "P2 · n" badge already flags the scope leakage); it's
+ *  deliberately looser than `isPendingPhase1` below, which additionally
+ *  excludes Phase-2 for the Spent/estimate rollups. */
 function subStories(epic: Epic, variant: EpicTableVariant): Story[] {
   if (variant === "mixed") return epic.stories.filter((s) => !isDoneState(s.state));
   return epic.stories;
+}
+
+/** Mirrors core/ytcore.py's `p1p` filter exactly: pending (not done) AND
+ *  in-scope for Phase 1 (no scope set, or scope contains "PHASE 1"). Used to
+ *  scope a MIXED epic's Spent figure to the same story set its Dev/UI/QA/
+ *  Total already use — see `pendingP1Spent` and `rowEffort` below. */
+function isPendingPhase1(story: Story): boolean {
+  return !isDoneState(story.state) && (!story.scope || story.scope.toUpperCase().includes("PHASE 1"));
+}
+
+/** Sum of each pending-Phase-1 story's own `spent` (its "Spent time" field —
+ *  see lib/types.ts's Story.spent doc) for a MIXED epic's Spent column.
+ *  `spent` is optional (older snapshots predate it) and defaults to 0. */
+function pendingP1Spent(epic: Epic): number {
+  return epic.stories.filter(isPendingPhase1).reduce((total, s) => total + (s.spent ?? 0), 0);
 }
 
 interface RowEffort {
@@ -105,7 +130,8 @@ function rowEffort(epic: Epic, variant: EpicTableVariant): RowEffort {
     return { ...r, total: r.dev + r.ui + r.qa, spent: epic.spent };
   }
   const r = rollupEffort(epic.rollup);
-  return { ...r, total: epic.total, spent: epic.spent };
+  const spent = variant === "mixed" ? pendingP1Spent(epic) : epic.spent;
+  return { ...r, total: epic.total, spent };
 }
 
 function sortValue(epic: Epic, key: SortKey, variant: EpicTableVariant): string | number | null {
@@ -325,15 +351,21 @@ function EpicDataRow({
   );
 }
 
-/** Sub-row: one story under an expanded epic (story id · state · assignee ·
- *  est), rendered as a single spanning cell so the story data reads as one
- *  flexible line regardless of the parent table's variable column count. */
-function StorySubRow({ story, columnCount }: { story: Story; columnCount: number }) {
+/** Sub-row: one story under an expanded epic. Renders one real `<td>` per
+ *  column, matching EpicDataRow's exact column set for `variant` (id/summary/
+ *  [assignee/created]/dev/ui/qa/total/spent/[est]) so a story's Assignee and
+ *  Dev/UI/QA values land in the SAME columns as the epic row above it, instead
+ *  of one flowing colSpan line that couldn't align with anything. */
+function StorySubRow({ story, variant }: { story: Story; variant: EpicTableVariant }) {
   const done = isDoneState(story.state);
+  const dev = story.est.server;
+  const ui = story.est.ui;
+  const qa = story.est.testing;
+
   return (
     <tr className={cn("border-t border-border/30 text-[11.5px]", done ? "bg-good/[0.03]" : "bg-elevated/20")}>
-      <td colSpan={columnCount} className="py-0">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-border/40 py-1.5 pl-8 pr-2">
+      <td className="whitespace-nowrap py-1.5 pl-8 pr-2 align-top">
+        <div className="flex items-center gap-1.5">
           <IssueLink id={story.id} showIcon={false} className="text-[11.5px]" />
           <Badge variant={stateVariant(story.state, done)} size="sm">
             {story.state || "—"}
@@ -343,13 +375,25 @@ function StorySubRow({ story, columnCount }: { story: Story; columnCount: number
               P2
             </Badge>
           ) : null}
-          <span className="min-w-0 flex-1 truncate text-fg/70">{story.summary}</span>
-          <span className="text-muted">{story.assignee || "—"}</span>
-          <span className="tabular text-[10.5px] text-faint">
-            Dev {fmtHours(story.est.server)} · UI {fmtHours(story.est.ui)} · QA {fmtHours(story.est.testing)}
-          </span>
         </div>
       </td>
+      <td className="max-w-[320px] px-2 py-1.5 align-top">
+        <span className="line-clamp-2 text-fg/70">{story.summary}</span>
+      </td>
+      {variant !== "done" ? (
+        <>
+          <td className="px-2 py-1.5 align-top text-muted">
+            {story.assignee || <span className="text-faint">—</span>}
+          </td>
+          <td className="whitespace-nowrap px-2 py-1.5 align-top text-muted">{fmtDate(story.created)}</td>
+        </>
+      ) : null}
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(dev)}</td>
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(ui)}</td>
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(qa)}</td>
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(dev + ui + qa)}</td>
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(story.spent ?? 0)}</td>
+      {variant === "pending" ? <td /> : null}
     </tr>
   );
 }
@@ -445,7 +489,7 @@ export function EpicEffortTable({ epics, variant }: { epics: Epic[]; variant: Ep
                   onToggle={() => toggleExpanded(epic.id)}
                 />
                 {isExpanded && subs.length > 0
-                  ? subs.map((story) => <StorySubRow key={story.id} story={story} columnCount={columnCount} />)
+                  ? subs.map((story) => <StorySubRow key={story.id} story={story} variant={variant} />)
                   : null}
               </React.Fragment>
             );

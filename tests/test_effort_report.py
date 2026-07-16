@@ -31,13 +31,14 @@ def _cf(name, value):
     return {"name": name, "value": value}
 
 
-def _story(sid, state, scope="PHASE 1", server=0, ui=0, testing=0, assignee=""):
+def _story(sid, state, scope="PHASE 1", server=0, ui=0, testing=0, assignee="", spent=0):
     return {"idReadable": sid, "summary": sid, "created": 1,
             "assignee": ({"name": assignee} if assignee else None),
             "customFields": [_cf("State", {"name": state}), _cf("Scope", {"name": scope}),
                              _cf("Server Estimation", {"minutes": server}),
                              _cf("UI Estimation", {"minutes": ui}),
-                             _cf("Testing Estimation", {"minutes": testing})]}
+                             _cf("Testing Estimation", {"minutes": testing}),
+                             _cf("Spent time", {"minutes": spent})]}
 
 
 def _epic(eid, state, stories=(), server=0, ui=0, testing=0, resolved=None, assignee=""):
@@ -112,15 +113,53 @@ def test_categorize_non_phase1_pending_story_excluded_from_rollup():
     assert rec["rollup"] == {"server": 30, "ui": 0, "testing": 60}
 
 
-# ---------- epic-level estimate fallback (recipe trap) ----------
-def test_epic_estimate_fallback_when_story_rollup_zero():
-    # story rollup for UI is 0 but the epic has UI 60 -> fall back to epic's value
-    ep = _epic("E-6", "OPEN", ui=60, testing=120, stories=[
+# ---------- per-story spend (Consensus: reuse the PM's scheduled-report recipe) ----------
+def test_epic_stories_carry_own_spent_time_field():
+    # each story's own "Spent time" custom field is read straight onto its dict,
+    # separate from the epic-level work-item sweep (effort_report's rec["spent"]).
+    ep = _epic("E-10", "OPEN", stories=[
+        _story("S-a", "OPEN", server=480, spent=120),
+        _story("S-b", "DONE", server=240, spent=600)])
+    rec = yt.categorize_epic(ep)
+    spent_by_id = {s["id"]: s["spent"] for s in rec["stories"]}
+    assert spent_by_id == {"S-a": 120, "S-b": 600}
+
+
+# ---------- epic-level estimate fallback (recipe trap, corrected scope) ----------
+# Verified live against PXB1-513 / PXB1-414: the fallback used to apply per-field
+# to every epic, so a genuinely-zero component on a real pending story (or an
+# epic whose only pending stories were out-of-phase) silently pulled in the
+# epic's own — often stale, all-stories-inclusive — Estimation fields. It's now
+# scoped to NO_STORIES epics only, the sole case where the epic's own fields are
+# the only estimate that exists.
+def test_no_stories_epic_falls_back_to_own_estimate():
+    ep = _epic("E-6", "OPEN", server=240, ui=60, testing=120)
+    rec = yt.categorize_epic(ep)
+    assert rec["category"] == "NO_STORIES"
+    assert rec["rollup"] == {"server": 240, "ui": 60, "testing": 120}
+
+
+def test_epic_with_stories_keeps_real_zero_no_fallback():
+    # story rollup for UI is genuinely 0 (e.g. a backend-only story) and the epic
+    # has its own UI 60 on record, but since the epic HAS stories, no fallback
+    # substitution happens — the real zero is kept.
+    ep = _epic("E-6b", "OPEN", ui=60, testing=120, stories=[
         _story("S-z", "OPEN", server=240, ui=0, testing=0)])
     rec = yt.categorize_epic(ep)
-    assert rec["rollup"]["server"] == 240        # story value kept (non-zero)
-    assert rec["rollup"]["ui"] == 60             # fell back to epic UI
-    assert rec["rollup"]["testing"] == 120       # fell back to epic Testing
+    assert rec["rollup"] == {"server": 240, "ui": 0, "testing": 0}
+
+
+def test_out_of_phase_only_pending_story_yields_zero_rollup_no_fallback():
+    # PXB1-414 shape: the epic has stories, but its only non-done story is
+    # Phase 2 (out of scope) — p1p is empty even though `stories` isn't, so the
+    # rollup should be a real zero, NOT a fallback to the epic's own (stale,
+    # done-inclusive) Estimation fields.
+    ep = _epic("E-414", "OPEN", server=999, ui=999, testing=999, stories=[
+        _story("S-p2", "OPEN", scope="PHASE 2", server=100, ui=100, testing=100),
+        _story("S-done", "DONE", scope="PHASE 1", server=500, ui=500, testing=500)])
+    rec = yt.categorize_epic(ep)
+    assert rec["category"] == "MIXED"
+    assert rec["rollup"] == {"server": 0, "ui": 0, "testing": 0}
 
 
 def test_missing_est_flag_rule():
