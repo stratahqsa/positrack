@@ -31,13 +31,14 @@ def _cf(name, value):
     return {"name": name, "value": value}
 
 
-def _story(sid, state, scope="PHASE 1", server=0, ui=0, testing=0, assignee=""):
+def _story(sid, state, scope="PHASE 1", server=0, ui=0, testing=0, assignee="", spent=0):
     return {"idReadable": sid, "summary": sid, "created": 1,
             "assignee": ({"name": assignee} if assignee else None),
             "customFields": [_cf("State", {"name": state}), _cf("Scope", {"name": scope}),
                              _cf("Server Estimation", {"minutes": server}),
                              _cf("UI Estimation", {"minutes": ui}),
-                             _cf("Testing Estimation", {"minutes": testing})]}
+                             _cf("Testing Estimation", {"minutes": testing}),
+                             _cf("Spent time", {"minutes": spent})]}
 
 
 def _epic(eid, state, stories=(), server=0, ui=0, testing=0, resolved=None, assignee=""):
@@ -110,6 +111,18 @@ def test_categorize_non_phase1_pending_story_excluded_from_rollup():
         _story("S-p1", "OPEN", scope="PHASE 1", server=30, ui=0, testing=60)])
     rec = yt.categorize_epic(ep)
     assert rec["rollup"] == {"server": 30, "ui": 0, "testing": 60}
+
+
+# ---------- per-story spend (Consensus: reuse the PM's scheduled-report recipe) ----------
+def test_epic_stories_carry_own_spent_time_field():
+    # each story's own "Spent time" custom field is read straight onto its dict,
+    # separate from the epic-level work-item sweep (effort_report's rec["spent"]).
+    ep = _epic("E-10", "OPEN", stories=[
+        _story("S-a", "OPEN", server=480, spent=120),
+        _story("S-b", "DONE", server=240, spent=600)])
+    rec = yt.categorize_epic(ep)
+    spent_by_id = {s["id"]: s["spent"] for s in rec["stories"]}
+    assert spent_by_id == {"S-a": 120, "S-b": 600}
 
 
 # ---------- epic-level estimate fallback (recipe trap, corrected scope) ----------

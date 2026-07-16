@@ -377,7 +377,16 @@ def _cf_str(issue, name):
 
 def _epic_stories(epic):
     """Extract the Subtask/OUTWARD child stories of a recipe-shaped epic dict as a
-    list of normalized story dicts (id, summary, state, scope, assignee, est)."""
+    list of normalized story dicts (id, summary, state, scope, assignee, est, spent).
+
+    `spent` is the story's own "Spent time" field — simpler than (and a deliberate
+    departure from) the epic-level work-item sweep below: per Consensus with the
+    PM's own scheduled-report recipe (which already reads this field per-story for
+    exactly this purpose), it's precise enough for a PENDING-STORIES-ONLY spend
+    figure on MIXED epics, where the epic-level sweep total (all stories, done
+    included) isn't what's wanted. The epic-level `spent` field elsewhere in this
+    module is untouched — it's still the work-item sweep, used for Done/Pending/
+    grand-total figures where a whole-epic lifetime total is exactly what's wanted."""
     stories = []
     for lk in (epic.get("links") or []):
         if (lk.get("linkType") or {}).get("name") == "Subtask" and lk.get("direction") == "OUTWARD":
@@ -394,6 +403,7 @@ def _epic_stories(epic):
                     "est": {"server": _cf_minutes(s, "Server Estimation"),
                             "ui": _cf_minutes(s, "UI Estimation"),
                             "testing": _cf_minutes(s, "Testing Estimation")},
+                    "spent": _cf_minutes(s, "Spent time"),
                 })
     return stories
 
