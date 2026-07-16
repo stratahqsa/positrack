@@ -1,8 +1,106 @@
+"use client";
+
+import * as React from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { fmtDateTimeIst } from "@/lib/format";
 import type { Bug } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
 import { stateVariant } from "@/components/weekly/badge-tone";
+
+type SortKey = "id" | "summary" | "created" | "state" | "assignee" | "module" | "reporter";
+type SortDir = "asc" | "desc";
+interface SortState {
+  key: SortKey;
+  dir: SortDir;
+}
+
+/** PRD_1 §5: "rows sorted by created ascending" — kept as the default so a
+ *  page load looks identical to before sorting existed; clicking a header
+ *  overrides it. */
+const DEFAULT_SORT: SortState = { key: "created", dir: "asc" };
+
+const COLUMNS: { key: SortKey; label: string }[] = [
+  { key: "id", label: "ID" },
+  { key: "summary", label: "Summary" },
+  { key: "created", label: "Created" },
+  { key: "state", label: "State" },
+  { key: "assignee", label: "Assignee" },
+  { key: "module", label: "Module" },
+  { key: "reporter", label: "Reporter" },
+];
+
+function sortValue(bug: Bug, key: SortKey): string | number {
+  switch (key) {
+    case "id":
+      return bug.id;
+    case "summary":
+      return bug.summary ?? "";
+    case "created":
+      return bug.created;
+    case "state":
+      return bug.state ?? "";
+    case "assignee":
+      return bug.assignee || "";
+    case "module":
+      return bug.module || "";
+    case "reporter":
+      return bug.reporter || "";
+  }
+}
+
+function compare(a: string | number, b: string | number): number {
+  if (typeof a === "string" || typeof b === "string") return String(a).localeCompare(String(b));
+  return a - b;
+}
+
+function sortBugs(bugs: Bug[], sort: SortState): Bug[] {
+  const sign = sort.dir === "asc" ? 1 : -1;
+  return [...bugs].sort((a, b) => {
+    const cmp = compare(sortValue(a, sort.key), sortValue(b, sort.key));
+    // Stable tie-break by ID, same convention as weekly/story-table.tsx.
+    return cmp !== 0 ? sign * cmp : a.id.localeCompare(b.id);
+  });
+}
+
+function Th({
+  label,
+  sortKey,
+  sort,
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortState;
+  onSort: (key: SortKey) => void;
+}) {
+  const active = sort.key === sortKey;
+  return (
+    <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide">
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        aria-label={`Sort by ${label}${active ? ` (${sort.dir === "asc" ? "ascending" : "descending"})` : ""}`}
+        className={cn(
+          "inline-flex items-center gap-1 rounded transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+          active ? "text-accent" : "text-faint",
+        )}
+      >
+        {label}
+        {active ? (
+          sort.dir === "asc" ? (
+            <ArrowUp className="size-3" />
+          ) : (
+            <ArrowDown className="size-3" />
+          )
+        ) : (
+          <ArrowUpDown className="size-3 opacity-40" />
+        )}
+      </button>
+    </th>
+  );
+}
 
 /**
  * Reusable bug listing table (docs/reports-dashboard/plans/05-bug-analysis.md
@@ -10,31 +108,41 @@ import { stateVariant } from "@/components/weekly/badge-tone";
  * Assignee · Module · Reporter. Shared by §1's three priority sub-groups and
  * §2's older-open-High list.
  *
- * Sorts its own rows by `created` ascending (PRD_1 §5: "rows sorted by
- * created ascending") — the snapshot's `bugs` block does NOT arrive
- * pre-sorted, so every caller gets the rule for free here instead of
- * repeating the sort at each of the 4 call sites (3 priorities in §1 + §2).
- * A plain server component: no interactivity, so no "use client" needed.
+ * Client component with clickable, sortable headers (same re-sort-the-array
+ * pattern as weekly/story-table.tsx — never touch the DOM directly). Default
+ * order is `created` ascending, matching the original always-sorted-by-created
+ * behavior, so nothing changes visually until a header is clicked.
  */
 export function BugTable({ rows }: { rows: Bug[] }) {
+  const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
+  const [sorted, setSorted] = React.useState<Bug[]>(() => sortBugs(rows, DEFAULT_SORT));
+
+  React.useEffect(() => {
+    setSorted(sortBugs(rows, sort));
+    // Intentionally NOT depending on `sort` — see weekly/story-table.tsx for
+    // why (header clicks apply the sort directly in handleSort below).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
+  function handleSort(key: SortKey) {
+    const dir: SortDir = sort.key === key && sort.dir === "asc" ? "desc" : "asc";
+    const next: SortState = { key, dir };
+    setSort(next);
+    setSorted((prev) => sortBugs(prev, next));
+  }
+
   if (rows.length === 0) {
     return <div className="px-4 py-4 text-center text-[12px] text-faint">No bugs.</div>;
   }
-
-  const sorted = [...rows].sort((a, b) => a.created - b.created);
 
   return (
     <div className="overflow-x-auto scroll-slim">
       <table className="w-full min-w-[820px] border-collapse">
         <thead>
-          <tr className="border-b border-border/50 text-[10px] font-semibold uppercase tracking-wide text-faint">
-            <th className="px-2 py-2 text-left">ID</th>
-            <th className="px-2 py-2 text-left">Summary</th>
-            <th className="px-2 py-2 text-left">Created</th>
-            <th className="px-2 py-2 text-left">State</th>
-            <th className="px-2 py-2 text-left">Assignee</th>
-            <th className="px-2 py-2 text-left">Module</th>
-            <th className="px-2 py-2 text-left">Reporter</th>
+          <tr className="border-b border-border/50">
+            {COLUMNS.map((c) => (
+              <Th key={c.key} label={c.label} sortKey={c.key} sort={sort} onSort={handleSort} />
+            ))}
           </tr>
         </thead>
         <tbody>
