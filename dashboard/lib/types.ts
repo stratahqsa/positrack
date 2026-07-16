@@ -40,6 +40,14 @@ export interface Story {
    * older snapshots.
    */
   priority?: string;
+  /**
+   * The story's own "Spent time" YouTrack field (minutes) — a direct field read,
+   * not the epic-level work-item sweep `Epic.spent` is. Optional: absent on
+   * older snapshots. Used to scope a MIXED epic's Spent column to just its
+   * pending stories (epic-effort-table.tsx), matching how Dev/UI/QA/Total
+   * already exclude done stories there.
+   */
+  spent?: number;
 }
 
 /** Section categories present in effort.sections. */

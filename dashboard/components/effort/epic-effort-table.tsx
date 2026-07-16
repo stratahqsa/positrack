@@ -26,6 +26,13 @@ import { stateVariant } from "@/components/weekly/badge-tone";
  *    "totals" prop is threaded in; the TOTAL row below is computed by
  *    summing the same per-row accessor used for the cells above it, so rows
  *    and their total can never visually disagree.
+ *
+ *    Spent is the exception for "mixed": `Epic.spent` is a whole-epic,
+ *    all-stories-ever total (a work-item sweep — see core/ytcore.py), which
+ *    would mismatch a Total that's already pending-P1-only. So "mixed" scopes
+ *    Spent down to `pendingP1Spent()` — summing each pending-P1 story's own
+ *    `spent` field — matching the PM's already-validated scheduled-report
+ *    recipe. "pending"/"done" keep the whole-epic `Epic.spent` unchanged.
  */
 export type EpicTableVariant = "done" | "pending" | "mixed";
 
@@ -81,10 +88,28 @@ function isDoneState(state: string | null | undefined): boolean {
  *  "pending" show ALL stories (PENDING epics have zero done stories by the
  *  category rule itself — PRD_3 §4 "PENDING: has stories, none done"); only
  *  "mixed" filters down to the pending ones (PRD_3 §5 "expandable pending
- *  sub-rows"). */
+ *  sub-rows"). This still includes pending Phase-2 stories (for visibility —
+ *  the epic's "P2 · n" badge already flags the scope leakage); it's
+ *  deliberately looser than `isPendingPhase1` below, which additionally
+ *  excludes Phase-2 for the Spent/estimate rollups. */
 function subStories(epic: Epic, variant: EpicTableVariant): Story[] {
   if (variant === "mixed") return epic.stories.filter((s) => !isDoneState(s.state));
   return epic.stories;
+}
+
+/** Mirrors core/ytcore.py's `p1p` filter exactly: pending (not done) AND
+ *  in-scope for Phase 1 (no scope set, or scope contains "PHASE 1"). Used to
+ *  scope a MIXED epic's Spent figure to the same story set its Dev/UI/QA/
+ *  Total already use — see `pendingP1Spent` and `rowEffort` below. */
+function isPendingPhase1(story: Story): boolean {
+  return !isDoneState(story.state) && (!story.scope || story.scope.toUpperCase().includes("PHASE 1"));
+}
+
+/** Sum of each pending-Phase-1 story's own `spent` (its "Spent time" field —
+ *  see lib/types.ts's Story.spent doc) for a MIXED epic's Spent column.
+ *  `spent` is optional (older snapshots predate it) and defaults to 0. */
+function pendingP1Spent(epic: Epic): number {
+  return epic.stories.filter(isPendingPhase1).reduce((total, s) => total + (s.spent ?? 0), 0);
 }
 
 interface RowEffort {
@@ -105,7 +130,8 @@ function rowEffort(epic: Epic, variant: EpicTableVariant): RowEffort {
     return { ...r, total: r.dev + r.ui + r.qa, spent: epic.spent };
   }
   const r = rollupEffort(epic.rollup);
-  return { ...r, total: epic.total, spent: epic.spent };
+  const spent = variant === "mixed" ? pendingP1Spent(epic) : epic.spent;
+  return { ...r, total: epic.total, spent };
 }
 
 function sortValue(epic: Epic, key: SortKey, variant: EpicTableVariant): string | number | null {
@@ -366,9 +392,7 @@ function StorySubRow({ story, variant }: { story: Story; variant: EpicTableVaria
       <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(ui)}</td>
       <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(qa)}</td>
       <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(dev + ui + qa)}</td>
-      {/* No per-story spend data yet (only epic-level totals exist today) — a
-          dash here beats a misleading 0. */}
-      <td className="px-2 py-1.5 text-right tabular align-top text-faint">—</td>
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(story.spent ?? 0)}</td>
       {variant === "pending" ? <td /> : null}
     </tr>
   );
