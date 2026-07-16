@@ -58,9 +58,9 @@ export async function callAiBrief({ system, user }, opts = {}) {
 
   // Lazy import: only the real-call path needs the `openai` package present.
   const { default: OpenAI } = await import("openai");
-  const client = new OpenAI({ baseURL, apiKey, timeout: 30000, maxRetries: 1 });
+  const client = new OpenAI({ baseURL, apiKey, timeout: 60000, maxRetries: 1 });
 
-  const completion = await client.chat.completions.create({
+  const request = {
     model,
     messages: [
       { role: "system", content: system },
@@ -70,12 +70,30 @@ export async function callAiBrief({ system, user }, opts = {}) {
     // The prompt describes the required shape; validateBrief() in
     // ai_brief.mjs is the real gate, not provider-side schema enforcement.
     response_format: { type: "json_object" },
-    max_tokens: 900,
-  });
+    // Generous budget: some models (including reasoning-capable flagships like
+    // deepseek-v4-pro) spend tokens on internal reasoning before the JSON
+    // answer, and too small a cap yields an empty/truncated completion. The
+    // brief itself is ~250 words, so this is headroom, not expected spend.
+    max_tokens: 4000,
+  };
 
-  const content = completion?.choices?.[0]?.message?.content;
-  if (!content || typeof content !== "string") {
-    throw new Error("model response had no message content to parse");
+  // Retry once on an empty completion. A 200 response with no message content
+  // is NOT an HTTP error, so the SDK's own maxRetries never covers it, yet it
+  // happens transiently on OpenRouter (provider routing / reasoning budget).
+  // One extra attempt turns most of those into a real brief instead of a
+  // fail-soft "unavailable". finish_reason is surfaced in the error so a
+  // persistent failure says WHY (e.g. "length" => raise max_tokens).
+  let content;
+  let finishReason;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const completion = await client.chat.completions.create(request);
+    const choice = completion?.choices?.[0];
+    content = choice?.message?.content;
+    finishReason = choice?.finish_reason;
+    if (typeof content === "string" && content.trim() !== "") break;
+  }
+  if (typeof content !== "string" || content.trim() === "") {
+    throw new Error(`model response had no message content to parse (finish_reason=${finishReason ?? "?"}, after retry)`);
   }
   return { json: JSON.parse(content), model_id: model };
 }
