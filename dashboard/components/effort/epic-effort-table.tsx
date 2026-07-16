@@ -325,15 +325,21 @@ function EpicDataRow({
   );
 }
 
-/** Sub-row: one story under an expanded epic (story id · state · assignee ·
- *  est), rendered as a single spanning cell so the story data reads as one
- *  flexible line regardless of the parent table's variable column count. */
-function StorySubRow({ story, columnCount }: { story: Story; columnCount: number }) {
+/** Sub-row: one story under an expanded epic. Renders one real `<td>` per
+ *  column, matching EpicDataRow's exact column set for `variant` (id/summary/
+ *  [assignee/created]/dev/ui/qa/total/spent/[est]) so a story's Assignee and
+ *  Dev/UI/QA values land in the SAME columns as the epic row above it, instead
+ *  of one flowing colSpan line that couldn't align with anything. */
+function StorySubRow({ story, variant }: { story: Story; variant: EpicTableVariant }) {
   const done = isDoneState(story.state);
+  const dev = story.est.server;
+  const ui = story.est.ui;
+  const qa = story.est.testing;
+
   return (
     <tr className={cn("border-t border-border/30 text-[11.5px]", done ? "bg-good/[0.03]" : "bg-elevated/20")}>
-      <td colSpan={columnCount} className="py-0">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-border/40 py-1.5 pl-8 pr-2">
+      <td className="whitespace-nowrap py-1.5 pl-8 pr-2 align-top">
+        <div className="flex items-center gap-1.5">
           <IssueLink id={story.id} showIcon={false} className="text-[11.5px]" />
           <Badge variant={stateVariant(story.state, done)} size="sm">
             {story.state || "—"}
@@ -343,13 +349,27 @@ function StorySubRow({ story, columnCount }: { story: Story; columnCount: number
               P2
             </Badge>
           ) : null}
-          <span className="min-w-0 flex-1 truncate text-fg/70">{story.summary}</span>
-          <span className="text-muted">{story.assignee || "—"}</span>
-          <span className="tabular text-[10.5px] text-faint">
-            Dev {fmtHours(story.est.server)} · UI {fmtHours(story.est.ui)} · QA {fmtHours(story.est.testing)}
-          </span>
         </div>
       </td>
+      <td className="max-w-[320px] px-2 py-1.5 align-top">
+        <span className="line-clamp-2 text-fg/70">{story.summary}</span>
+      </td>
+      {variant !== "done" ? (
+        <>
+          <td className="px-2 py-1.5 align-top text-muted">
+            {story.assignee || <span className="text-faint">—</span>}
+          </td>
+          <td className="whitespace-nowrap px-2 py-1.5 align-top text-muted">{fmtDate(story.created)}</td>
+        </>
+      ) : null}
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(dev)}</td>
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(ui)}</td>
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(qa)}</td>
+      <td className="px-2 py-1.5 text-right tabular align-top text-muted">{fmtHours(dev + ui + qa)}</td>
+      {/* No per-story spend data yet (only epic-level totals exist today) — a
+          dash here beats a misleading 0. */}
+      <td className="px-2 py-1.5 text-right tabular align-top text-faint">—</td>
+      {variant === "pending" ? <td /> : null}
     </tr>
   );
 }
@@ -445,7 +465,7 @@ export function EpicEffortTable({ epics, variant }: { epics: Epic[]; variant: Ep
                   onToggle={() => toggleExpanded(epic.id)}
                 />
                 {isExpanded && subs.length > 0
-                  ? subs.map((story) => <StorySubRow key={story.id} story={story} columnCount={columnCount} />)
+                  ? subs.map((story) => <StorySubRow key={story.id} story={story} variant={variant} />)
                   : null}
               </React.Fragment>
             );

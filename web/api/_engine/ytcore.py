@@ -350,7 +350,7 @@ def _issue_block(query, columns, issues):
 #   * stories via Subtask/OUTWARD links off each epic
 #   * DONE / PENDING / MIXED / NO_STORIES per State
 #   * estimate rollup = Server+UI+Testing over PENDING Phase-1 stories, with an
-#     epic-level fallback when a story rollup field is 0
+#     epic-level fallback ONLY for epics with no stories at all (NO_STORIES)
 #   * P2 backlog via activity history (Scope PHASE 1->PHASE 2 after the cutoff)
 #   * true spend from a work-item sweep attributed story->epic (NOT the Spent-time
 #     rollup, which — verified live — is not backed by work items on the epic)
@@ -440,13 +440,24 @@ def categorize_epic(epic):
     rollup = {"server": sum(s["est"]["server"] for s in p1p),
               "ui": sum(s["est"]["ui"] for s in p1p),
               "testing": sum(s["est"]["testing"] for s in p1p)}
-    # epic-level fallback: a 0 field falls back to the epic's own estimate
-    if rollup["server"] == 0 and epic_est["server"] > 0:
-        rollup["server"] = epic_est["server"]
-    if rollup["ui"] == 0 and epic_est["ui"] > 0:
-        rollup["ui"] = epic_est["ui"]
-    if rollup["testing"] == 0 and epic_est["testing"] > 0:
-        rollup["testing"] = epic_est["testing"]
+    # epic-level fallback: ONLY when the epic has no stories at all (NO_STORIES) —
+    # that's the sole case where the epic's own Estimation fields are the only
+    # numbers that exist. Epics WITH stories keep the pending-P1 rollup as-is,
+    # including real zeros (e.g. a backend-only pending story genuinely has UI=0).
+    # This used to apply per-field to every epic, so it also fired whenever a
+    # single component happened to be 0 despite real pending stories existing, or
+    # whenever an epic's only pending stories were out-of-phase (Phase 2, so p1p
+    # was empty even though the epic has stories) — silently substituting the
+    # epic's own Estimation fields, which are often stale totals across ALL of the
+    # epic's stories (done included), into what's supposed to be a pending-only
+    # remaining-effort number (verified live against PXB1-513 and PXB1-414).
+    if not stories:
+        if rollup["server"] == 0 and epic_est["server"] > 0:
+            rollup["server"] = epic_est["server"]
+        if rollup["ui"] == 0 and epic_est["ui"] > 0:
+            rollup["ui"] = epic_est["ui"]
+        if rollup["testing"] == 0 and epic_est["testing"] > 0:
+            rollup["testing"] = epic_est["testing"]
     rec["rollup"] = rollup
     if not stories:
         rec["category"] = "NO_STORIES"
