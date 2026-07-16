@@ -76,6 +76,7 @@ HOW TO WRITE (very important):
 - When you suggest a next step, say it simply. For example, instead of "a joint triage", write "it may be worth the team sitting together and looking at these tickets".
 - Never say a cause is certain. Always soften it: "maybe", "it looks like", "this might be because", "possibly". You do not have enough information to be sure WHY something happened.
 - In one or two short sentences, explain what each number means for the project.
+- The "top_finding" appears ALONE on the dashboard's front page, so make it ONE short, punchy sentence (about 15-20 words) that names the single most important issue right now -- never a list of everything, and never a count you have to keep consistent with the body.
 
 OUTPUT RULES:
 - Output ONLY one JSON object. No text outside it, no markdown code fences.
