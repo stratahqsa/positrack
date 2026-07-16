@@ -1,41 +1,42 @@
 name: Snapshot
 
-# Hourly PRECOMPUTE for the POSX Control Tower. A full snapshot takes ~285s live,
-# too slow for a Vercel function (60s ceiling). We compute it here and publish the
-# JSON as assets on the machine-managed GitHub Release `snapshot-latest`; the
-# force-dynamic Next.js app reads those public asset URLs server-side on the next
-# request. Nothing is committed to git and nothing is pushed to protected master,
-# so the workflow's built-in GITHUB_TOKEN is all that is needed — no PAT, no bypass,
-# no external storage.
+# Hourly PRECOMPUTE for the POSX Reports dashboard. A full snapshot takes ~285s
+# live, too slow for a Vercel function (60s ceiling). We compute it here and
+# publish the JSON to Vercel Blob under a SECRET path prefix; the force-dynamic
+# Next.js app reads it server-side on the next request. Nothing is committed to
+# git and nothing is pushed to master.
 #
-# latest.json is overwritten every run, so the live dashboard is at most ~1h stale.
-# The per-day history file (snapshot-<UTCdate>.json), which day-over-day RED delta
-# and the trend chart depend on, is frozen on the FIRST run of each UTC day by
-# write_snapshot() in scripts/snapshot.py — later runs that day leave it alone. The
-# seed step below downloads BOTH the most recent prior-day file (for the delta) and
-# today's own file if it already exists (so the freeze check has something to see).
+# PRIVACY / LOCKDOWN: the snapshot's raw fields (assignee / people names) are
+# not exposed at a guessable public URL. It is published ONLY to Vercel Blob
+# under an unguessable "<SNAPSHOT_SECRET>/..." prefix — NOT to a public GitHub
+# Release (the old web/ Control Tower that read the Release has been retired).
+# This is a secret-path interim, not private ACLs (the existing Blob store is
+# public and its access mode is immutable once created), so a leaked URL stays
+# valid; the proper follow-up is a private Blob store read via the SDK. The
+# dashboard points SNAPSHOT_DATA_URL at <blob-base>/<SNAPSHOT_SECRET>.
 #
-# SETUP REQUIRED (one time): a single repository secret:
-#   YT_TOKEN — a YouTrack permanent token. LEAST-PRIVILEGE, READ-ONLY service
-#   account (the snapshot only READS: effort/worklog/hygiene). Never an admin token.
-#   Settings -> Secrets and variables -> Actions -> New repository secret.
-# Optionally set YT_BASE (defaults to https://support.posibolt.com in the engine).
+# latest.json is overwritten every run (dashboard is at most ~1h stale). The
+# per-day history file snapshot-<UTCdate>.json (which the day-over-day RED
+# delta depends on) is frozen on the FIRST run of each UTC day by
+# write_snapshot() in scripts/snapshot.py; scripts/blob_seed.mjs pulls the most
+# recent prior-day file (and today's own, if any) back from Blob before
+# snapshot.py runs.
 #
-# AI BRIEFING (optional, additive): the "Generate AI briefing" step below runs
-# scripts/ai_brief.mjs, which distills the fresh snapshot into a short 3-part
-# exec brief via one OpenAI-compatible chat-completion call and bakes the
-# result into latest.json as `ai_brief`, read-only, before either publish
-# step. It is fully optional and fail-soft: with no AI_API_KEY secret set,
-# the step logs a warning and skips, and latest.json is unaffected either
-# way (see scripts/ai_brief.mjs's module docstring for the full fail-soft
-# contract). To enable it, add repository secrets AI_API_KEY, AI_BASE_URL
-# (e.g. https://openrouter.ai/api/v1), and AI_MODEL (e.g.
-# deepseek/deepseek-chat) — see .env.example at the repo root. Deciding what
-# may egress to a third-party LLM (aggregates only vs. real names vs. bug
-# free-text — see AI_SEND_REAL_NAMES/AI_SEND_SUMMARIES in
-# scripts/lib/distill-brief-input.mjs) is a privacy-posture call for whoever
-# adds that secret, not something this workflow enforces on its own beyond
-# defaulting to the most private option.
+# SETUP REQUIRED (repository secrets):
+#   YT_TOKEN               read-only YouTrack token (the snapshot only READS).
+#   BLOB_READ_WRITE_TOKEN  Vercel Blob store read/write token.
+#   SNAPSHOT_SECRET        long random string used as the Blob path prefix; the
+#                          dashboard's SNAPSHOT_DATA_URL must end with it.
+# Optionally YT_BASE (defaults to https://support.posibolt.com in the engine).
+#
+# AI BRIEFING (optional, additive): the "Generate AI briefing" step runs
+# scripts/ai_brief.mjs, distilling the fresh snapshot into a short 3-part exec
+# brief via one OpenAI-compatible chat-completion call and baking it into
+# latest.json as `ai_brief` BEFORE the publish step. Fail-soft: with no
+# AI_API_KEY set it logs a warning and skips, leaving latest.json untouched.
+# Enable via AI_API_KEY + AI_BASE_URL + AI_MODEL (see .env.example). What may
+# egress to the LLM (AI_SEND_REAL_NAMES / AI_SEND_SUMMARIES, default unset) is
+# a privacy-posture call for whoever adds the secret.
 
 on:
   schedule:
@@ -55,9 +56,10 @@ on:
         required: false
         default: ""
 
-# Publishing to a Release needs contents:write; no branch is pushed.
+# No GitHub Release is published anymore (snapshot goes only to Vercel Blob);
+# checkout needs read only, and no branch is pushed.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: snapshot-${{ github.ref }}
@@ -66,9 +68,6 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
-      TAG: snapshot-latest
     steps:
       - uses: actions/checkout@v7
 
@@ -77,33 +76,21 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Seed prior snapshot (for day-over-day deltas)
+      - name: Seed prior snapshot from Blob (for day-over-day deltas)
+        # Best-effort: pulls the most recent prior-day dated file (the delta
+        # baseline) and today's own dated file if an earlier run today already
+        # published one (so write_snapshot()'s freeze check sees it), from the
+        # secret Blob prefix, before scripts/snapshot.py runs. continue-on-error
+        # so a transient npm/list hiccup can never break the snapshot itself;
+        # the seed is not a dependency of producing the snapshot, only of the
+        # RED delta. See scripts/blob_seed.mjs.
+        continue-on-error: true
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          SNAPSHOT_SECRET: ${{ secrets.SNAPSHOT_SECRET }}
         run: |
-          mkdir -p web/data
-          # Each run is a fresh checkout with no persisted local state, so two
-          # things need seeding from the release before scripts/snapshot.py runs:
-          #   1. The most recent PRIOR dated snapshot, so build_insights() can
-          #      diff against it for the day-over-day RED delta.
-          #   2. TODAY's own dated snapshot, if an earlier run today already
-          #      published one — otherwise write_snapshot()'s freeze check
-          #      (`if not os.path.exists(dated)`) would never see it locally and
-          #      would re-freeze on every hourly run instead of only the first.
-          # (_prior_snapshot_red() in scripts/snapshot.py explicitly excludes
-          # today's own date from the delta comparison, so seeding both here
-          # can never make it diff a snapshot against itself.)
-          TODAY="snapshot-$(date -u +%Y-%m-%d).json"
-          gh release download "$TAG" --pattern "$TODAY" --dir web/data --clobber 2>/dev/null \
-            && echo "seeded today's own $TODAY (later runs today will not re-freeze it)" \
-            || true
-          if gh release download "$TAG" --pattern "index.json" --dir /tmp/idx --clobber 2>/dev/null; then
-            PRIOR=$(python3 -c "import json; a=json.load(open('/tmp/idx/index.json')); print(a[-1] if a else '')")
-            if [ -n "$PRIOR" ]; then
-              gh release download "$TAG" --pattern "$PRIOR" --dir web/data --clobber 2>/dev/null || true
-              echo "seeded prior $PRIOR"
-            fi
-          else
-            echo "no release yet — first run; deltas begin next run"
-          fi
+          npm install --no-save @vercel/blob@1
+          node scripts/blob_seed.mjs
 
       - name: Produce snapshot
         # Dispatch inputs are routed through env (never interpolated into the shell)
@@ -170,59 +157,20 @@ jobs:
           npm install --no-save openai@4
           node scripts/ai_brief.mjs
 
-      - name: Publish snapshot to the release
-        run: |
-          gh release view "$TAG" >/dev/null 2>&1 || \
-            gh release create "$TAG" \
-              --title "POSX Control Tower data (machine-managed)" \
-              --notes "Snapshot assets for the Control Tower dashboard, refreshed hourly. Auto-updated by the Snapshot workflow — do not edit." \
-              --latest=false
-          # index.json = every dated snapshot (existing release assets ∪ new local ones).
-          python3 - <<'PY'
-          import json, glob, os, subprocess
-          existing = []
-          try:
-              out = subprocess.check_output(
-                  ["gh", "release", "view", os.environ["TAG"], "--json", "assets", "-q", ".assets[].name"],
-                  text=True)
-              existing = [n.strip() for n in out.splitlines()
-                          if n.strip().startswith("snapshot-") and n.strip().endswith(".json")]
-          except Exception:
-              pass
-          local = [os.path.basename(p) for p in glob.glob("web/data/snapshot-*.json")]
-          names = sorted(set(existing) | set(local))
-          json.dump(names, open("web/data/index.json", "w"))
-          print("index.json:", names)
-          PY
-          gh release upload "$TAG" web/data/latest.json web/data/index.json web/data/snapshot-*.json --clobber
-
-      - name: Publish latest.json to Vercel Blob (fresh source for the reports dashboard)
-        # The reports dashboard (dashboard/, positrack-reports.vercel.app) reads its
-        # snapshot from Vercel Blob, NOT the GitHub Release asset above. GitHub's
-        # release-asset CDN caches by path and does not reliably purge on clobber, so
-        # a force-dynamic page can serve a stale snapshot for a long time. Blob with a
-        # stable pathname + cache-control:max-age=0 is always fresh. This is ADDITIVE:
-        # the old web/ dashboard keeps reading the Release; only the new app uses Blob.
+      - name: Publish snapshot to Vercel Blob (secret path)
+        # The ONLY delivery path now — the public GitHub Release was dropped
+        # (the old web/ Control Tower that read it is retired). Publishes
+        # latest.json + today's dated history file under the unguessable
+        # "<SNAPSHOT_SECRET>/" prefix (see scripts/blob_publish.mjs). A failure
+        # here fails the job on purpose: with no other source, a silent failure
+        # would strand the dashboard on stale data.
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          SNAPSHOT_SECRET: ${{ secrets.SNAPSHOT_SECRET }}
         run: |
-          if [ -z "${BLOB_READ_WRITE_TOKEN}" ]; then
-            echo "::warning::BLOB_READ_WRITE_TOKEN not set — skipping Blob publish; the reports dashboard will lag until the secret is configured."
-            exit 0
+          if [ -z "${BLOB_READ_WRITE_TOKEN}" ] || [ -z "${SNAPSHOT_SECRET}" ]; then
+            echo "::error::BLOB_READ_WRITE_TOKEN or SNAPSHOT_SECRET not set — cannot publish the snapshot."
+            exit 1
           fi
-          # Use the @vercel/blob SDK, not the `vercel` CLI: the CLI requires full
-          # account login (VERCEL_TOKEN) even for blob ops, whereas the SDK
-          # authenticates with only BLOB_READ_WRITE_TOKEN — the right fit for CI.
           npm install --no-save @vercel/blob@1
-          node -e '
-          const { put } = require("@vercel/blob");
-          const fs = require("fs");
-          put("latest.json", fs.readFileSync("web/data/latest.json"), {
-            access: "public",
-            addRandomSuffix: false,
-            allowOverwrite: true,
-            cacheControlMaxAge: 0,
-            contentType: "application/json",
-          }).then((r) => console.log("Published to Blob:", r.url))
-            .catch((e) => { console.error("Blob publish failed:", e.message || e); process.exit(1); });
-          '
+          node scripts/blob_publish.mjs

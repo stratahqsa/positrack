@@ -18,6 +18,11 @@ venv/
 .pytest_cache/
 *.egg-info/
 
+# Node — repo-root node_modules from `npm install`-ing the Blob/AI scripts'
+# deps (openai, @vercel/blob) in CI and locally. dashboard/ and web/ have their
+# own. Never committed.
+/node_modules/
+
 # Build artifacts
 dist/
 *.skill
