@@ -280,6 +280,96 @@ export interface Snapshot {
   bugs?: BugsBlock;
   /** Release Schedule / Weekly Deadline data block (epics+stories+drilldown). Optional: absent on older snapshots. */
   schedule?: ScheduleBlock;
+  /**
+   * AI-generated proactive briefing (top issues, since-yesterday deltas, most-
+   * behind people), baked into the snapshot by the hourly GitHub Action.
+   * Optional: absent on snapshots that predate the feature, AND fail-soft —
+   * a bad/timed-out model call also leaves this absent rather than writing a
+   * broken `ai_brief` (see `status`/`reason` on AiBrief for the case where a
+   * value IS present but generation still didn't succeed). Read via
+   * `lib/brief.ts`'s `getBrief()`/`isBriefOk()`, never accessed directly.
+   */
+  ai_brief?: AiBrief;
+}
+
+/**
+ * AI briefing shapes (scripts/ai_brief.mjs is the producer; this file is the
+ * read-side contract only — see lib/brief.ts for the pure read helpers and
+ * components/insights/ for rendering). `status` distinguishes two different
+ * "nothing to show" cases that must render differently: "unavailable" (this
+ * cycle's generation failed/was skipped — a fail-soft outcome, not an error)
+ * vs. `empty: true` on an "ok" brief (generation succeeded but found nothing
+ * notable — an all-green cycle).
+ */
+export type AiBriefStatus = "ok" | "unavailable";
+
+/** Finding severity — drives the red/amber/green color + icon treatment in
+ *  components/insights/severity.ts. "high" = needs attention now, "medium" =
+ *  worth watching, "low" = informational/good news. */
+export type Severity = "high" | "medium" | "low";
+
+/**
+ * Human-readable, clickable provenance for an `AiBriefItem`'s claim — shown
+ * as a trust chip (components/insights/briefing.tsx's `SourceChip`) instead
+ * of the raw `evidence_ref`. At most one of `issueId`/`href` is meaningful:
+ * `issueId` wins (renders via `IssueLink` out to YouTrack) when both are
+ * somehow present.
+ */
+export interface AiBriefSource {
+  /** Human-readable chip text, e.g. "PXB1-7206" or "Product bugs". May itself
+   *  contain a pseudonym token ("P1") for a person reference — see
+   *  `lib/brief.ts`'s `rehydrateBrief`. */
+  label: string;
+  /** YouTrack issue id — chip links out via the shared IssueLink/issueUrl(). */
+  issueId?: string;
+  /** Internal route (e.g. "/bugs") — chip links via next/link. */
+  href?: string;
+}
+
+/** One bullet in a briefing section. `evidence_ref` traces the claim back to
+ *  a specific entry in the distilled input (an issue id, or a synthetic key
+ *  like "insights.red_delta.total_red") so every figure is checkable — kept
+ *  even now that `source` carries the human-facing citation, since
+ *  `evidence_ref` is also the exact-match key the upstream validator checks.
+ *  `severity`/`source` are optional-tolerant: a brief baked before this pass
+ *  (or the "unavailable"/`reason`-only case) lacks them, and
+ *  `components/insights/briefing.tsx` falls back to a neutral bullet /
+ *  evidence_ref-based chip when either is absent, rather than breaking. */
+export interface AiBriefItem {
+  text: string;
+  evidence_ref: string;
+  severity?: Severity;
+  source?: AiBriefSource;
+}
+
+export interface AiBriefSection {
+  title: string;
+  items: AiBriefItem[];
+}
+
+export interface AiBrief {
+  status: AiBriefStatus;
+  /** ms epoch when the brief was generated (upstream, at snapshot time). */
+  generated_at: number;
+  model_id: string;
+  /**
+   * One-line headline for the Health teaser AND the Insights page itself.
+   * May contain pseudonym tokens ("P1", "P2", …) for PERSON references — the
+   * published snapshot never carries real names for privacy. Render ONLY via
+   * `lib/brief.ts`'s `rehydrateBrief(brief, snapshot)`, which maps `P{i+1}`
+   * to the i-th name in `accountability(...).byPerson` (the same rank order
+   * the upstream pseudonymizer used) — never read `top_finding` (or an
+   * item's `text`/`source.label`) directly off a snapshot-sourced brief.
+   */
+  top_finding: string;
+  /** Severity of `top_finding` — accents the Health teaser and the Insights
+   *  page's headline. Optional-tolerant, same reasoning as `AiBriefItem.severity`. */
+  top_severity?: Severity;
+  /** true = all-green "nothing notable" cycle. */
+  empty: boolean;
+  sections: AiBriefSection[];
+  /** Present when status is "unavailable" — why generation didn't succeed. */
+  reason?: string;
 }
 
 /** Re-baseline-able config for the PXB1 reports (scripts/reports/config.py). */

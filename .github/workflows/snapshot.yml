@@ -20,6 +20,22 @@ name: Snapshot
 #   account (the snapshot only READS: effort/worklog/hygiene). Never an admin token.
 #   Settings -> Secrets and variables -> Actions -> New repository secret.
 # Optionally set YT_BASE (defaults to https://support.posibolt.com in the engine).
+#
+# AI BRIEFING (optional, additive): the "Generate AI briefing" step below runs
+# scripts/ai_brief.mjs, which distills the fresh snapshot into a short 3-part
+# exec brief via one OpenAI-compatible chat-completion call and bakes the
+# result into latest.json as `ai_brief`, read-only, before either publish
+# step. It is fully optional and fail-soft: with no AI_API_KEY secret set,
+# the step logs a warning and skips, and latest.json is unaffected either
+# way (see scripts/ai_brief.mjs's module docstring for the full fail-soft
+# contract). To enable it, add repository secrets AI_API_KEY, AI_BASE_URL
+# (e.g. https://openrouter.ai/api/v1), and AI_MODEL (e.g.
+# deepseek/deepseek-chat) — see .env.example at the repo root. Deciding what
+# may egress to a third-party LLM (aggregates only vs. real names vs. bug
+# free-text — see AI_SEND_REAL_NAMES/AI_SEND_SUMMARIES in
+# scripts/lib/distill-brief-input.mjs) is a privacy-posture call for whoever
+# adds that secret, not something this workflow enforces on its own beyond
+# defaulting to the most private option.
 
 on:
   schedule:
@@ -111,6 +127,48 @@ jobs:
           else
             python3 scripts/snapshot.py --project "$PROJECT" --scope "$SCOPE"
           fi
+
+      - name: Generate AI briefing (best-effort; never blocks the snapshot)
+        # Distills the fresh snapshot into a short 3-part exec brief via one
+        # OpenAI-compatible chat-completion call (default: DeepSeek via
+        # OpenRouter; point AI_MODEL/AI_BASE_URL at any other OpenAI-compatible
+        # gateway, e.g. an Anthropic model, with no code change) and injects
+        # the result as `ai_brief` into web/data/latest.json -- BEFORE both
+        # publish steps below, so the Release asset, the Blob copy, and the
+        # old web/ dashboard all pick it up. See scripts/ai_brief.mjs for the
+        # full pipeline (distill -> prompt -> validate -> inject).
+        #
+        # continue-on-error + timeout-minutes are load-bearing, not
+        # decorative: ai_brief.mjs is itself fail-soft (any error/timeout/
+        # malformed response leaves latest.json byte-identical and the script
+        # always exits 0), but that can't protect against `npm install`
+        # hanging or failing before Node even runs. These two guarantee a
+        # stuck or broken AI step can never stall or fail the job that both
+        # downstream publish steps depend on.
+        #
+        # Requires the AI_API_KEY secret (+ AI_BASE_URL/AI_MODEL) to actually
+        # generate anything -- if unset, this step logs a warning and skips
+        # (mirrors the BLOB_READ_WRITE_TOKEN pattern below). No secret has
+        # been added by this change; go-live is a separate step for whoever
+        # owns the privacy-posture decision (see .env.example).
+        # AI_SEND_REAL_NAMES / AI_SEND_SUMMARIES widen what leaves the
+        # pipeline (see scripts/lib/distill-brief-input.mjs) and are expected
+        # to stay unset by default.
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          AI_SEND_REAL_NAMES: ${{ secrets.AI_SEND_REAL_NAMES }}
+          AI_SEND_SUMMARIES: ${{ secrets.AI_SEND_SUMMARIES }}
+        run: |
+          if [ -z "${AI_API_KEY}" ]; then
+            echo "::warning::AI_API_KEY not set -- skipping AI briefing (latest.json unchanged)."
+            exit 0
+          fi
+          npm install --no-save openai@4
+          node scripts/ai_brief.mjs
 
       - name: Publish snapshot to the release
         run: |

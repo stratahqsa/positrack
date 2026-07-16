@@ -6,6 +6,7 @@ import {
   remainingEffort,
   thisWeekDeadlines,
 } from "@/lib/health";
+import { getBrief, rehydrateBrief } from "@/lib/brief";
 import { Header } from "@/components/shell/header";
 import { Nav } from "@/components/shell/nav";
 import { OnTrackBanner } from "@/components/health/on-track-banner";
@@ -13,6 +14,7 @@ import { EffortTile } from "@/components/health/effort-tile";
 import { DeadlinesTile } from "@/components/health/deadlines-tile";
 import { BugPressureTile } from "@/components/health/bug-pressure-tile";
 import { AccountabilityStrip } from "@/components/health/accountability-strip";
+import { BriefTeaser } from "@/components/insights/brief-teaser";
 
 // Snapshot is read from disk (dev) or the Release (prod) per request; never
 // statically cached, so a refreshed snapshot shows with no redeploy.
@@ -21,7 +23,17 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const snapshot = await loadSnapshot();
   const { meta, insights } = snapshot;
-  const nowMs = Date.now();
+  // Anchored to the snapshot's own clock, matching app/weekly + app/schedule
+  // (both use meta.generated_at_ms) instead of the request-time Date.now()
+  // this page used before. Keeps Health's overdue/verdict math consistent
+  // with every other view AND with the AI briefing below, which is computed
+  // at snapshot time too — a live Date.now() here could otherwise disagree
+  // with the (necessarily frozen) brief about what's overdue.
+  const nowMs = meta.generated_at_ms;
+  // Re-hydrate pseudonym tokens to real names inside the gated app (the
+  // published brief carries only "P1"-style tokens — privacy).
+  const rawBrief = getBrief(snapshot);
+  const brief = rawBrief ? rehydrateBrief(rawBrief, snapshot) : null;
 
   const verdict = onTrackVerdict(snapshot, nowMs);
   const effort = remainingEffort(snapshot);
@@ -40,6 +52,8 @@ export default async function Home() {
       <Nav />
       <main className="mx-auto max-w-[1400px] space-y-5 px-4 py-6 sm:px-6">
         <OnTrackBanner status={verdict.status} reasons={verdict.reasons} />
+
+        <BriefTeaser brief={brief} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <EffortTile

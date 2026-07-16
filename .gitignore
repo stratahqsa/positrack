@@ -4,6 +4,10 @@
 yt.env
 *.token
 .env.*
+# ...except *.env.example templates (placeholder values only, no real
+# secrets) — these are meant to be committed so contributors know which vars
+# to set. Matches the existing tracked web/.env.example convention.
+!.env.example
 
 # Python
 __pycache__/

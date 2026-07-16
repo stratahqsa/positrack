@@ -13,11 +13,12 @@ Five surfaces, all reading the same underlying data:
 
 | Route | Surface | What it answers |
 |---|---|---|
-| `/` | **Health** | "Is the project on track?" — the landing view. Verdict banner + effort/deadline/bug tiles + accountability strip. |
+| `/` | **Health** | "Is the project on track?" — the landing view. Verdict banner + AI briefing teaser + effort/deadline/bug tiles + accountability strip. |
 | `/weekly` | **Weekly Deadline View** | What's due this release week, by week, sortable, with RE-OPEN → bug drill-down. |
 | `/schedule` | **Release Schedule Tracker** | Epics grouped by milestone, DONE vs NOT-DONE against the meeting baseline. |
 | `/bugs` | **Bug Analysis** | New bugs in the reporting window, older open High, state breakdowns, module hotspots. |
 | `/effort` | **Effort Report** | The 6-section epic effort tracker (done/pending/mixed/no-stories/P2-backlog/watch-list) + Grand Total. |
+| `/insights` | **AI Insights** | A proactive, auto-generated briefing — top issues now, since-yesterday deltas, most-behind people. Read-only over `snapshot.ai_brief`, baked in upstream by the hourly job; fail-soft (renders a graceful "unavailable" state, never an error) when generation didn't succeed this cycle. |
 
 Project scope today: **PXB1, Phase 1** only. The architecture is config-driven
 so Phase 2 (or another project) is a config edit, not a code change — see
@@ -66,6 +67,7 @@ dashboard/
 │   ├── schedule/page.tsx            /schedule Release Schedule
 │   ├── bugs/page.tsx                /bugs    Bug Analysis
 │   ├── effort/page.tsx              /effort  Effort Report
+│   ├── insights/page.tsx            /insights AI Insights (proactive AI briefing)
 │   ├── login/page.tsx, api/login/route.ts    access-code auth
 │   └── layout.tsx                   theme-init script + globals.css import
 ├── lib/                     Pure logic. No React in here except auth's Web Crypto calls.
@@ -78,6 +80,9 @@ dashboard/
 │   ├── health.ts              Health tile math (onTrackVerdict, accountability, bugPressure…)
 │   ├── release.ts             Release Schedule: epic badges, milestone grouping, rollups
 │   ├── effort.ts              Effort watch-list (S5) + info-bar counts
+│   ├── brief.ts                AI briefing read helpers: getBrief/isBriefOk/briefAgeMs/
+│   │                           formatBriefAge — pure reads over Snapshot.ai_brief; the brief
+│   │                           itself is generated upstream by scripts/ai_brief.mjs, not here
 │   ├── utils.ts               cn() — Tailwind className combiner
 │   └── auth.ts                Signed session-cookie primitives (HMAC-SHA256, Web Crypto)
 ├── components/
@@ -90,15 +95,17 @@ dashboard/
 │   │                           milestone-section.tsx, release-kpi.tsx
 │   ├── bugs/                   bug-kpi, bug-table, section, state-breakdown, module-insights
 │   ├── effort/                 effort-kpi, epic-effort-table (sortable + expandable), watch-list, section
+│   ├── insights/                briefing.tsx (the 3-section AI brief + empty/unavailable states),
+│   │                           brief-teaser.tsx (Health-page teaser card, hidden unless status "ok")
 │   ├── filters/                filter-bar.tsx (writes the URL), filter-context.tsx
 │   │                           (useFilters() reads the URL), multi-select.tsx
-│   ├── shell/                  header.tsx, nav.tsx (the 5-surface nav — SURFACES array),
+│   ├── shell/                  header.tsx, nav.tsx (the 6-surface nav — SURFACES array),
 │   │                           dual-clock.tsx (SAST+IST), sign-out-button.tsx
 │   ├── ui/                     card.tsx, badge.tsx, issue-link.tsx (links out to
 │   │                           support.posibolt.com/issue/<id>)
 │   └── theme-toggle.tsx, login-form.tsx
 ├── tests/                   Vitest. One *.test.ts per non-trivial lib/ module
-│                             (effort/filters/format/health/release/week/weekly)
+│                             (brief/effort/filters/format/health/release/week/weekly)
 │                             + fixtures.ts (baseSnapshot()/baseStory() builders
 │                             every test overrides from)
 ├── data/                    gitignored. Local dev copy of latest.json lands here
@@ -165,11 +172,26 @@ produces it. Don't guess a shape; read the interface. A few load-bearing ones:
   `health.ts`'s own `accountability().unowned` (open STORIES) — don't
   conflate them, see the doc comment on `AccountabilityStrip`.
 - `config` — `ReportsConfigBlock`, see "Re-baselining" above.
+- `ai_brief` — optional `AiBrief` (`lib/types.ts`): a proactive, AI-generated
+  briefing baked into the snapshot upstream by the hourly job
+  (`scripts/ai_brief.mjs`, outside `dashboard/`). Absent on snapshots that
+  predate the feature, AND fail-soft — a failed/timed-out/invalid generation
+  also leaves it absent rather than writing a broken value; a *present*
+  value can still carry `status: "unavailable"` (with an optional `reason`)
+  when generation ran but a later validation step rejected it. Never read
+  directly — go through `lib/brief.ts`'s `getBrief()` (presence) and
+  `isBriefOk()` (the single ok/empty/unavailable gate both `/insights`
+  (`components/insights/briefing.tsx`) and the Health teaser
+  (`components/insights/brief-teaser.tsx`) use, so the two surfaces can't
+  disagree about availability). `briefAgeMs()`/`formatBriefAge()` compute
+  the brief's real-world age from a caller-supplied `nowMs` — deliberately
+  NOT `meta.generated_at_ms`, since both are baked into the same snapshot in
+  the same CI run and would make the "age" a tautological ~0.
 
-Optional fields (`bugs?`, `schedule?`, `config?`, `sprints_available?`) exist
-because older snapshots predate them — every page that reads one guards with
-`if (!block) { <graceful notice> }` (see `app/bugs/page.tsx`,
-`app/effort/page.tsx`) rather than assuming presence.
+Optional fields (`bugs?`, `schedule?`, `config?`, `sprints_available?`,
+`ai_brief?`) exist because older snapshots predate them — every page that
+reads one guards with `if (!block) { <graceful notice> }` (see
+`app/bugs/page.tsx`, `app/effort/page.tsx`) rather than assuming presence.
 
 ## The YouTrack gotchas (they live in Python, not here)
 
@@ -203,8 +225,8 @@ cd dashboard
 npm run dev          # next dev, defaults to :3000
                       # (this repo's .claude/launch.json runs it on :3100 for the
                       # in-editor preview pane — don't be surprised by two ports)
-npm test              # vitest run — 140 tests across 7 files, covering
-                      # lib/{effort,filters,format,health,release,week,weekly}.ts
+npm test              # vitest run — 156 tests across 8 files, covering
+                      # lib/{brief,effort,filters,format,health,release,week,weekly}.ts
                       # (auth.ts/data.ts/utils.ts have no dedicated test file)
 npm run build          # next build — THIS IS THE VERCEL GATE. Must stay green.
 npx tsc --noEmit       # strict type check

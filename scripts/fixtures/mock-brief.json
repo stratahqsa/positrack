@@ -1,0 +1,53 @@
+{
+  "top_finding": "Product and Purchase have the most new bugs this cycle (32 and 31). P1 is the furthest behind, with 3 late stories out of 6.",
+  "empty": false,
+  "sections": [
+    {
+      "title": "Top issues now",
+      "items": [
+        {
+          "text": "Product has the most new bugs this week: 32, and 15 of them are in Product Catalog. When so many bugs land in one area, it often means a recent change to that area caused them, not many separate problems.",
+          "evidence_ref": "hotspot-1"
+        },
+        {
+          "text": "Purchase is next with 31 new bugs, mostly in Purchase Return (4). This might have the same cause as the Product bugs. It may be worth the team sitting together and looking at these tickets.",
+          "evidence_ref": "hotspot-2"
+        },
+        {
+          "text": "Across the project, 25 High-priority bugs are still open and 12 new High ones came in this week. It looks like the team may be fixing them more slowly than new ones arrive.",
+          "evidence_ref": "bug-kpi-1"
+        },
+        {
+          "text": "Epic PXB1-54 has used about 12 times its planned time (38150 minutes instead of 3120). This usually means the first time estimate was too low, not that the work grew.",
+          "evidence_ref": "epic-1"
+        }
+      ]
+    },
+    {
+      "title": "Since last snapshot",
+      "items": [
+        {
+          "text": "The risk counts (no owner, no estimate, not moving, blocked, over budget) are the same as the last snapshot. Nothing new looks worse this cycle.",
+          "evidence_ref": "delta-1"
+        }
+      ]
+    },
+    {
+      "title": "Most behind",
+      "items": [
+        {
+          "text": "P1 is the furthest behind: 3 late stories out of 6 open. Work that waits on this person may be slowed down.",
+          "evidence_ref": "person-1"
+        },
+        {
+          "text": "P2 has 2 late stories out of 3 open.",
+          "evidence_ref": "person-2"
+        },
+        {
+          "text": "P3 has 1 late story out of 4 open.",
+          "evidence_ref": "person-3"
+        }
+      ]
+    }
+  ]
+}
