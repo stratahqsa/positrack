@@ -1,10 +1,16 @@
 name: Snapshot
 
-# Hourly PRECOMPUTE for the POSX Reports dashboard. A full snapshot takes ~285s
-# live, too slow for a Vercel function (60s ceiling). We compute it here and
-# publish the JSON to Vercel Blob under a SECRET path prefix; the force-dynamic
-# Next.js app reads it server-side on the next request. Nothing is committed to
-# git and nothing is pushed to master.
+# 3x/day (8am/12pm/7pm IST) PRECOMPUTE for the POSX Reports dashboard. A full
+# snapshot takes ~285s live, too slow for a Vercel function (60s ceiling). We
+# compute it here and publish the JSON to Vercel Blob under a SECRET path
+# prefix; the force-dynamic Next.js app reads it server-side on the next
+# request. Nothing is committed to git and nothing is pushed to master.
+#
+# CADENCE: moved off hourly (2026-07-17) — team reported the hourly sweep
+# noticeably slowing down the shared YouTrack instance's own frontend for
+# concurrent users. 3x/day covers the team's actual working hours; the
+# dashboard can be up to ~13h stale overnight (between the 7pm and 8am runs)
+# instead of ~1h, which was judged an acceptable trade for YouTrack headroom.
 #
 # PRIVACY / LOCKDOWN: the snapshot's raw fields (assignee / people names) are
 # not exposed at a guessable public URL. It is published ONLY to Vercel Blob
@@ -15,7 +21,7 @@ name: Snapshot
 # valid; the proper follow-up is a private Blob store read via the SDK. The
 # dashboard points SNAPSHOT_DATA_URL at <blob-base>/<SNAPSHOT_SECRET>.
 #
-# latest.json is overwritten every run (dashboard is at most ~1h stale). The
+# latest.json is overwritten every run (see CADENCE above for staleness). The
 # per-day history file snapshot-<UTCdate>.json (which the day-over-day RED
 # delta depends on) is frozen on the FIRST run of each UTC day by
 # write_snapshot() in scripts/snapshot.py; scripts/blob_seed.mjs pulls the most
@@ -40,7 +46,7 @@ name: Snapshot
 
 on:
   schedule:
-    - cron: "0 * * * *"      # hourly, on the hour (UTC)
+    - cron: "30 2,6,13 * * *"   # 8am / 12pm / 7pm IST (UTC+5:30)
   workflow_dispatch:
     inputs:
       project:
@@ -94,8 +100,8 @@ jobs:
 
       - name: Produce snapshot
         # Dispatch inputs are routed through env (never interpolated into the shell)
-        # so an untrusted value can't inject a command. Defaults apply on the hourly
-        # schedule where inputs are empty.
+        # so an untrusted value can't inject a command. Defaults apply on the
+        # scheduled runs where inputs are empty.
         env:
           YT_TOKEN: ${{ secrets.YT_TOKEN }}
           YT_BASE: ${{ secrets.YT_BASE }}   # optional; engine defaults if unset

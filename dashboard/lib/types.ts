@@ -290,7 +290,7 @@ export interface Snapshot {
   schedule?: ScheduleBlock;
   /**
    * AI-generated proactive briefing (top issues, since-yesterday deltas, most-
-   * behind people), baked into the snapshot by the hourly GitHub Action.
+   * behind people), baked into the snapshot by the Snapshot GitHub Action.
    * Optional: absent on snapshots that predate the feature, AND fail-soft —
    * a bad/timed-out model call also leaves this absent rather than writing a
    * broken `ai_brief` (see `status`/`reason` on AiBrief for the case where a
