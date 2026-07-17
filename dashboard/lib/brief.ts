@@ -9,8 +9,8 @@ import { accountability } from "./health";
 import type { AiBrief, AiBriefItem, AiBriefSection, Snapshot } from "./types";
 
 /** Reads the AI brief off the snapshot, if present (absent on snapshots that
- *  predate the feature, or when the hourly generation step failed/was
- *  skipped this cycle — fail-soft by design, never a broken partial value). */
+ *  predate the feature, or when the generation step failed/was skipped this
+ *  cycle — fail-soft by design, never a broken partial value). */
 export function getBrief(snapshot: Snapshot): AiBrief | null {
   return snapshot.ai_brief ?? null;
 }

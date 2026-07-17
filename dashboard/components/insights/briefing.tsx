@@ -86,7 +86,7 @@ export function Briefing({ brief, nowMs }: { brief: AiBrief | null; nowMs: numbe
           The AI briefing couldn&apos;t be generated this cycle.
         </p>
         <p className="mt-1 text-[12px] text-faint">
-          {brief?.reason ?? "It regenerates automatically on the next hourly snapshot."}
+          {brief?.reason ?? "It regenerates automatically on the next scheduled snapshot."}
         </p>
       </section>
     );
