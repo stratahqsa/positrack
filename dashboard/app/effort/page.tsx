@@ -59,8 +59,8 @@ export default async function EffortPage() {
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-violet/30 bg-violet/[0.08] px-4 py-2.5 text-[12.5px] text-violet">
                 <Layers className="size-4 shrink-0" />
                 <span>
-                  <strong className="tabular">{hasP2}</strong> Phase-1 epic{hasP2 === 1 ? "" : "s"} contain Phase 2
-                  stories
+                  <strong className="tabular">{hasP2}</strong> Phase-1 epic{hasP2 === 1 ? "" : "s"} contain Phase
+                  2/3 stories
                   {readyToMove > 0 ? (
                     <>
                       {" "}
@@ -133,10 +133,10 @@ export default async function EffortPage() {
                 )}
               </Section>
 
-              <Section title="📁 P2 Backlog (moved after 29 Jun)" tone="violet" count={effort.counts.p2_backlog}>
+              <Section title="📁 P2/P3 Backlog (moved after 29 Jun)" tone="violet" count={effort.counts.p2_backlog}>
                 {effort.sections.p2_backlog.length === 0 ? (
                   <div className="px-4 py-6 text-center text-[12px] text-faint">
-                    No epics currently in the P2 backlog.
+                    No epics currently in the P2/P3 backlog.
                   </div>
                 ) : (
                   <div className="overflow-x-auto scroll-slim">
@@ -175,7 +175,7 @@ export default async function EffortPage() {
                 )}
               </Section>
 
-              <Section title="👀 Watch List: P1 Epics with P2 Stories" tone="violet" count={watch.length}>
+              <Section title="👀 Watch List: P1 Epics with P2/P3 Stories" tone="violet" count={watch.length}>
                 <WatchList items={watch} />
               </Section>
             </div>

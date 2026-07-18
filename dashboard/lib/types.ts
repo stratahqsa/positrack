@@ -88,7 +88,9 @@ export interface Epic {
   priority?: string;
   /** Owning module/component label. Optional on older snapshots. */
   module?: string;
-  /** Stories deferred to Phase 2 under this P1 epic (scope-leakage). Optional. */
+  /** Stories deferred to a later phase — Phase 2 or Phase 3 — under this P1
+   *  epic (scope-leakage). Field name predates the Phase-3 broadening
+   *  (2026-07-18) and is kept for wire-format stability. Optional. */
   p2_stories?: number;
   /** Still-pending Phase-1 stories. Optional on older snapshots. */
   p1_pending?: number;
@@ -243,8 +245,9 @@ export interface RedCounts {
    */
   role_owned?: number;
   /**
-   * Open P1 epics with stories deferred to Phase 2 (scope leakage / watch list).
-   * A watch signal, NOT summed into total_red. Optional on older snapshots.
+   * Open P1 epics with stories deferred to a later phase — Phase 2 or Phase 3
+   * (scope leakage / watch list). A watch signal, NOT summed into total_red.
+   * Optional on older snapshots.
    */
   deferred?: number;
 }

@@ -17,7 +17,7 @@ const TONE_TEXT: Record<Tone, string> = {
  * Top KPI strip for the Effort Report (docs/reports-dashboard/plans/
  * 06-effort.md Task 2 / PRD_3 §5 "KPI cards"): Done · Pending · Dev/UI/QA
  * (the S1 pending breakdown) · Pending Total (red) · Mixed · No Stories ·
- * P2 Backlog (purple) · Has P2 Stories (violet, conditional tone) · Grand
+ * P2/P3 Backlog (purple) · Has P2/P3 Stories (violet, conditional tone) · Grand
  * Total (prominent) — a direct render of `effort.counts`/`effort.totals`,
  * already computed upstream (Plan 1), plus `hasP2Count` from lib/effort.ts
  * (not itself a snapshot field). Dev/UI/QA/Pending Total/Grand Total are
@@ -46,12 +46,12 @@ export function EffortKpi({ effort, hasP2Count }: { effort: Effort; hasP2Count: 
     { label: "Pending Total", value: fmtHours(pending.total), sub: fmtMd(pending.total), tone: "danger" },
     { label: "Mixed", value: counts.mixed.toLocaleString(), tone: counts.mixed > 0 ? "warn" : undefined, title: "Mixed (P1): some done, some pending" },
     { label: "No Stories", value: counts.no_stories.toLocaleString() },
-    { label: "P2 Backlog", value: counts.p2_backlog.toLocaleString(), tone: "violet" },
+    { label: "P2/P3 Backlog", value: counts.p2_backlog.toLocaleString(), tone: "violet" },
     {
-      label: "Has P2",
+      label: "Has P2/P3",
       value: hasP2Count.toLocaleString(),
       tone: hasP2Count > 0 ? "violet" : undefined,
-      title: "Phase 1 epics containing at least one Phase 2 story",
+      title: "Phase 1 epics containing at least one Phase 2 or Phase 3 story",
     },
     { label: "Grand Total", value: fmtHours(grand.total), sub: fmtMd(grand.total), tone: "accent" },
   ];

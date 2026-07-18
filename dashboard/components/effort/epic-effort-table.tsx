@@ -7,7 +7,7 @@ import { fmtDate, fmtHours, fmtMd } from "@/lib/format";
 import type { Epic, Rollup, Story } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
-import { stateVariant } from "@/components/weekly/badge-tone";
+import { scopeLabel, stateVariant } from "@/components/weekly/badge-tone";
 
 /**
  * Sortable epic table reused by S0 (done), S1 (pending), and S2 (mixed) —
@@ -88,10 +88,10 @@ function isDoneState(state: string | null | undefined): boolean {
  *  "pending" show ALL stories (PENDING epics have zero done stories by the
  *  category rule itself — PRD_3 §4 "PENDING: has stories, none done"); only
  *  "mixed" filters down to the pending ones (PRD_3 §5 "expandable pending
- *  sub-rows"). This still includes pending Phase-2 stories (for visibility —
- *  the epic's "P2 · n" badge already flags the scope leakage); it's
- *  deliberately looser than `isPendingPhase1` below, which additionally
- *  excludes Phase-2 for the Spent/estimate rollups. */
+ *  sub-rows"). This still includes pending Phase-2/Phase-3 stories (for
+ *  visibility — the epic's "P2/P3 · n" badge already flags the scope
+ *  leakage); it's deliberately looser than `isPendingPhase1` below, which
+ *  additionally excludes any later phase for the Spent/estimate rollups. */
 function subStories(epic: Epic, variant: EpicTableVariant): Story[] {
   if (variant === "mixed") return epic.stories.filter((s) => !isDoneState(s.state));
   return epic.stories;
@@ -319,7 +319,7 @@ function EpicDataRow({
             <span className="line-clamp-2 text-fg/85">{epic.summary}</span>
             {epic.has_p2 ? (
               <Badge variant="violet" size="sm">
-                P2 · {epic.p2_stories ?? 0}
+                P2/P3 · {epic.p2_stories ?? 0}
               </Badge>
             ) : null}
           </div>
@@ -370,9 +370,9 @@ function StorySubRow({ story, variant }: { story: Story; variant: EpicTableVaria
           <Badge variant={stateVariant(story.state, done)} size="sm">
             {story.state || "—"}
           </Badge>
-          {story.scope === "PHASE 2" ? (
+          {scopeLabel(story.scope) ? (
             <Badge variant="violet" size="sm">
-              P2
+              {scopeLabel(story.scope)}
             </Badge>
           ) : null}
         </div>
