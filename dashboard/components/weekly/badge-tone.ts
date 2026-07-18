@@ -45,3 +45,14 @@ export function priorityVariant(priority: string | null | undefined): BadgeVaria
   if (p.includes("low") || p.includes("minor")) return "good";
   return "outline";
 }
+
+/** Non-Phase-1 scope badge text ("P2"/"P3"/…) for a story's `scope` field, or
+ *  null for Phase 1 (the implied default — never badged) or an unrecognized/
+ *  blank scope. Generalized over any "PHASE N" value so a future Phase 4
+ *  needs no code change here. Shared by epic-effort-table.tsx's story
+ *  sub-rows and watch-list.tsx's story drill-down. */
+export function scopeLabel(scope: string | null | undefined): string | null {
+  const m = /PHASE\s*(\d+)/i.exec(scope ?? "");
+  if (!m || m[1] === "1") return null;
+  return "P" + m[1];
+}

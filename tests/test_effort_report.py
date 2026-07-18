@@ -113,6 +113,18 @@ def test_categorize_non_phase1_pending_story_excluded_from_rollup():
     assert rec["rollup"] == {"server": 30, "ui": 0, "testing": 60}
 
 
+def test_categorize_phase3_pending_story_also_excluded_from_rollup():
+    # broadened 2026-07-18: a Phase 3 story is excluded from the rollup exactly
+    # like a Phase 2 one, and counted in p2_stories/excluded from p1_pending.
+    ep = _epic("E-5b", "OPEN", stories=[
+        _story("S-p3", "OPEN", scope="PHASE 3", server=999, ui=999, testing=999),
+        _story("S-p1", "OPEN", scope="PHASE 1", server=30, ui=0, testing=60)])
+    rec = yt.categorize_epic(ep)
+    assert rec["rollup"] == {"server": 30, "ui": 0, "testing": 60}
+    assert rec["p2_stories"] == 1   # counts Phase 2 AND Phase 3 deferrals
+    assert rec["p1_pending"] == 1   # only the Phase 1 story is still P1-pending
+
+
 # ---------- per-story spend (Consensus: reuse the PM's scheduled-report recipe) ----------
 def test_epic_stories_carry_own_spent_time_field():
     # each story's own "Spent time" custom field is read straight onto its dict,
@@ -175,7 +187,10 @@ def test_missing_est_flag_rule():
     assert ok["missing_est"] is False             # Dev>0 and QA>0
 
 
-# ---------- P2 activity-history filter (recipe trap: activity-based, not scope-field) ----------
+# ---------- P2/P3 activity-history filter (recipe trap: activity-based, not scope-field) ----------
+# Broadened 2026-07-18: epics moved straight to Phase 3 (not just Phase 2) also
+# count as "left Phase 1" — _scope_changed_p1_to_p2 was renamed to
+# _scope_left_phase1 to match.
 def test_p2_scope_change_after_cutoff_only():
     cut = 1782729000000
     acts = [
@@ -186,16 +201,25 @@ def test_p2_scope_change_after_cutoff_only():
         {"field": {"name": "Priority"}, "timestamp": cut + 5,
          "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},     # wrong field -> no
     ]
-    matched, ts = yt._scope_changed_p1_to_p2(acts, cut)
+    matched, ts = yt._scope_left_phase1(acts, cut)
     assert matched and ts == cut + 1000
+
+
+def test_p3_scope_change_after_cutoff_matches_too():
+    # a straight-to-Phase-3 move counts exactly like a Phase-2 move.
+    cut = 1782729000000
+    acts = [{"field": {"name": "Scope"}, "timestamp": cut + 2000,
+             "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 3"}]}]
+    matched, ts = yt._scope_left_phase1(acts, cut)
+    assert matched and ts == cut + 2000
 
 
 def test_p2_ignores_reverse_and_unrelated_changes():
     cut = 1782729000000
     reverse = [{"field": {"name": "Scope"}, "timestamp": cut + 5,
                 "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 1"}]}]
-    assert yt._scope_changed_p1_to_p2(reverse, cut) == (False, None)
-    assert yt._scope_changed_p1_to_p2([], cut) == (False, None)
+    assert yt._scope_left_phase1(reverse, cut) == (False, None)
+    assert yt._scope_left_phase1([], cut) == (False, None)
 
 
 # ---------- spend attribution (Consensus Rev #2) ----------
