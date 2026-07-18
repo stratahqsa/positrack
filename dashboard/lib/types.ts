@@ -110,6 +110,10 @@ export interface P2Item {
   /** The epic's current scope, e.g. "PHASE 2" or "PHASE 3". Optional: absent
    *  on snapshots that predate this field (2026-07-18). */
   phase?: string;
+  /** The epic's PENDING stories only (done ones already excluded upstream —
+   *  this section is about outstanding work). Optional: absent on snapshots
+   *  that predate this field (2026-07-18). */
+  stories?: Story[];
 }
 
 export interface EffortSections {
