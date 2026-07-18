@@ -9,6 +9,7 @@ import { EffortKpi } from "@/components/effort/effort-kpi";
 import { EpicEffortTable } from "@/components/effort/epic-effort-table";
 import { WatchList } from "@/components/effort/watch-list";
 import { IssueLink } from "@/components/ui/issue-link";
+import { scopeLabel } from "@/components/weekly/badge-tone";
 
 // Snapshot is read from disk (dev) or the Release (prod) per request —
 // force-dynamic so a refreshed snapshot shows with no redeploy, same
@@ -158,7 +159,7 @@ export default async function EffortPage() {
                             <td className="max-w-[320px] px-2 py-2 align-top">
                               <span className="line-clamp-2 text-fg/85">{item.summary}</span>
                               <div className="mt-0.5 text-[10.5px] text-violet/80">
-                                → P2 on {fmtDate(item.changed_at)}
+                                → {scopeLabel(item.phase) ?? "P2"} on {fmtDate(item.changed_at)}
                               </div>
                             </td>
                             <td className="px-2 py-2 align-top text-fg/80">

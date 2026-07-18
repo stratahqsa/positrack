@@ -495,13 +495,24 @@ def categorize_epic(epic):
     rec["missing_est"] = (rollup["server"] == 0 and rollup["ui"] == 0) or (rollup["testing"] == 0)
     return rec
 
-def _scope_left_phase1(activities, cutoff_ms):
-    """PURE port of recipe Step 6's filter, broadened 2026-07-18 from Phase-2-only
-    to any later phase: True if the CustomFieldCategory activity list contains a
-    Scope change removing 'PHASE 1' and adding 'PHASE 2' OR 'PHASE 3' after the
-    cutoff. Returns (matched, latest_change_ms). No network.
-    (Was named `_scope_changed_p1_to_p2` — renamed since it now also matches a
-    move straight to Phase 3, which that name no longer described accurately.)"""
+def _scope_arrived_at_after_cutoff(activities, cutoff_ms, phase_name):
+    """Latest timestamp (strictly after cutoff_ms) at which a Scope-change
+    activity added `phase_name` specifically — i.e. when the epic
+    (re-)arrived at exactly this phase. Returns the timestamp, or None if it
+    never did after the cutoff. No network.
+
+    2026-07-18 redesign (was `_scope_changed_p1_to_p2`, matched only on
+    'PHASE 1' being in `removed`): an epic can hop PHASE 1 -> PHASE 2 -> PHASE
+    3, and the old check reported the FIRST hop's date even when the epic's
+    CURRENT phase is 3 (PXB1-2201 was exactly this — showed "moved to P2/P3"
+    dated the PHASE 1->PHASE 2 hop, not the later PHASE 2->PHASE 3 one). This
+    is now called once per candidate with `phase_name` = the epic's CURRENT
+    scope, so it naturally reports the most recent arrival at wherever the
+    epic actually sits today, regardless of how many hops it took. Also fixes
+    a narrower bug the old 'PHASE 1 in removed' requirement had: an epic whose
+    PHASE 1->PHASE 2 hop happened BEFORE the cutoff but whose later PHASE
+    2->PHASE 3 hop happened AFTER it would have been wrongly excluded, since
+    the post-cutoff activity window never showed 'PHASE 1' being removed."""
     latest = None
     for a in (activities or []):
         if (a.get("field") or {}).get("name") != "Scope":
@@ -509,13 +520,11 @@ def _scope_left_phase1(activities, cutoff_ms):
         ts = a.get("timestamp") or 0
         if ts <= cutoff_ms:
             continue
-        removed = a.get("removed") or []
         added = a.get("added") or []
-        if any((x or {}).get("name") == "PHASE 1" for x in removed) and \
-           any((x or {}).get("name") in _DEFERRED_PHASES for x in added):
+        if any((x or {}).get("name") == phase_name for x in added):
             if latest is None or ts > latest:
                 latest = ts
-    return (latest is not None), latest
+    return latest
 
 def _build_story_epic_map(cats):
     """PURE: {story_id -> epic_id} from categorized epics' Subtask/OUTWARD children.
@@ -678,14 +687,20 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     mixed = [r for r in cats if r["category"] == "MIXED"]
     no_stories = [r for r in cats if r["category"] == "NO_STORIES"]
 
-    # --- P2 backlog: Scope PHASE 1->{PHASE 2 or PHASE 3} after cutoff, via activity
+    # --- P2 backlog: Scope moved to {PHASE 2 or PHASE 3} after cutoff, via activity
     # history. Broadened 2026-07-18: epics moved straight to Phase 3 (or moved to
     # Phase 2 and later to Phase 3) used to be invisible here since candidates were
     # queried as Scope: {PHASE 2} only. Candidates are now the current open PHASE 2
-    # OR PHASE 3 epics; the PHASE 1->{2,3} direction and the after-cutoff timing are
-    # enforced by _scope_left_phase1 on each activity. Field/key names (`p2_backlog`,
-    # `p2_candidates`) are kept as-is (wire-format stability) even though the set now
-    # also includes Phase 3 moves.
+    # OR PHASE 3 epics.
+    #
+    # `changed_at`/`phase` report the epic's CURRENT phase and when it arrived
+    # there specifically (2026-07-18 fix, PXB1-2201): an epic that hopped PHASE
+    # 1 -> PHASE 2 -> PHASE 3 now reports "PHASE 3, on <the 2->3 date>", not the
+    # earlier 1->2 hop's date — see _scope_arrived_at_after_cutoff's docstring.
+    # Field/key names (`p2_backlog`, `p2_candidates`) are kept as-is (wire-
+    # format stability) even though the set now also includes Phase 3 moves;
+    # `phase` is a new, additive field (full "PHASE N" string; older snapshots
+    # simply lack it).
     p2_candidates = get_issues(ctx, "project: %s TaskType: EPIC Scope: {PHASE 2}, {PHASE 3} #Unresolved" % project,
                                fields="idReadable", top=300)
     p2_backlog = []
@@ -693,14 +708,18 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
         pid = e.get("idReadable")
         if not pid or pid in exclude:
             continue
+        meta = GET(ctx, "/api/issues/%s?fields=idReadable,summary,created,customFields(name,value(name))" % pid)
+        current_phase = _cf_str(meta, "Scope")
+        if current_phase not in _DEFERRED_PHASES:
+            continue  # defensive: scope could've changed again between the two calls
         act = GET(ctx, "/api/issues/%s/activities?categories=CustomFieldCategory"
                        "&fields=timestamp,added(name),removed(name),field(name)" % pid)
-        matched, changed_at = _scope_left_phase1(act if isinstance(act, list) else [], cutoff_ms)
-        if matched:
-            meta = GET(ctx, "/api/issues/%s?fields=idReadable,summary,created,customFields(name,value(name))" % pid)
+        changed_at = _scope_arrived_at_after_cutoff(act if isinstance(act, list) else [], cutoff_ms, current_phase)
+        if changed_at is not None:
             p2_backlog.append({"id": pid, "summary": meta.get("summary") or "",
                                "assignee": _cf_str(meta, "Assignee"),
-                               "created": meta.get("created"), "changed_at": changed_at})
+                               "created": meta.get("created"), "changed_at": changed_at,
+                               "phase": current_phase})
 
     def _sum_section(recs):
         s = {"server": 0, "ui": 0, "testing": 0, "total": 0, "spent": 0}

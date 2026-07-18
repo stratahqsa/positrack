@@ -103,7 +103,13 @@ export interface P2Item {
   summary: string;
   assignee: string;
   created: number;
+  /** When the epic arrived at its CURRENT phase specifically (not its first
+   *  departure from Phase 1) — a PHASE 1 -> PHASE 2 -> PHASE 3 epic reports
+   *  the 2->3 date. See core/ytcore.py's _scope_arrived_at_after_cutoff. */
   changed_at: number;
+  /** The epic's current scope, e.g. "PHASE 2" or "PHASE 3". Optional: absent
+   *  on snapshots that predate this field (2026-07-18). */
+  phase?: string;
 }
 
 export interface EffortSections {

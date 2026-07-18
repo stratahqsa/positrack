@@ -18,15 +18,20 @@ function isDoneState(state: string | null | undefined): boolean {
   return DONE_STATE_WORDS.some((word) => s.includes(word));
 }
 
-/** One story under an expanded watch-list epic. Unlike epic-effort-table.tsx's
- *  story sub-rows, this table's own columns (P1 Pending / P2/P3 Stories /
- *  Action) are epic-level summary stats with no natural per-story
- *  counterpart, so there's nothing to align a story's own fields under —
- *  this renders as one flowing line instead (same reasoning/pattern as
- *  weekly/story-table.tsx's BugRow). */
+/** One PENDING story under an expanded watch-list epic (done stories are
+ *  filtered out by the caller — this section is about what's still
+ *  outstanding). Every story shows its own phase explicitly (P1/P2/P3, via
+ *  `scopeLabel` defaulting to "P1" — unlike epic-effort-table.tsx's story
+ *  sub-rows, which only badge non-Phase-1 stories, here the whole point is
+ *  seeing the P1/P2/P3 split at a glance). Unlike epic-effort-table.tsx's
+ *  sub-rows, this table's own columns (P1 Pending / P2/P3 Stories / Action)
+ *  are epic-level summary stats with no natural per-story counterpart, so
+ *  there's nothing to align a story's own fields under — this renders as one
+ *  flowing line instead (same reasoning/pattern as weekly/story-table.tsx's
+ *  BugRow). */
 function WatchStoryRow({ story }: { story: Story }) {
   const done = isDoneState(story.state);
-  const scope = scopeLabel(story.scope);
+  const phase = scopeLabel(story.scope) ?? "P1";
   return (
     <tr className="border-t border-border/30 bg-elevated/20 text-[11.5px]">
       <td colSpan={COLUMN_COUNT} className="py-0">
@@ -35,11 +40,9 @@ function WatchStoryRow({ story }: { story: Story }) {
           <Badge variant={stateVariant(story.state, done)} size="sm">
             {story.state || "—"}
           </Badge>
-          {scope ? (
-            <Badge variant="violet" size="sm">
-              {scope}
-            </Badge>
-          ) : null}
+          <Badge variant={phase === "P1" ? "outline" : "violet"} size="sm">
+            {phase}
+          </Badge>
           <span className="min-w-0 flex-1 truncate text-fg/70">{story.summary}</span>
           <span className="text-muted">{story.assignee || "—"}</span>
           <span className="tabular text-[10.5px] text-faint">
@@ -63,9 +66,12 @@ function WatchStoryRow({ story }: { story: Story }) {
  * request — this was "a plain render from props" before). `item.epic.stories`
  * already carries every story the epic has — no new data plumbing needed,
  * this is display-only — so a PM can check exactly which stories under an
- * epic are P1 vs. P2/P3 without leaving this section. No sort here (unlike
- * epic-effort-table.tsx); the watch list is short enough that sorting
- * wasn't asked for and would be over-building.
+ * epic are P1 vs. P2/P3 without leaving this section. Expanding shows only
+ * the epic's PENDING stories (done ones filtered out — this section is
+ * about outstanding work), each labeled with its own phase (P1/P2/P3, not
+ * just non-P1 stories badged). No sort here (unlike epic-effort-table.tsx);
+ * the watch list is short enough that sorting wasn't asked for and would be
+ * over-building.
  */
 export function WatchList({ items }: { items: WatchListItem[] }) {
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
@@ -102,7 +108,8 @@ export function WatchList({ items }: { items: WatchListItem[] }) {
         </thead>
         <tbody>
           {items.map((item) => {
-            const canExpand = item.epic.stories.length > 0;
+            const pendingStories = item.epic.stories.filter((s) => !isDoneState(s.state));
+            const canExpand = pendingStories.length > 0;
             const isExpanded = expanded.has(item.epic.id);
             return (
               <React.Fragment key={item.epic.id}>
@@ -119,7 +126,7 @@ export function WatchList({ items }: { items: WatchListItem[] }) {
                           type="button"
                           onClick={() => toggleExpanded(item.epic.id)}
                           aria-expanded={isExpanded}
-                          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.epic.stories.length} stor${item.epic.stories.length === 1 ? "y" : "ies"} for ${item.epic.id}`}
+                          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${pendingStories.length} pending stor${pendingStories.length === 1 ? "y" : "ies"} for ${item.epic.id}`}
                           className="inline-flex items-center justify-center rounded p-0.5 text-faint transition-colors hover:bg-elevated/60 hover:text-fg"
                         >
                           <ChevronRight className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")} />
@@ -154,7 +161,7 @@ export function WatchList({ items }: { items: WatchListItem[] }) {
                   </td>
                 </tr>
                 {isExpanded && canExpand
-                  ? item.epic.stories.map((story) => <WatchStoryRow key={story.id} story={story} />)
+                  ? pendingStories.map((story) => <WatchStoryRow key={story.id} story={story} />)
                   : null}
               </React.Fragment>
             );
