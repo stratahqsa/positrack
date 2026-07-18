@@ -188,10 +188,11 @@ def test_missing_est_flag_rule():
 
 
 # ---------- P2/P3 activity-history filter (recipe trap: activity-based, not scope-field) ----------
-# Broadened 2026-07-18: epics moved straight to Phase 3 (not just Phase 2) also
-# count as "left Phase 1" — _scope_changed_p1_to_p2 was renamed to
-# _scope_left_phase1 to match.
-def test_p2_scope_change_after_cutoff_only():
+# 2026-07-18 redesign (PXB1-2201): _scope_changed_p1_to_p2 (matched only on
+# "PHASE 1 removed") was replaced by _scope_arrived_at_after_cutoff, called
+# with the epic's CURRENT phase — so a multi-hop epic reports its most recent
+# arrival, not its first departure from Phase 1. See its own docstring.
+def test_scope_arrived_at_after_cutoff_ignores_before_cutoff_and_wrong_field():
     cut = 1782729000000
     acts = [
         {"field": {"name": "Scope"}, "timestamp": cut - 1,
@@ -201,25 +202,42 @@ def test_p2_scope_change_after_cutoff_only():
         {"field": {"name": "Priority"}, "timestamp": cut + 5,
          "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},     # wrong field -> no
     ]
-    matched, ts = yt._scope_left_phase1(acts, cut)
-    assert matched and ts == cut + 1000
+    assert yt._scope_arrived_at_after_cutoff(acts, cut, "PHASE 2") == cut + 1000
 
 
-def test_p3_scope_change_after_cutoff_matches_too():
-    # a straight-to-Phase-3 move counts exactly like a Phase-2 move.
+def test_scope_arrived_at_after_cutoff_multi_hop_reports_latest_arrival_at_current_phase():
+    # PXB1-2201 shape: PHASE 1 -> PHASE 2 (day 5) -> PHASE 3 (day 10). Asking
+    # for "PHASE 3" (the epic's current scope) must report day 10, not day 5.
+    cut = 1782729000000
+    day5 = cut + 5 * 86400000
+    day10 = cut + 10 * 86400000
+    acts = [
+        {"field": {"name": "Scope"}, "timestamp": day5,
+         "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},
+        {"field": {"name": "Scope"}, "timestamp": day10,
+         "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 3"}]},
+    ]
+    assert yt._scope_arrived_at_after_cutoff(acts, cut, "PHASE 3") == day10
+    assert yt._scope_arrived_at_after_cutoff(acts, cut, "PHASE 2") == day5
+
+
+def test_scope_arrived_at_after_cutoff_does_not_require_phase1_in_removed():
+    # narrower bug the old check had: if the PHASE 1->PHASE 2 hop happened
+    # BEFORE the cutoff but the later PHASE 2->PHASE 3 hop happened AFTER it,
+    # the epic must still be caught — "PHASE 1" never appears in `removed`
+    # anywhere in the post-cutoff window.
     cut = 1782729000000
     acts = [{"field": {"name": "Scope"}, "timestamp": cut + 2000,
-             "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 3"}]}]
-    matched, ts = yt._scope_left_phase1(acts, cut)
-    assert matched and ts == cut + 2000
+             "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 3"}]}]
+    assert yt._scope_arrived_at_after_cutoff(acts, cut, "PHASE 3") == cut + 2000
 
 
-def test_p2_ignores_reverse_and_unrelated_changes():
+def test_scope_arrived_at_after_cutoff_ignores_reverse_and_empty():
     cut = 1782729000000
     reverse = [{"field": {"name": "Scope"}, "timestamp": cut + 5,
                 "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 1"}]}]
-    assert yt._scope_left_phase1(reverse, cut) == (False, None)
-    assert yt._scope_left_phase1([], cut) == (False, None)
+    assert yt._scope_arrived_at_after_cutoff(reverse, cut, "PHASE 2") is None
+    assert yt._scope_arrived_at_after_cutoff([], cut, "PHASE 2") is None
 
 
 # ---------- spend attribution (Consensus Rev #2) ----------
