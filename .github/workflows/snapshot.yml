@@ -1,6 +1,6 @@
 name: Snapshot
 
-# 4x/day (6am/12pm/4pm/7pm IST) PRECOMPUTE for the POSX Reports dashboard. A full
+# 5x/day (5am/8am/12pm/4pm/7pm IST) PRECOMPUTE for the POSX Reports dashboard. A full
 # snapshot takes ~285s live, too slow for a Vercel function (60s ceiling). We
 # compute it here and publish the JSON to Vercel Blob under a SECRET path
 # prefix; the force-dynamic Next.js app reads it server-side on the next
@@ -9,11 +9,10 @@ name: Snapshot
 # CADENCE: moved off hourly (2026-07-17), then from 3x/day to 4x/day
 # (2026-07-17, added the 4pm run) — team reported the hourly sweep noticeably
 # slowing down the shared YouTrack instance's own frontend for concurrent
-# users. 4x/day covers the team's actual working hours; the first run was
-# later moved from 8am to 6am IST (2026-07-20). The dashboard can be up to
-# ~11h stale overnight (between the 7pm and 6am runs) instead of ~1h under
-# the old hourly schedule, which was judged an acceptable trade for YouTrack
-# headroom.
+# users. A 5am run was added on top of the existing 8am run (2026-07-20) for
+# 5x/day total. The dashboard can be up to ~10h stale overnight (between the
+# 7pm and 5am runs) instead of ~1h under the old hourly schedule, which was
+# judged an acceptable trade for YouTrack headroom.
 #
 # PRIVACY / LOCKDOWN: the snapshot's raw fields (assignee / people names) are
 # not exposed at a guessable public URL. It is published ONLY to Vercel Blob
@@ -49,7 +48,7 @@ name: Snapshot
 
 on:
   schedule:
-    - cron: "30 0,6,10,13 * * *"   # 6am / 12pm / 4pm / 7pm IST (UTC+5:30)
+    - cron: "30 23,2,6,10,13 * * *"   # 5am / 8am / 12pm / 4pm / 7pm IST (UTC+5:30)
   workflow_dispatch:
     inputs:
       project:
