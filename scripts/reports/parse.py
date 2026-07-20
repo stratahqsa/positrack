@@ -73,17 +73,28 @@ def fmt_ist(ms):
     return dt.strftime("%d %b %Y, %-I:%M %p")
 
 def ist_window(now_ms):
-    """The Bug Analysis window: yesterday 00:00 IST → now (Examples_1 §2).
-    Returns start_ms, end_ms, label, yesterday_str (YYYY-MM-DD), seven_days_str."""
+    """The Bug Analysis window: yesterday 00:00 IST → now (Examples_1 §2),
+    EXCEPT on Monday runs, where the window starts the PRECEDING FRIDAY
+    00:00 IST instead — so a Monday-morning run still covers bugs reported
+    over the weekend (Fri/Sat/Sun), which a plain "yesterday" (Sunday)
+    window would silently drop. (2026-07-20: the dashboard never had this
+    Monday rule; the standalone pxb1-bug-analysis skill already did, and
+    this ports the same behavior here.) The day-of-week check runs on the
+    already-IST-localized date, so it can't be thrown off by a UTC/IST
+    calendar-date mismatch near midnight — same care as `in_window` below.
+    Returns start_ms, end_ms, label, window_start_str (YYYY-MM-DD — was
+    `yesterday_str`, renamed since it isn't always yesterday), seven_days_str."""
     now_ist = datetime.datetime.fromtimestamp(now_ms / 1000, IST)
     today = now_ist.date()
-    yest = today - datetime.timedelta(days=1)
-    start_ist = datetime.datetime(yest.year, yest.month, yest.day, 0, 0, tzinfo=IST)
+    days_back = 3 if today.weekday() == 0 else 1  # Monday (weekday()==0) -> back to Friday
+    window_start_date = today - datetime.timedelta(days=days_back)
+    start_ist = datetime.datetime(
+        window_start_date.year, window_start_date.month, window_start_date.day, 0, 0, tzinfo=IST)
     start_ms = int(start_ist.timestamp() * 1000)
     return {
         "start_ms": start_ms,
         "end_ms": now_ms,
-        "yesterday_str": yest.isoformat(),
+        "window_start_str": window_start_date.isoformat(),
         "seven_days_str": (today - datetime.timedelta(days=7)).isoformat(),
         "label": "%s → %s IST" % (fmt_ist(start_ms), fmt_ist(now_ms)),
     }
