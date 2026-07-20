@@ -4,7 +4,7 @@ snapshot.py — the POSX Control Tower snapshot PRODUCER (Phase B data layer).
 
 WHY PRECOMPUTE, NOT LIVE: a full effort_report takes ~285s against YouTrack, which
 blows the 60s ceiling of a Vercel Hobby function. So the data path is: this producer
-runs on a schedule in GitHub Actions (4x/day: 8am/12pm/4pm/7pm IST — see
+runs on a schedule in GitHub Actions (5x/day: 5am/8am/12pm/4pm/7pm IST — see
 .github/workflows/snapshot.yml; moved down from hourly 2026-07-17, the hourly sweep
 was noticeably slowing down YouTrack's own frontend) or locally, composes a single
 JSON snapshot, and commits it under web/data/. The Next.js UI reads that JSON

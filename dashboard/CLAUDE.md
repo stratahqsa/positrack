@@ -18,7 +18,7 @@ Five surfaces, all reading the same underlying data:
 | `/schedule` | **Release Schedule Tracker** | Epics grouped by milestone, DONE vs NOT-DONE against the meeting baseline. |
 | `/bugs` | **Bug Analysis** | New bugs in the reporting window, older open High, state breakdowns, module hotspots. |
 | `/effort` | **Effort Report** | The 6-section epic effort tracker (done/pending/mixed/no-stories/P2-backlog/watch-list) + Grand Total. |
-| `/insights` | **AI Insights** | A proactive, auto-generated briefing — top issues now, since-yesterday deltas, most-behind people. Read-only over `snapshot.ai_brief`, baked in upstream by the Snapshot job (4x/day: 8am/12pm/4pm/7pm IST); fail-soft (renders a graceful "unavailable" state, never an error) when generation didn't succeed this cycle. |
+| `/insights` | **AI Insights** | A proactive, auto-generated briefing — top issues now, since-yesterday deltas, most-behind people. Read-only over `snapshot.ai_brief`, baked in upstream by the Snapshot job (5x/day: 5am/8am/12pm/4pm/7pm IST); fail-soft (renders a graceful "unavailable" state, never an error) when generation didn't succeed this cycle. |
 
 Project scope today: **PXB1, Phase 1** only. The architecture is config-driven
 so Phase 2 (or another project) is a config edit, not a code change — see

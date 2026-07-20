@@ -18,8 +18,8 @@ Claude), and the review/merge process — in plain language.
 - **Live link:** https://posxphase1.positrack.live · **access code:** `posx2026`
 - It replaces the 4 daily HTML reports that used to be posted in the PosiboltX Admin
   WhatsApp group. **One link, always current, filterable, drill-downable.**
-- Data refreshes **automatically 4×/day (8am / 12pm / 4pm / 7pm IST)** from YouTrack.
-  Nobody maintains it by hand.
+- Data refreshes **automatically 5×/day (5am / 8am / 12pm / 4pm / 7pm IST)** from
+  YouTrack. Nobody maintains it by hand.
 - To change something: a **maintainer** asks Claude (§4) and opens a PR; the **approver**
   merges it once CI is green (§5).
 
@@ -53,7 +53,7 @@ Open the link, enter the code once (it remembers you). Five tabs across the top:
 The single most important thing to understand.
 
 ```
-YouTrack (support.posibolt.com)  ──►  Python scripts compute ONE snapshot (4x/day)
+YouTrack (support.posibolt.com)  ──►  Python scripts compute ONE snapshot (5x/day)
                                               │
                                               ▼
                                       published to Vercel Blob (a file)
@@ -79,9 +79,9 @@ and view helps.
 
 ## 3. Refreshing the data (usually automatic)
 
-- **Automatic:** a scheduled job runs **4×/day, at 8am / 12pm / 4pm / 7pm IST** — pulls
-  YouTrack, builds the snapshot, publishes it. The dashboard can be up to ~13 hours
-  behind on its own overnight (between the 7pm and 8am runs) — moved down from hourly
+- **Automatic:** a scheduled job runs **5×/day, at 5am / 8am / 12pm / 4pm / 7pm IST** —
+  pulls YouTrack, builds the snapshot, publishes it. The dashboard can be up to ~10 hours
+  behind on its own overnight (between the 7pm and 5am runs) — moved down from hourly
   because the hourly sweep was noticeably slowing down YouTrack's own frontend for the
   team.
 - **On demand** (fresh *right now*): GitHub → **Actions → "Snapshot" → Run workflow →
