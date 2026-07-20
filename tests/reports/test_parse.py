@@ -21,8 +21,25 @@ def test_ist_window_worked_example():
     w = parse.ist_window(now_ms)
     assert w["start_ms"] == parse.iso_to_ms("2026-07-07T18:30:00Z")  # yesterday 00:00 IST
     assert w["end_ms"] == now_ms
-    assert w["yesterday_str"] == "2026-07-08"
+    assert w["window_start_str"] == "2026-07-08"
     assert w["seven_days_str"] == "2026-07-02"
+
+
+def test_ist_window_monday_starts_friday_not_yesterday():
+    # 2026-07-13 is a Monday. Run Mon 13 Jul 2026 09:00 IST == 2026-07-13T03:30:00Z.
+    # Window must start the preceding Friday (10 Jul) 00:00 IST, not Sunday (12 Jul)
+    # — a plain "yesterday" window would silently drop the whole weekend's bugs.
+    now_ms = parse.iso_to_ms("2026-07-13T03:30:00Z")
+    w = parse.ist_window(now_ms)
+    assert w["start_ms"] == parse.iso_to_ms("2026-07-09T18:30:00Z")  # Fri 10 Jul 00:00 IST
+    assert w["window_start_str"] == "2026-07-10"
+
+
+def test_ist_window_non_monday_still_uses_yesterday():
+    # 2026-07-14 is a Tuesday — must NOT get the Friday special-case.
+    now_ms = parse.iso_to_ms("2026-07-14T03:30:00Z")
+    w = parse.ist_window(now_ms)
+    assert w["window_start_str"] == "2026-07-13"
 
 def test_sprint_max_by_numeric_suffix():
     assert parse.sprint_max([{"name": "Sprint 9"}, {"name": "Sprint 14"}]) == "Sprint 14"

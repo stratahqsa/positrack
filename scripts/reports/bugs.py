@@ -64,7 +64,7 @@ def build_bugs(ctx, yt, cfg, now_ms):
     F = "id,idReadable,summary,created,resolved,reporter(fullName,login),customFields(name,value(name,text))"
     def q(query):
         return [parse_bug(r) for r in _dedupe(yt.get_issues(ctx, query, fields=F))]
-    q1 = [b for b in q("project: %s TaskType: BUG created: %s .. Today #Unresolved" % (P, w["yesterday_str"]))
+    q1 = [b for b in q("project: %s TaskType: BUG created: %s .. Today #Unresolved" % (P, w["window_start_str"]))
           if in_window(b["created"], w["start_ms"], w["end_ms"])]   # client-side window (Examples_1 §2 Ex3)
     q2 = q("project: %s TaskType: BUG Priority: {High} #Unresolved" % P)
     q3 = q("project: %s TaskType: BUG Priority: {Medium} #Unresolved" % P)
