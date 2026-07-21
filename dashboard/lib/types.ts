@@ -437,8 +437,12 @@ export interface BugsBlock {
   medium_by_state: StateBreakdownRow[];
   low_by_state: StateBreakdownRow[];
   module_insights: ModuleInsight[];
-  seven_day_bugs: Bug[];
-  open_bugs: Bug[];
+  // Optional: absent on a snapshot published before these fields existed —
+  // the live Blob snapshot is regenerated on its own schedule/on-demand, not
+  // atomically with a dashboard deploy, so a stale snapshot must not crash
+  // the page (2026-07-21).
+  seven_day_bugs?: Bug[];
+  open_bugs?: Bug[];
   kpi: {
     new_high: number;
     new_medium: number;
