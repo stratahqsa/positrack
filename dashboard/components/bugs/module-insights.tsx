@@ -84,7 +84,11 @@ function Th({
  * `bugsByModule`, when supplied, makes each row expandable (chevron, same
  * expand/collapse pattern as weekly/story-table.tsx) to a nested BugTable of
  * the underlying tickets — e.g. "(No module)" expands to show exactly which
- * bugs have no Module set, instead of just the count.
+ * bugs have no Module set, instead of just the count. A submodule badge is
+ * also clickable: it expands the row (if needed) and narrows the table to
+ * just that submodule (click the same badge again, or "Show all", to clear)
+ * — e.g. click "Goods Receipt" under Purchase to see only those tickets
+ * instead of every Purchase bug (2026-07-21).
  */
 export function ModuleInsights({
   modules,
@@ -96,10 +100,12 @@ export function ModuleInsights({
   const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
   const [sorted, setSorted] = React.useState<ModuleInsight[]>(() => sortModules(modules, DEFAULT_SORT));
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
+  const [submoduleFilter, setSubmoduleFilter] = React.useState<Map<string, string>>(() => new Map());
 
   React.useEffect(() => {
     setSorted(sortModules(modules, sort));
     setExpanded(new Set());
+    setSubmoduleFilter(new Map());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modules]);
 
@@ -119,6 +125,24 @@ export function ModuleInsights({
     });
   }
 
+  function selectSubmodule(module: string, submodule: string) {
+    setExpanded((prev) => new Set(prev).add(module));
+    setSubmoduleFilter((prev) => {
+      const next = new Map(prev);
+      if (next.get(module) === submodule) next.delete(module);
+      else next.set(module, submodule);
+      return next;
+    });
+  }
+
+  function clearSubmodule(module: string) {
+    setSubmoduleFilter((prev) => {
+      const next = new Map(prev);
+      next.delete(module);
+      return next;
+    });
+  }
+
   if (modules.length === 0) {
     return <div className="px-4 py-6 text-center text-[12px] text-faint">No module data.</div>;
   }
@@ -133,6 +157,8 @@ export function ModuleInsights({
         {sorted.map((m) => {
           const bugs = bugsByModule?.get(m.module);
           const isExpanded = expanded.has(m.module);
+          const activeSubmodule = submoduleFilter.get(m.module);
+          const shownBugs = bugs && activeSubmodule ? bugs.filter((b) => b.submodule === activeSubmodule) : bugs;
           return (
             <div key={m.module}>
               <div
@@ -160,15 +186,50 @@ export function ModuleInsights({
                 <Badge variant="violet" size="sm">
                   {m.count}
                 </Badge>
-                {m.submodules.slice(0, MAX_SUBMODULE_BADGES).map((sm) => (
-                  <Badge key={sm.submodule} variant="accent" size="sm">
-                    {sm.submodule} · {sm.count}
-                  </Badge>
-                ))}
+                {m.submodules.slice(0, MAX_SUBMODULE_BADGES).map((sm) => {
+                  const active = activeSubmodule === sm.submodule;
+                  return (
+                    <button
+                      key={sm.submodule}
+                      type="button"
+                      disabled={!bugs}
+                      aria-pressed={active}
+                      aria-label={`${active ? "Clear" : "Filter"} ${m.module} tickets to submodule ${sm.submodule}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (bugs) selectSubmodule(m.module, sm.submodule);
+                      }}
+                      className={cn("rounded-md", !bugs && "cursor-default")}
+                    >
+                      <Badge
+                        variant="accent"
+                        size="sm"
+                        className={active ? "ring-1 ring-accent ring-offset-1 ring-offset-surface" : undefined}
+                      >
+                        {sm.submodule} · {sm.count}
+                      </Badge>
+                    </button>
+                  );
+                })}
               </div>
               {bugs && isExpanded ? (
                 <div className="border-t border-border/30 bg-elevated/20 py-2">
-                  <BugTable rows={bugs} />
+                  {activeSubmodule ? (
+                    <div className="flex flex-wrap items-center gap-2 px-4 pb-2 text-[11px] text-muted">
+                      <span>
+                        Showing <span className="font-medium text-fg/90">{activeSubmodule}</span> only (
+                        {shownBugs?.length ?? 0})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => clearSubmodule(m.module)}
+                        className="text-accent hover:underline"
+                      >
+                        Show all {bugs.length}
+                      </button>
+                    </div>
+                  ) : null}
+                  <BugTable rows={shownBugs ?? []} showPriority />
                 </div>
               ) : null}
             </div>
