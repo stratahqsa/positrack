@@ -41,6 +41,26 @@ def test_ist_window_non_monday_still_uses_yesterday():
     w = parse.ist_window(now_ms)
     assert w["window_start_str"] == "2026-07-13"
 
+def test_submodule_folds_casing_duplicates():
+    assert parse.submodule("Product: Product category - x") == "Product Category"
+    assert parse.submodule("Product: Product Category - x") == "Product Category"
+
+def test_submodule_folds_confirmed_synonym_pairs():
+    # 2026-07-21: user-confirmed canonical spellings for near-duplicate
+    # free-text submodules that were splitting Module Insights counts.
+    assert parse.submodule("Product: Product Imports - x") == "Product Import"
+    assert parse.submodule("Product: Product Import - x") == "Product Import"
+    assert parse.submodule("Purchase: Payable Management - x") == "Payables Management"
+    assert parse.submodule("Purchase: Payables Management - x") == "Payables Management"
+    assert parse.submodule("Purchase: Receive Goods - x") == "Goods Receipt"
+    assert parse.submodule("Purchase: Goods Receipt - x") == "Goods Receipt"
+    assert parse.submodule("Sale: POS Screen - x") == "POS"
+    assert parse.submodule("Sale: Web POS - x") == "POS"
+    assert parse.submodule("Sale: POS - x") == "POS"
+    assert parse.submodule("Customers: Manage customer - x") == "Manage Customers"
+    assert parse.submodule("Customers: Manage Customers - x") == "Manage Customers"
+    assert parse.submodule("POS Register App: Customer settlement - x") == "Customer Settlement"
+
 def test_sprint_max_by_numeric_suffix():
     assert parse.sprint_max([{"name": "Sprint 9"}, {"name": "Sprint 14"}]) == "Sprint 14"
     assert parse.sprint_max([]) == ""

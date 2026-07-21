@@ -39,6 +39,10 @@ export function bugPressure(s: Snapshot): {
     totalOpen: kpi?.total_open ?? 0,
     // module_insights is pre-sorted descending by count (scripts/reports/bugs.py
     // module_insights()), so index 0 is the module with the most 7-day bugs.
+    // Deliberately always module_insights (the 7-day-scoped field), never
+    // bugs.open_bugs / the dashboard's "All Open" Module Insights view — the
+    // Health tile's "hottest module" is meant to track a stable, apples-to-
+    // apples 7-day recency window, not the full open backlog (2026-07-21).
     hottestModule: s.bugs?.module_insights?.[0]?.module ?? null,
   };
 }

@@ -92,6 +92,8 @@ export function baseSnapshot(): Snapshot {
       medium_by_state: [],
       low_by_state: [],
       module_insights: [],
+      seven_day_bugs: [],
+      open_bugs: [],
       kpi: {
         new_high: 0,
         new_medium: 0,

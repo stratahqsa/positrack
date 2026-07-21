@@ -6,7 +6,7 @@ import { BugKpi } from "@/components/bugs/bug-kpi";
 import { BugTable } from "@/components/bugs/bug-table";
 import { Section } from "@/components/bugs/section";
 import { StateBreakdown } from "@/components/bugs/state-breakdown";
-import { ModuleInsights } from "@/components/bugs/module-insights";
+import { ModuleInsightsPanel } from "@/components/bugs/module-insights-panel";
 import { priorityVariant } from "@/components/weekly/badge-tone";
 
 // Snapshot is read from disk (dev) or the Release (prod) per request —
@@ -37,7 +37,7 @@ export default async function BugsPage() {
           <h1 className="text-[15px] font-semibold tracking-tight text-fg">Bug Analysis Report</h1>
           <p className="mt-0.5 text-[12px] text-muted">
             {bugs
-              ? `Covers: ${bugs.window.label} · open High/Med/Low · module insights (7d)`
+              ? `Covers: ${bugs.window.label} · open High/Med/Low · module insights (7d / all open)`
               : `${meta.project} · ${meta.scope} · bug data not available in this snapshot`}
           </p>
         </div>
@@ -88,8 +88,8 @@ export default async function BugsPage() {
               </div>
             </Section>
 
-            <Section title="Module Insights (7d)" tone="violet" count={bugs.module_insights.length}>
-              <ModuleInsights modules={bugs.module_insights} />
+            <Section title="Module Insights" tone="violet" count={bugs.module_insights.length}>
+              <ModuleInsightsPanel sevenDayBugs={bugs.seven_day_bugs} openBugs={bugs.open_bugs} />
             </Section>
           </>
         )}
