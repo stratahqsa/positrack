@@ -73,8 +73,9 @@ def build_bugs(ctx, yt, cfg, now_ms):
     # #Unresolved priority queries, concatenated rather than one OR query, to
     # avoid relying on YouTrack multi-value query syntax this codebase has no
     # existing precedent for.
-    q2 = (q("project: %s TaskType: BUG Priority: {High} #Unresolved" % P)
-          + q("project: %s TaskType: BUG Priority: {Urgent} #Unresolved" % P))
+    q2_high = q("project: %s TaskType: BUG Priority: {High} #Unresolved" % P)
+    q2_urgent = q("project: %s TaskType: BUG Priority: {Urgent} #Unresolved" % P)
+    q2 = q2_high + q2_urgent
     q3 = q("project: %s TaskType: BUG Priority: {Medium} #Unresolved" % P)
     q4 = q("project: %s TaskType: BUG Priority: {Low} #Unresolved" % P)
     q5 = q("project: %s TaskType: BUG created: %s .. Today" % (P, w["seven_days_str"]))
@@ -85,6 +86,7 @@ def build_bugs(ctx, yt, cfg, now_ms):
         "Medium": [b for b in q1 if b["priority"] == "Medium"],
         "Low": [b for b in q1 if b["priority"] == "Low"],
     }
+    new_urgent = sum(1 for b in by_prio["High"] if b["priority"] == "Urgent")
     modules = module_insights(q5)
     return {
         "window": {"start_ms": w["start_ms"], "end_ms": w["end_ms"], "label": w["label"]},
@@ -101,6 +103,10 @@ def build_bugs(ctx, yt, cfg, now_ms):
             "new_high": len(by_prio["High"]), "new_medium": len(by_prio["Medium"]),
             "open_high": len(q2), "open_medium": len(q3), "open_low": len(q4),
             "total_open": len(q2) + len(q3) + len(q4),      # sum of 3 priority buckets (Examples_1 §7); q2 = High+Urgent
+            "new_urgent": new_urgent, "open_urgent": len(q2_urgent),   # Urgent sub-count within
+                                                                        # the combined "High" bucket
+                                                                        # above, for a "· N Urgent"
+                                                                        # annotation on the High tiles
             "modules_hit": len(modules),
         },
     }
