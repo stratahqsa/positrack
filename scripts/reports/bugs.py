@@ -1,6 +1,7 @@
 # scripts/reports/bugs.py
 """Bug Analysis data block. Pure shaping fns are unit-tested; build_bugs() wires
-the 5 queries. Rules: PRD_1 §4, Examples_1. TaskType: BUG only; explicit dates."""
+the underlying queries (Urgent folds into High — see build_bugs). Rules: PRD_1
+§4, Examples_1. TaskType: BUG only; explicit dates."""
 from collections import Counter, defaultdict
 from . import parse
 
@@ -58,7 +59,7 @@ def _dedupe(raw_list):
     return out
 
 def build_bugs(ctx, yt, cfg, now_ms):
-    """Run the 5 queries and shape the block. `yt` is the ytcore module."""
+    """Run the underlying queries and shape the block. `yt` is the ytcore module."""
     w = parse.ist_window(now_ms)
     P = cfg.project
     F = "id,idReadable,summary,created,resolved,reporter(fullName,login),customFields(name,value(name,text))"
@@ -66,13 +67,24 @@ def build_bugs(ctx, yt, cfg, now_ms):
         return [parse_bug(r) for r in _dedupe(yt.get_issues(ctx, query, fields=F))]
     q1 = [b for b in q("project: %s TaskType: BUG created: %s .. Today #Unresolved" % (P, w["window_start_str"]))
           if in_window(b["created"], w["start_ms"], w["end_ms"])]   # client-side window (Examples_1 §2 Ex3)
-    q2 = q("project: %s TaskType: BUG Priority: {High} #Unresolved" % P)
+    # "Urgent" (this instance's top severity, above High) folds into the "High"
+    # bucket everywhere in this report — no separate Urgent section, just one
+    # combined count under the existing High label (2026-07-21). Two disjoint
+    # #Unresolved priority queries, concatenated rather than one OR query, to
+    # avoid relying on YouTrack multi-value query syntax this codebase has no
+    # existing precedent for.
+    q2 = (q("project: %s TaskType: BUG Priority: {High} #Unresolved" % P)
+          + q("project: %s TaskType: BUG Priority: {Urgent} #Unresolved" % P))
     q3 = q("project: %s TaskType: BUG Priority: {Medium} #Unresolved" % P)
     q4 = q("project: %s TaskType: BUG Priority: {Low} #Unresolved" % P)
     q5 = q("project: %s TaskType: BUG created: %s .. Today" % (P, w["seven_days_str"]))
     q6 = q("project: %s TaskType: BUG #Unresolved" % P)   # every open bug, any/no priority
     old_high, new_high = split_high(q2, w["start_ms"])
-    by_prio = {p: [b for b in q1 if b["priority"] == p] for p in ("High", "Medium", "Low")}
+    by_prio = {
+        "High": [b for b in q1 if b["priority"] in ("High", "Urgent")],
+        "Medium": [b for b in q1 if b["priority"] == "Medium"],
+        "Low": [b for b in q1 if b["priority"] == "Low"],
+    }
     modules = module_insights(q5)
     return {
         "window": {"start_ms": w["start_ms"], "end_ms": w["end_ms"], "label": w["label"]},
@@ -88,7 +100,7 @@ def build_bugs(ctx, yt, cfg, now_ms):
         "kpi": {
             "new_high": len(by_prio["High"]), "new_medium": len(by_prio["Medium"]),
             "open_high": len(q2), "open_medium": len(q3), "open_low": len(q4),
-            "total_open": len(q2) + len(q3) + len(q4),      # sum of 3 priority queries (Examples_1 §7)
+            "total_open": len(q2) + len(q3) + len(q4),      # sum of 3 priority buckets (Examples_1 §7); q2 = High+Urgent
             "modules_hit": len(modules),
         },
     }

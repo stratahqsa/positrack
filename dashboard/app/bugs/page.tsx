@@ -65,7 +65,10 @@ export default async function BugsPage() {
                         {bugs.new_in_window[pri].length === 1 ? "" : "s"}
                       </span>
                     </div>
-                    <BugTable rows={bugs.new_in_window[pri]} />
+                    {/* High absorbs Urgent (scripts/reports/bugs.py::build_bugs) — the
+                        per-row Priority badge is the only way to tell the two apart here,
+                        since Medium/Low can't mix priorities there's nothing to disambiguate. */}
+                    <BugTable rows={bugs.new_in_window[pri]} showPriority={pri === "High"} />
                   </div>
                 ))}
               </div>
@@ -73,7 +76,8 @@ export default async function BugsPage() {
 
             <Section title="Older Open High Priority Bugs" tone="danger-dim" count={bugs.open_high_older.length}>
               <div className="p-4">
-                <BugTable rows={bugs.open_high_older} />
+                {/* Also a High+Urgent mix (see note above) — Priority badge tags which is which. */}
+                <BugTable rows={bugs.open_high_older} showPriority />
               </div>
             </Section>
 
