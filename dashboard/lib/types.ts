@@ -451,6 +451,10 @@ export interface BugsBlock {
     open_low: number;
     total_open: number;
     modules_hit: number;
+    // Optional for the same deploy-order reason as seven_day_bugs/open_bugs
+    // above: Urgent sub-counts within the combined "High" bucket.
+    new_urgent?: number;
+    open_urgent?: number;
   };
 }
 

@@ -24,12 +24,28 @@ const TONE_TEXT: Record<Tone, string> = {
  * `accent` highlight, not a severity count. A plain server component: pure
  * render from props, no interactivity — same pattern as weekly/kpi-cards.tsx
  * and release/release-kpi.tsx.
+ *
+ * New High/Open High get a small "N Urgent" sub-line when kpi.new_urgent /
+ * kpi.open_urgent is > 0 (2026-07-21): Urgent folds into the same "High"
+ * count (scripts/reports/bugs.py::build_bugs), so this is the only place
+ * that count surfaces at the summary level — deliberately not a 7th/8th tile,
+ * to avoid widening the strip for a number that's usually small or zero.
  */
 export function BugKpi({ kpi }: { kpi: BugsBlock["kpi"] }) {
-  const stats: { label: string; value: number; tone?: Tone }[] = [
-    { label: "New High (window)", value: kpi.new_high, tone: kpi.new_high > 0 ? "warn" : undefined },
+  const stats: { label: string; value: number; tone?: Tone; subLabel?: string }[] = [
+    {
+      label: "New High (window)",
+      value: kpi.new_high,
+      tone: kpi.new_high > 0 ? "warn" : undefined,
+      subLabel: kpi.new_urgent ? `${kpi.new_urgent} Urgent` : undefined,
+    },
     { label: "New Medium (window)", value: kpi.new_medium, tone: kpi.new_medium > 0 ? "info" : undefined },
-    { label: "Open High", value: kpi.open_high, tone: kpi.open_high > 0 ? "warn" : undefined },
+    {
+      label: "Open High",
+      value: kpi.open_high,
+      tone: kpi.open_high > 0 ? "warn" : undefined,
+      subLabel: kpi.open_urgent ? `${kpi.open_urgent} Urgent` : undefined,
+    },
     { label: "Open Medium", value: kpi.open_medium, tone: kpi.open_medium > 0 ? "info" : undefined },
     { label: "Open Low", value: kpi.open_low, tone: kpi.open_low > 0 ? "good" : undefined },
     { label: "Total Open", value: kpi.total_open, tone: kpi.total_open > 0 ? "danger" : undefined },
@@ -47,6 +63,7 @@ export function BugKpi({ kpi }: { kpi: BugsBlock["kpi"] }) {
               {s.value.toLocaleString()}
             </div>
             <div className="mt-1 text-[10px] font-medium uppercase tracking-wide text-faint">{s.label}</div>
+            {s.subLabel ? <div className="mt-0.5 text-[10px] font-semibold text-danger">{s.subLabel}</div> : null}
           </div>
         ))}
       </div>

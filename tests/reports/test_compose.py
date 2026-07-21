@@ -48,3 +48,7 @@ def test_urgent_folds_into_high_everywhere():
     assert {x["id"] for x in b["open_high_older"]} == {"PXB1-3", "PXB1-4"}
     assert b["kpi"]["open_high"] == 2
     assert b["kpi"]["new_high"] == 2
+    # Sub-counts for the "· N Urgent" tile annotation: 1 Urgent in the window,
+    # 1 Urgent among the open/older High bugs.
+    assert b["kpi"]["new_urgent"] == 1
+    assert b["kpi"]["open_urgent"] == 1
