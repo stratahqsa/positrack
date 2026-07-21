@@ -7,9 +7,9 @@ import { fmtDateTimeIst } from "@/lib/format";
 import type { Bug } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
-import { stateVariant } from "@/components/weekly/badge-tone";
+import { priorityVariant, stateVariant } from "@/components/weekly/badge-tone";
 
-type SortKey = "id" | "summary" | "created" | "state" | "assignee" | "module" | "reporter";
+type SortKey = "id" | "summary" | "created" | "state" | "priority" | "assignee" | "module" | "reporter";
 type SortDir = "asc" | "desc";
 interface SortState {
   key: SortKey;
@@ -31,6 +31,13 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "reporter", label: "Reporter" },
 ];
 
+/** Priority column is opt-in (see `showPriority` below) — every other call
+ *  site already scopes its rows to a single priority (the "High"/"Medium"/
+ *  "Low" sections, the older-open-High list), so a Priority column there
+ *  would just repeat the section title. Module Insights spans every
+ *  priority, so it turns this on. */
+const PRIORITY_COLUMN: { key: SortKey; label: string } = { key: "priority", label: "Priority" };
+
 function sortValue(bug: Bug, key: SortKey): string | number {
   switch (key) {
     case "id":
@@ -41,6 +48,8 @@ function sortValue(bug: Bug, key: SortKey): string | number {
       return bug.created;
     case "state":
       return bug.state ?? "";
+    case "priority":
+      return bug.priority || "";
     case "assignee":
       return bug.assignee || "";
     case "module":
@@ -113,9 +122,10 @@ function Th({
  * order is `created` ascending, matching the original always-sorted-by-created
  * behavior, so nothing changes visually until a header is clicked.
  */
-export function BugTable({ rows }: { rows: Bug[] }) {
+export function BugTable({ rows, showPriority = false }: { rows: Bug[]; showPriority?: boolean }) {
   const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
   const [sorted, setSorted] = React.useState<Bug[]>(() => sortBugs(rows, DEFAULT_SORT));
+  const columns = showPriority ? [...COLUMNS.slice(0, 4), PRIORITY_COLUMN, ...COLUMNS.slice(4)] : COLUMNS;
 
   React.useEffect(() => {
     setSorted(sortBugs(rows, sort));
@@ -140,7 +150,7 @@ export function BugTable({ rows }: { rows: Bug[] }) {
       <table className="w-full min-w-[820px] border-collapse">
         <thead>
           <tr className="border-b border-border/50">
-            {COLUMNS.map((c) => (
+            {columns.map((c) => (
               <Th key={c.key} label={c.label} sortKey={c.key} sort={sort} onSort={handleSort} />
             ))}
           </tr>
@@ -166,6 +176,13 @@ export function BugTable({ rows }: { rows: Bug[] }) {
                   {bug.state || "—"}
                 </Badge>
               </td>
+              {showPriority ? (
+                <td className="px-2 py-2 align-top">
+                  <Badge variant={priorityVariant(bug.priority)} size="sm">
+                    {bug.priority || "No Priority"}
+                  </Badge>
+                </td>
+              ) : null}
               <td className="px-2 py-2 align-top text-fg/80">
                 {bug.assignee || <span className="text-faint">—</span>}
               </td>
