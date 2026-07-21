@@ -89,7 +89,10 @@ export default async function BugsPage() {
             </Section>
 
             <Section title="Module Insights" tone="violet" count={bugs.module_insights.length}>
-              <ModuleInsightsPanel sevenDayBugs={bugs.seven_day_bugs} openBugs={bugs.open_bugs} />
+              <ModuleInsightsPanel
+                sevenDayBugs={bugs.seven_day_bugs ?? []}
+                openBugs={bugs.open_bugs ?? []}
+              />
             </Section>
           </>
         )}
