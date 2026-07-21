@@ -70,6 +70,7 @@ def build_bugs(ctx, yt, cfg, now_ms):
     q3 = q("project: %s TaskType: BUG Priority: {Medium} #Unresolved" % P)
     q4 = q("project: %s TaskType: BUG Priority: {Low} #Unresolved" % P)
     q5 = q("project: %s TaskType: BUG created: %s .. Today" % (P, w["seven_days_str"]))
+    q6 = q("project: %s TaskType: BUG #Unresolved" % P)   # every open bug, any/no priority
     old_high, new_high = split_high(q2, w["start_ms"])
     by_prio = {p: [b for b in q1 if b["priority"] == p] for p in ("High", "Medium", "Low")}
     modules = module_insights(q5)
@@ -80,6 +81,10 @@ def build_bugs(ctx, yt, cfg, now_ms):
         "medium_by_state": state_breakdown(q3),
         "low_by_state": state_breakdown(q4),
         "module_insights": modules,
+        "seven_day_bugs": q5,   # full 7-day bug list, so the dashboard can expand a Module
+                                 # Insights row to show the underlying tickets
+        "open_bugs": q6,   # full open-bug list (module/submodule/priority per bug), for the
+                            # dashboard's "All Open" Module Insights view + priority filter
         "kpi": {
             "new_high": len(by_prio["High"]), "new_medium": len(by_prio["Medium"]),
             "open_high": len(q2), "open_medium": len(q3), "open_low": len(q4),

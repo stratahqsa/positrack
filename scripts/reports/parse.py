@@ -58,14 +58,39 @@ def is_done(state):
     s = (state or "").lower()
     return any(d in s for d in DONE_STATES)
 
+_SUBMODULE_ALIASES = {
+    # Free-text near-duplicates observed in Module Insights submodule counts
+    # (2026-07-21, user-confirmed canonical spellings). Keyed lowercase — the
+    # lookup folds casing too, so e.g. "Product category" and "product
+    # Category" both land on the same canonical entry below.
+    "product category": "Product Category",
+    "product import": "Product Import",
+    "product imports": "Product Import",
+    "payables management": "Payables Management",
+    "payable management": "Payables Management",
+    "receive goods": "Goods Receipt",
+    "goods receipt": "Goods Receipt",
+    "pos": "POS",
+    "pos screen": "POS",
+    "pos scree": "POS",
+    "web pos": "POS",
+    "customer settlement": "Customer Settlement",
+    "manage customer": "Manage Customers",
+    "manage customers": "Manage Customers",
+}
+
 def submodule(summary):
     """Text after the FIRST colon, cut at the FIRST dash of any type; None if no
-    colon (Examples_1 §6)."""
+    colon (Examples_1 §6). Near-duplicate spellings/casings are folded to a
+    single canonical form via _SUBMODULE_ALIASES so Module Insights counts
+    aren't split across variants of the same submodule."""
     if not summary or ":" not in summary:
         return None
     after = summary.split(":", 1)[1]
     part = _DASH_RE.split(after, 1)[0].strip()
-    return part or None
+    if not part:
+        return None
+    return _SUBMODULE_ALIASES.get(part.lower(), part)
 
 def fmt_ist(ms):
     """Epoch ms → 'DD Mon YYYY, h:mm AM/PM' in IST (Examples_1 §4)."""

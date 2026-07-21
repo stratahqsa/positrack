@@ -437,6 +437,8 @@ export interface BugsBlock {
   medium_by_state: StateBreakdownRow[];
   low_by_state: StateBreakdownRow[];
   module_insights: ModuleInsight[];
+  seven_day_bugs: Bug[];
+  open_bugs: Bug[];
   kpi: {
     new_high: number;
     new_medium: number;

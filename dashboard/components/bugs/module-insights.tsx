@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { ModuleInsight } from "@/lib/types";
+import type { Bug, ModuleInsight } from "@/lib/types";
+import { BugTable } from "@/components/bugs/bug-table";
 
 /** PRD_1 §5 Section 4: "top 8 per module by count". Sliced here too (not
  *  just trusted upstream) so the ≤8 acceptance criterion holds regardless
@@ -79,13 +80,26 @@ function Th({
  * header is rendered for them. Default order (count descending) matches the
  * pre-sorted snapshot order, so nothing changes visually until a header is
  * clicked.
+ *
+ * `bugsByModule`, when supplied, makes each row expandable (chevron, same
+ * expand/collapse pattern as weekly/story-table.tsx) to a nested BugTable of
+ * the underlying tickets — e.g. "(No module)" expands to show exactly which
+ * bugs have no Module set, instead of just the count.
  */
-export function ModuleInsights({ modules }: { modules: ModuleInsight[] }) {
+export function ModuleInsights({
+  modules,
+  bugsByModule,
+}: {
+  modules: ModuleInsight[];
+  bugsByModule?: Map<string, Bug[]>;
+}) {
   const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
   const [sorted, setSorted] = React.useState<ModuleInsight[]>(() => sortModules(modules, DEFAULT_SORT));
+  const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
 
   React.useEffect(() => {
     setSorted(sortModules(modules, sort));
+    setExpanded(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modules]);
 
@@ -94,6 +108,15 @@ export function ModuleInsights({ modules }: { modules: ModuleInsight[] }) {
     const next: SortState = { key, dir };
     setSort(next);
     setSorted((prev) => sortModules(prev, next));
+  }
+
+  function toggleExpanded(module: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(module)) next.delete(module);
+      else next.add(module);
+      return next;
+    });
   }
 
   if (modules.length === 0) {
@@ -107,19 +130,50 @@ export function ModuleInsights({ modules }: { modules: ModuleInsight[] }) {
         <Th label="Bug Count" sortKey="count" sort={sort} onSort={handleSort} />
       </div>
       <div className="divide-y divide-border/40">
-        {sorted.map((m) => (
-          <div key={m.module} className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-4 py-2.5">
-            <span className="text-[12.5px] font-medium text-fg/90">{m.module}</span>
-            <Badge variant="violet" size="sm">
-              {m.count}
-            </Badge>
-            {m.submodules.slice(0, MAX_SUBMODULE_BADGES).map((sm) => (
-              <Badge key={sm.submodule} variant="accent" size="sm">
-                {sm.submodule} · {sm.count}
-              </Badge>
-            ))}
-          </div>
-        ))}
+        {sorted.map((m) => {
+          const bugs = bugsByModule?.get(m.module);
+          const isExpanded = expanded.has(m.module);
+          return (
+            <div key={m.module}>
+              <div
+                className={cn(
+                  "flex flex-wrap items-center gap-x-2 gap-y-1.5 px-4 py-2.5",
+                  bugs ? "cursor-pointer hover:bg-elevated/40" : undefined,
+                )}
+                onClick={bugs ? () => toggleExpanded(m.module) : undefined}
+              >
+                {bugs ? (
+                  <button
+                    type="button"
+                    aria-expanded={isExpanded}
+                    aria-label={`${isExpanded ? "Collapse" : "Expand"} ${bugs.length} bug${bugs.length === 1 ? "" : "s"} for ${m.module}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpanded(m.module);
+                    }}
+                    className="text-faint hover:text-fg"
+                  >
+                    <ChevronRight className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")} />
+                  </button>
+                ) : null}
+                <span className="text-[12.5px] font-medium text-fg/90">{m.module}</span>
+                <Badge variant="violet" size="sm">
+                  {m.count}
+                </Badge>
+                {m.submodules.slice(0, MAX_SUBMODULE_BADGES).map((sm) => (
+                  <Badge key={sm.submodule} variant="accent" size="sm">
+                    {sm.submodule} · {sm.count}
+                  </Badge>
+                ))}
+              </div>
+              {bugs && isExpanded ? (
+                <div className="border-t border-border/30 bg-elevated/20 py-2">
+                  <BugTable rows={bugs} />
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
