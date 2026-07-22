@@ -103,6 +103,7 @@ _SUBMODULE_ALIASES = {
     "web pos": "POS",
     "customer settlement": "Customer Settlement",
     "manage customer": "Manage Customer",
+    "manager customer": "Manage Customer",   # typo, flagged by find_submodule_dupes.py (0.97 similarity)
     "laybuy report": "Laybuy Report",
     "purchase return": "Purchase Return",
     "stock valuation": "Stock Valuation Report",

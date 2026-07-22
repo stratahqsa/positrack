@@ -59,6 +59,7 @@ def test_submodule_folds_confirmed_synonym_pairs():
     assert parse.submodule("Sale: POS - x") == "POS"
     assert parse.submodule("Customers: Manage customer - x") == "Manage Customer"
     assert parse.submodule("Customers: Manage Customers - x") == "Manage Customer"
+    assert parse.submodule("Customers: Manager Customer - x") == "Manage Customer"   # typo
     assert parse.submodule("POS Register App: Customer settlement - x") == "Customer Settlement"
 
 def test_submodule_folds_more_confirmed_synonym_pairs():
