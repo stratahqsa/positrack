@@ -1,15 +1,10 @@
 # scripts/reports/bug_blocker.py
 """Bug Blocker Dashboard data block (2026-07-22). RE-OPEN development tickets
-(TaskType: Story — the same "dev ticket" level scripts/reports/drilldown.py
-walks to via a parent Story's Subtask link) with unresolved bugs linked via an
-OUTWARD "Bugs Reported" link. Urgent/High/Medium unresolved bugs BLOCK the
-ticket from closing; unresolved Low-priority bugs are shown but don't block.
-
-ASSUMPTION TO VERIFY: querying TaskType: Story directly (no live YouTrack
-access was available to confirm the exact TaskType of the ticket level shown
-in the mockup screenshots) — matches the existing convention in schedule.py /
-release_schedule.py for "the dev-ticket level". If a real snapshot run comes
-back with zero tickets where some are expected, check this first."""
+(TaskType: Development — user-confirmed against PXB1-7513, the "dev ticket"
+level scripts/reports/drilldown.py walks to via a parent Story's Subtask
+link) with unresolved bugs linked via an OUTWARD "Bugs Reported" link.
+Urgent/High/Medium unresolved bugs BLOCK the ticket from closing; unresolved
+Low-priority bugs are shown but don't block."""
 from . import parse
 
 BLOCKING_PRIORITIES = ("Urgent", "High", "Medium")
@@ -54,7 +49,7 @@ def build_bug_blocker(ctx, yt, cfg):
     LF = "id,idReadable,summary,links(direction,linkType(name),issues(id,idReadable))"
     BF = "id,idReadable,summary,customFields(name,value(name,text))"
 
-    tickets_raw = yt.get_issues(ctx, "project: %s TaskType: Story State: RE-OPEN" % P, fields=LF)
+    tickets_raw = yt.get_issues(ctx, "project: %s TaskType: Development State: RE-OPEN" % P, fields=LF)
 
     seen_bug = {}
 

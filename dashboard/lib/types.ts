@@ -325,7 +325,7 @@ export interface BlockerBug {
   priority: string;
 }
 
-/** A RE-OPEN development ticket (TaskType: Story) with its linked bugs split
+/** A RE-OPEN development ticket (TaskType: Development) with its linked bugs split
  *  into blocking (Urgent/High/Medium, unresolved) vs low-priority
  *  (unresolved but non-blocking) — `status` is "blocked" whenever
  *  `blockingBugs` is non-empty, "ready" otherwise. */

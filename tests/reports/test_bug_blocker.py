@@ -31,7 +31,7 @@ class FakeYT:
         self.bugs = {b["idReadable"]: b for b in bugs}
 
     def get_issues(self, ctx, query, fields=None, limit=None):
-        if "TaskType: Story" in query:
+        if "TaskType: Development" in query:
             return self.tickets
         for bid, raw in self.bugs.items():
             if bid in query:
