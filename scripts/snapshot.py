@@ -57,7 +57,7 @@ sys.path.insert(0, _HERE)  # for gamification.py
 import ytcore as yt  # noqa: E402
 import gamification as gam  # noqa: E402
 from reports.config import load_config  # scripts/ is already on sys.path (line 53)
-from reports import bugs as rbugs, schedule as rsched, drilldown as rdrill  # noqa: E402
+from reports import bugs as rbugs, schedule as rsched, drilldown as rdrill, bug_blocker as rblocker  # noqa: E402
 
 ENGINE_VERSION = "control-tower-b1"
 DATA_DIR = os.path.join(_ROOT, "web", "data")
@@ -469,6 +469,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     bugs_block = rbugs.build_bugs(ctx, yt, rcfg, now_ms)
     schedule_block = rsched.build_schedule(ctx, yt, rcfg)
     rdrill.attach_drilldown(ctx, yt, schedule_block["stories"])
+    bug_blocker_block = rblocker.build_bug_blocker(ctx, yt, rcfg)
     config_block = {
         "project": rcfg.project, "scope": rcfg.scope, "exclude_ids": rcfg.exclude_ids,
         "man_day_minutes": rcfg.man_day_minutes, "jun29_cutoff_iso": rcfg.jun29_cutoff_iso,
@@ -499,6 +500,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
         "config": config_block,
         "bugs": bugs_block,
         "schedule": schedule_block,
+        "bug_blocker": bug_blocker_block,
     }
 
 

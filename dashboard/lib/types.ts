@@ -311,6 +311,36 @@ export interface Snapshot {
    * `lib/brief.ts`'s `getBrief()`/`isBriefOk()`, never accessed directly.
    */
   ai_brief?: AiBrief;
+  /** Bug Blocker Dashboard data block (RE-OPEN dev tickets + linked bugs).
+   *  Optional: absent on snapshots that predate the feature. */
+  bug_blocker?: BugBlockerBlock;
+}
+
+/** A bug linked to a Bug Blocker ticket via an OUTWARD "Bugs Reported" link,
+ *  already filtered to unresolved-only (scripts/reports/bug_blocker.py). */
+export interface BlockerBug {
+  id: string;
+  summary: string;
+  state: string;
+  priority: string;
+}
+
+/** A RE-OPEN development ticket (TaskType: Development) with its linked bugs split
+ *  into blocking (Urgent/High/Medium, unresolved) vs low-priority
+ *  (unresolved but non-blocking) — `status` is "blocked" whenever
+ *  `blockingBugs` is non-empty, "ready" otherwise. */
+export interface BlockerTicket {
+  id: string;
+  summary: string;
+  state: string;
+  blockingBugs: BlockerBug[];
+  lowPriorityBugs: BlockerBug[];
+  status: "blocked" | "ready";
+}
+
+export interface BugBlockerBlock {
+  tickets: BlockerTicket[];
+  kpi: { total: number; blocked: number; ready: number };
 }
 
 /**
