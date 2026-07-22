@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Bug, ModuleInsight } from "@/lib/types";
 import { BugTable } from "@/components/bugs/bug-table";
+import { submoduleFoldKey } from "@/lib/bug-modules";
 
 /** PRD_1 §5 Section 4: "top 8 per module by count". Sliced here too (not
  *  just trusted upstream) so the ≤8 acceptance criterion holds regardless
@@ -158,7 +159,14 @@ export function ModuleInsights({
           const bugs = bugsByModule?.get(m.module);
           const isExpanded = expanded.has(m.module);
           const activeSubmodule = submoduleFilter.get(m.module);
-          const shownBugs = bugs && activeSubmodule ? bugs.filter((b) => b.submodule === activeSubmodule) : bugs;
+          // Fold-key equality, not exact match: the clicked badge's label is
+          // whichever spelling won the majority vote (bug-modules.ts /
+          // module_insights()), so individual bugs tagged with a differently
+          // cased/pluralized (but equivalent) submodule must still match.
+          const shownBugs =
+            bugs && activeSubmodule
+              ? bugs.filter((b) => !!b.submodule && submoduleFoldKey(b.submodule) === submoduleFoldKey(activeSubmodule))
+              : bugs;
           return (
             <div key={m.module}>
               <div

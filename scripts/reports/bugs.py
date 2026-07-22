@@ -44,10 +44,22 @@ def module_insights(seven_day_bugs, top_submodules=8):
         by_mod[b.get("module") or "(No module)"].append(b)
     out = []
     for mod, items in sorted(by_mod.items(), key=lambda kv: -len(kv[1])):
-        subs = Counter(s for s in (parse.submodule(i.get("summary") or "") for i in items) if s)
+        raw_subs = [s for s in (parse.submodule(i.get("summary") or "") for i in items) if s]
+        # Group by fold-key so casing/pluralization duplicates NOT YET in
+        # parse._SUBMODULE_ALIASES (not yet reported) still collapse into one
+        # row (2026-07-22) — display is whichever exact spelling is most
+        # common within the group; ties broken alphabetically, which (thanks
+        # to ASCII ordering putting uppercase before lowercase) tends to
+        # prefer a Title Case spelling over an all-lowercase one.
+        groups = defaultdict(Counter)
+        for s in raw_subs:
+            groups[parse.submodule_fold_key(s)][s] += 1
+        merged = Counter({key: sum(variants.values()) for key, variants in groups.items()})
+        display_for_key = {key: min(variants.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+                            for key, variants in groups.items()}
         out.append({"module": mod, "count": len(items),
-                    "submodules": [{"submodule": s, "count": n}
-                                   for s, n in subs.most_common(top_submodules)]})
+                    "submodules": [{"submodule": display_for_key[k], "count": n}
+                                   for k, n in merged.most_common(top_submodules)]})
     return out
 
 def _dedupe(raw_list):

@@ -58,39 +58,72 @@ def is_done(state):
     s = (state or "").lower()
     return any(d in s for d in DONE_STATES)
 
+def submodule_fold_key(text):
+    """Comparison key for near-duplicate submodule matching: lowercase, plus
+    a conservative singular fold — strip one trailing 's' from the LAST WORD
+    only (never a double-s ending, and only when the word is long enough
+    that it isn't a short acronym like "POS") — so pure casing/pluralization
+    variants (e.g. "Laybuy Report"/"Laybuy report", "Purchase Return"/
+    "Purchase Returns") compare equal without needing a table entry for
+    every future case (2026-07-22). This never REWRITES a submodule's text,
+    only detects a match — used by module_insights() to merge counts and by
+    the dashboard's submodule drill-down/filter, never to alter what a bug
+    record itself displays. Real synonyms/abbreviations that don't differ by
+    mere casing/plurality (e.g. "RG" vs "Goods Receipt") still need an
+    explicit _SUBMODULE_ALIASES entry below — no fold key can safely infer
+    those."""
+    key = (text or "").strip().lower()
+    if not key:
+        return key
+    words = key.rsplit(" ", 1)
+    last = words[-1]
+    if last.endswith("s") and not last.endswith("ss") and len(last) > 4:
+        words[-1] = last[:-1]
+    return " ".join(words)
+
 _SUBMODULE_ALIASES = {
-    # Free-text near-duplicates observed in Module Insights submodule counts
-    # (2026-07-21, user-confirmed canonical spellings). Keyed lowercase — the
-    # lookup folds casing too, so e.g. "Product category" and "product
-    # Category" both land on the same canonical entry below.
+    # Real synonyms/abbreviations/naming-preference calls that need domain
+    # knowledge — submodule_fold_key() alone can't safely infer these (e.g.
+    # "RG" doesn't textually resemble "Goods Receipt"; "Stock Valuation" vs
+    # "...Report" differs by a whole word, not just casing/plurality).
+    # Keyed by submodule_fold_key(), so only ONE entry is needed per group
+    # regardless of singular/plural spelling — e.g. "Product Imports" already
+    # folds to the same key as "Product Import" below, no separate entry
+    # needed. User-confirmed canonical spellings, 2026-07-21/22.
     "product category": "Product Category",
     "product import": "Product Import",
-    "product imports": "Product Import",
     "payables management": "Payables Management",
     "payable management": "Payables Management",
-    "receive goods": "Goods Receipt",
+    "receive good": "Goods Receipt",
     "goods receipt": "Goods Receipt",
+    "rg": "Goods Receipt",
     "pos": "POS",
     "pos screen": "POS",
     "pos scree": "POS",
     "web pos": "POS",
     "customer settlement": "Customer Settlement",
-    "manage customer": "Manage Customers",
-    "manage customers": "Manage Customers",
+    "manage customer": "Manage Customer",
+    "laybuy report": "Laybuy Report",
+    "purchase return": "Purchase Return",
+    "stock valuation": "Stock Valuation Report",
+    "stock valuation report": "Stock Valuation Report",
 }
 
 def submodule(summary):
     """Text after the FIRST colon, cut at the FIRST dash of any type; None if no
     colon (Examples_1 §6). Near-duplicate spellings/casings are folded to a
     single canonical form via _SUBMODULE_ALIASES so Module Insights counts
-    aren't split across variants of the same submodule."""
+    aren't split across variants of the same submodule. Only covers cases
+    with a confirmed canonical spelling; module_insights() additionally
+    auto-merges casing/pluralization variants that AREN'T in this table yet
+    (submodule_fold_key(), above) without rewriting the per-bug text here."""
     if not summary or ":" not in summary:
         return None
     after = summary.split(":", 1)[1]
     part = _DASH_RE.split(after, 1)[0].strip()
     if not part:
         return None
-    return _SUBMODULE_ALIASES.get(part.lower(), part)
+    return _SUBMODULE_ALIASES.get(submodule_fold_key(part), part)
 
 def fmt_ist(ms):
     """Epoch ms → 'DD Mon YYYY, h:mm AM/PM' in IST (Examples_1 §4)."""

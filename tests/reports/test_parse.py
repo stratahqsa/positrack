@@ -57,9 +57,28 @@ def test_submodule_folds_confirmed_synonym_pairs():
     assert parse.submodule("Sale: POS Screen - x") == "POS"
     assert parse.submodule("Sale: Web POS - x") == "POS"
     assert parse.submodule("Sale: POS - x") == "POS"
-    assert parse.submodule("Customers: Manage customer - x") == "Manage Customers"
-    assert parse.submodule("Customers: Manage Customers - x") == "Manage Customers"
+    assert parse.submodule("Customers: Manage customer - x") == "Manage Customer"
+    assert parse.submodule("Customers: Manage Customers - x") == "Manage Customer"
     assert parse.submodule("POS Register App: Customer settlement - x") == "Customer Settlement"
+
+def test_submodule_folds_more_confirmed_synonym_pairs():
+    # 2026-07-22: second round of user-confirmed canonical spellings.
+    assert parse.submodule("Sale: Laybuy Report - x") == "Laybuy Report"
+    assert parse.submodule("Sale: Laybuy report - x") == "Laybuy Report"
+    assert parse.submodule("Purchase: Purchase Return - x") == "Purchase Return"
+    assert parse.submodule("Purchase: Purchase Returns - x") == "Purchase Return"
+    assert parse.submodule("Purchase: RG - x") == "Goods Receipt"
+    assert parse.submodule("Reports: Stock Valuation - x") == "Stock Valuation Report"
+    assert parse.submodule("Reports: Stock Valuation Report - x") == "Stock Valuation Report"
+
+def test_submodule_fold_key_folds_casing_and_trailing_plural():
+    assert parse.submodule_fold_key("Laybuy Report") == parse.submodule_fold_key("Laybuy report")
+    assert parse.submodule_fold_key("Purchase Return") == parse.submodule_fold_key("Purchase Returns")
+    # A short trailing word (an acronym like POS) must NOT be singular-folded.
+    assert parse.submodule_fold_key("Web POS") == "web pos"
+    assert parse.submodule_fold_key("POS") == "pos"
+    # A double-s ending must not be stripped either.
+    assert parse.submodule_fold_key("Database Access") == "database access"
 
 def test_sprint_max_by_numeric_suffix():
     assert parse.sprint_max([{"name": "Sprint 9"}, {"name": "Sprint 14"}]) == "Sprint 14"

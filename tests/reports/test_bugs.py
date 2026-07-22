@@ -83,6 +83,22 @@ def test_module_insights_merges_submodule_near_duplicates():
     assert mods[0]["module"] == "Sale"
     assert mods[0]["submodules"] == [{"submodule": "POS", "count": 6}]
 
+def test_module_insights_auto_merges_casing_and_plural_without_alias_entry():
+    # 2026-07-22: NOT in parse._SUBMODULE_ALIASES — proves the generic
+    # fold-key layer catches future casing/pluralization duplicates on its
+    # own, without needing every future pair reported and added by hand.
+    seven = ([{"summary": "Reports: Widget Config - a", "module": "Reports"}] * 4
+             + [{"summary": "Reports: widget config - b", "module": "Reports"}]
+             + [{"summary": "Reports: Widget Configs - c", "module": "Reports"}])
+    mods = bugs.module_insights(seven)
+    assert mods[0]["submodules"] == [{"submodule": "Widget Config", "count": 6}]
+
+def test_module_insights_tie_break_prefers_title_case():
+    seven = ([{"summary": "Reports: Widget Config - a", "module": "Reports"}]
+             + [{"summary": "Reports: widget config - b", "module": "Reports"}])
+    mods = bugs.module_insights(seven)
+    assert mods[0]["submodules"] == [{"submodule": "Widget Config", "count": 2}]
+
 def test_t13_reopen_and_open_are_distinct_state_breakdown_rows():
     # Examples_1 §9 T13: RE-OPEN must not be mis-bucketed as OPEN (exact-value
     # tally, no substring collapsing between the two states).
