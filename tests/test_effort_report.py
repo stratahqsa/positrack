@@ -113,6 +113,18 @@ def test_categorize_non_phase1_pending_story_excluded_from_rollup():
     assert rec["rollup"] == {"server": 30, "ui": 0, "testing": 60}
 
 
+def test_categorize_phase3_pending_story_also_excluded_from_rollup():
+    # broadened 2026-07-18: a Phase 3 story is excluded from the rollup exactly
+    # like a Phase 2 one, and counted in p2_stories/excluded from p1_pending.
+    ep = _epic("E-5b", "OPEN", stories=[
+        _story("S-p3", "OPEN", scope="PHASE 3", server=999, ui=999, testing=999),
+        _story("S-p1", "OPEN", scope="PHASE 1", server=30, ui=0, testing=60)])
+    rec = yt.categorize_epic(ep)
+    assert rec["rollup"] == {"server": 30, "ui": 0, "testing": 60}
+    assert rec["p2_stories"] == 1   # counts Phase 2 AND Phase 3 deferrals
+    assert rec["p1_pending"] == 1   # only the Phase 1 story is still P1-pending
+
+
 # ---------- per-story spend (Consensus: reuse the PM's scheduled-report recipe) ----------
 def test_epic_stories_carry_own_spent_time_field():
     # each story's own "Spent time" custom field is read straight onto its dict,
@@ -175,8 +187,12 @@ def test_missing_est_flag_rule():
     assert ok["missing_est"] is False             # Dev>0 and QA>0
 
 
-# ---------- P2 activity-history filter (recipe trap: activity-based, not scope-field) ----------
-def test_p2_scope_change_after_cutoff_only():
+# ---------- P2/P3 activity-history filter (recipe trap: activity-based, not scope-field) ----------
+# 2026-07-18 redesign (PXB1-2201): _scope_changed_p1_to_p2 (matched only on
+# "PHASE 1 removed") was replaced by _scope_arrived_at_after_cutoff, called
+# with the epic's CURRENT phase — so a multi-hop epic reports its most recent
+# arrival, not its first departure from Phase 1. See its own docstring.
+def test_scope_arrived_at_after_cutoff_ignores_before_cutoff_and_wrong_field():
     cut = 1782729000000
     acts = [
         {"field": {"name": "Scope"}, "timestamp": cut - 1,
@@ -186,16 +202,83 @@ def test_p2_scope_change_after_cutoff_only():
         {"field": {"name": "Priority"}, "timestamp": cut + 5,
          "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},     # wrong field -> no
     ]
-    matched, ts = yt._scope_changed_p1_to_p2(acts, cut)
-    assert matched and ts == cut + 1000
+    assert yt._scope_arrived_at_after_cutoff(acts, cut, "PHASE 2") == cut + 1000
 
 
-def test_p2_ignores_reverse_and_unrelated_changes():
+def test_scope_arrived_at_after_cutoff_multi_hop_reports_latest_arrival_at_current_phase():
+    # PXB1-2201 shape: PHASE 1 -> PHASE 2 (day 5) -> PHASE 3 (day 10). Asking
+    # for "PHASE 3" (the epic's current scope) must report day 10, not day 5.
+    cut = 1782729000000
+    day5 = cut + 5 * 86400000
+    day10 = cut + 10 * 86400000
+    acts = [
+        {"field": {"name": "Scope"}, "timestamp": day5,
+         "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},
+        {"field": {"name": "Scope"}, "timestamp": day10,
+         "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 3"}]},
+    ]
+    assert yt._scope_arrived_at_after_cutoff(acts, cut, "PHASE 3") == day10
+    assert yt._scope_arrived_at_after_cutoff(acts, cut, "PHASE 2") == day5
+
+
+def test_scope_arrived_at_after_cutoff_finds_the_hop_regardless_of_removed():
+    # this function only answers "when did `phase_name` get added after the
+    # cutoff" — it doesn't require "PHASE 1" to appear in `removed` anywhere.
+    # (Whether an epic with this exact activity shape belongs in the backlog
+    # at all is _scope_at_or_before's job, tested below — PXB1-4916's shape
+    # is precisely this one, and it's excluded at that eligibility layer, not
+    # here.)
+    cut = 1782729000000
+    acts = [{"field": {"name": "Scope"}, "timestamp": cut + 2000,
+             "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 3"}]}]
+    assert yt._scope_arrived_at_after_cutoff(acts, cut, "PHASE 3") == cut + 2000
+
+
+def test_scope_arrived_at_after_cutoff_ignores_reverse_and_empty():
     cut = 1782729000000
     reverse = [{"field": {"name": "Scope"}, "timestamp": cut + 5,
                 "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 1"}]}]
-    assert yt._scope_changed_p1_to_p2(reverse, cut) == (False, None)
-    assert yt._scope_changed_p1_to_p2([], cut) == (False, None)
+    assert yt._scope_arrived_at_after_cutoff(reverse, cut, "PHASE 2") is None
+    assert yt._scope_arrived_at_after_cutoff([], cut, "PHASE 2") is None
+
+
+# ---------- P2/P3-backlog eligibility gate (PXB1-4916 vs PXB1-49) ----------
+def test_scope_at_or_before_pxb1_4916_shape_was_already_p2_at_cutoff():
+    # already PHASE 2 before the cutoff, later reclassified PHASE 2->PHASE 3
+    # after it — scope AT the cutoff was PHASE 2, not PHASE 1, so this epic
+    # must be excluded from the backlog regardless of the later hop.
+    cut = 1782729000000
+    acts = [
+        {"field": {"name": "Scope"}, "timestamp": cut - 86400000,
+         "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},   # before cutoff
+        {"field": {"name": "Scope"}, "timestamp": cut + 86400000,
+         "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 3"}]},   # after cutoff
+    ]
+    assert yt._scope_at_or_before(acts, cut) == "PHASE 2"
+
+
+def test_scope_at_or_before_pxb1_49_shape_was_p1_at_cutoff_then_left():
+    # PHASE 1 at the cutoff (no Scope activity before it at all — constant
+    # since creation), left afterward. Must be included.
+    cut = 1782729000000
+    acts = [{"field": {"name": "Scope"}, "timestamp": cut + 86400000,
+             "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]}]
+    assert yt._scope_at_or_before(acts, cut) == "PHASE 1"
+
+
+def test_scope_at_or_before_uses_latest_change_at_or_before_cutoff():
+    cut = 1782729000000
+    acts = [
+        {"field": {"name": "Scope"}, "timestamp": cut - 2000,
+         "removed": [{"name": "PHASE 1"}], "added": [{"name": "PHASE 2"}]},
+        {"field": {"name": "Scope"}, "timestamp": cut - 1000,   # later, still before cutoff -> wins
+         "removed": [{"name": "PHASE 2"}], "added": [{"name": "PHASE 1"}]},
+    ]
+    assert yt._scope_at_or_before(acts, cut) == "PHASE 1"
+
+
+def test_scope_at_or_before_none_when_no_scope_activity_at_all():
+    assert yt._scope_at_or_before([], 1782729000000) is None
 
 
 # ---------- spend attribution (Consensus Rev #2) ----------

@@ -229,7 +229,7 @@ MAN_DAY = 480
 # Case-insensitive substring match against a State name marks an issue "done".
 DONE_STATES = ("done", "fixed", "verified", "closed", "won't fix", "duplicate", "obsolete")
 # The reporting baseline: epics resolved after this land in the Done section, and
-# a Scope PHASE 1->PHASE 2 change after this marks an epic as P2-backlog.
+# a Scope PHASE 1->{PHASE 2 or PHASE 3} change after this marks an epic as P2-backlog.
 EFFORT_CUTOFF_DEFAULT = "2026-06-29T10:30:00.000Z"
 
 def iso_to_ms(iso):
@@ -379,7 +379,8 @@ def _issue_block(query, columns, issues):
 #   * DONE / PENDING / MIXED / NO_STORIES per State
 #   * estimate rollup = Server+UI+Testing over PENDING Phase-1 stories, with an
 #     epic-level fallback ONLY for epics with no stories at all (NO_STORIES)
-#   * P2 backlog via activity history (Scope PHASE 1->PHASE 2 after the cutoff)
+#   * P2/P3 backlog via activity history (Scope PHASE 1->{PHASE 2 or PHASE 3} after
+#     the cutoff)
 #   * true spend from a work-item sweep attributed story->epic (NOT the Spent-time
 #     rollup, which — verified live — is not backed by work items on the epic)
 _EST_FIELDS = ("Server Estimation", "UI Estimation", "Testing Estimation")
@@ -402,6 +403,17 @@ def _cf_str(issue, name):
     if isinstance(v, dict):
         return v.get("name") or ""
     return v or ""
+
+# Any phase after Phase 1 counts as "deferred out of Phase 1 scope" — a story
+# or epic scoped here no longer belongs in Phase-1 P1-pending/rollup figures.
+# Extend this tuple, not the call sites, if a Phase 4 is ever introduced.
+_DEFERRED_PHASES = ("PHASE 2", "PHASE 3")
+
+def _is_deferred_scope(scope):
+    """True if `scope` (a raw Scope string) names a later-phase deferral —
+    i.e. moved out of Phase 1, regardless of which later phase it landed in."""
+    s = (scope or "").upper()
+    return any(p in s for p in _DEFERRED_PHASES)
 
 def _epic_stories(epic):
     """Extract the Subtask/OUTWARD child stories of a recipe-shaped epic dict as a
@@ -442,13 +454,17 @@ def categorize_epic(epic):
     estimate rollup {server,ui,testing} with epic-level fallback, the missing-est
     flag, and the child story list. No network."""
     stories = _epic_stories(epic)
-    # Scope-leakage signals (v15 parity): stories deferred to Phase 2 under a P1 epic,
-    # plus how many P1 stories are still pending. Derived from child scopes/states we
-    # already fetched — no extra calls. A P1 epic with P2 stories is being partially
-    # deferred ("hollowed out"), which the tower should surface as a watch item.
-    p2_stories = sum(1 for s in stories if "PHASE 2" in (s.get("scope") or "").upper())
+    # Scope-leakage signals (v15 parity, broadened to any later phase — Phase 2
+    # or Phase 3 — 2026-07-18): stories deferred out of Phase 1 under a P1
+    # epic, plus how many P1 stories are still pending. Derived from child
+    # scopes/states we already fetched — no extra calls. A P1 epic with
+    # deferred stories is being partially deferred ("hollowed out"), which the
+    # tower should surface as a watch item regardless of which later phase the
+    # story landed in. Field name `p2_stories` is kept as-is (wire-format
+    # stability) even though it now also counts Phase 3.
+    p2_stories = sum(1 for s in stories if _is_deferred_scope(s.get("scope")))
     p1_pending = sum(1 for s in stories
-                     if "PHASE 2" not in (s.get("scope") or "").upper()
+                     if not _is_deferred_scope(s.get("scope"))
                      and not is_done_state(s.get("state")))
     epic_state = _cf_str(epic, "State")
     epic_est = {"server": _cf_minutes(epic, "Server Estimation"),
@@ -507,10 +523,46 @@ def categorize_epic(epic):
     rec["missing_est"] = (rollup["server"] == 0 and rollup["ui"] == 0) or (rollup["testing"] == 0)
     return rec
 
-def _scope_changed_p1_to_p2(activities, cutoff_ms):
-    """PURE port of recipe Step 6's filter: True if the CustomFieldCategory activity
-    list contains a Scope change removing 'PHASE 1' and adding 'PHASE 2' after the
-    cutoff. Returns (matched, latest_change_ms). No network."""
+def _scope_at_or_before(activities, cutoff_ms):
+    """Reconstructs the Scope value effective AT cutoff_ms from activity
+    history: the `added` value of the LATEST Scope-change at-or-before the
+    cutoff, or — if no Scope-change happened that early — the `removed`
+    value of the EARLIEST Scope-change strictly after the cutoff (nothing
+    changed before that one, so the scope was constant through the cutoff
+    moment). None if there's no Scope-change activity at all. No network.
+
+    2026-07-18 (PXB1-4916 vs PXB1-49): this is the P2/P3-backlog ELIGIBILITY
+    gate — an epic only belongs in the backlog if it was PHASE 1 specifically
+    AT the cutoff. PXB1-4916 was already PHASE 2 before the cutoff and later
+    hopped PHASE 2->PHASE 3 — that hop is a reclassification of an
+    already-deferred epic, not a fresh departure from Phase 1, so it must be
+    excluded even though a naive "did some post-cutoff activity land on the
+    current phase" check (the previous, too-broad version of this gate) would
+    catch it. PXB1-49 (PHASE 1 at cutoff, left afterward to PHASE 2 and
+    possibly on to PHASE 3) must be included."""
+    scope_activities = [a for a in (activities or []) if (a.get("field") or {}).get("name") == "Scope"]
+    at_or_before = [a for a in scope_activities if (a.get("timestamp") or 0) <= cutoff_ms]
+    if at_or_before:
+        latest = max(at_or_before, key=lambda a: a.get("timestamp") or 0)
+        added = latest.get("added") or []
+        return added[0].get("name") if added else None
+    after = [a for a in scope_activities if (a.get("timestamp") or 0) > cutoff_ms]
+    if after:
+        earliest = min(after, key=lambda a: a.get("timestamp") or 0)
+        removed = earliest.get("removed") or []
+        return removed[0].get("name") if removed else None
+    return None
+
+def _scope_arrived_at_after_cutoff(activities, cutoff_ms, phase_name):
+    """Latest timestamp (strictly after cutoff_ms) at which a Scope-change
+    activity added `phase_name` specifically — i.e. when the epic
+    (re-)arrived at exactly this phase. Returns the timestamp, or None if it
+    never did after the cutoff. No network. This is the P2/P3-backlog
+    DISPLAY date (paired with `_scope_at_or_before` above as the eligibility
+    gate) — called with `phase_name` = the epic's CURRENT scope, so a
+    multi-hop epic (PHASE 1 -> PHASE 2 -> PHASE 3) reports the most recent
+    arrival at wherever it actually sits today (PXB1-2201: the 2->3 date,
+    not the earlier 1->2 one)."""
     latest = None
     for a in (activities or []):
         if (a.get("field") or {}).get("name") != "Scope":
@@ -518,13 +570,11 @@ def _scope_changed_p1_to_p2(activities, cutoff_ms):
         ts = a.get("timestamp") or 0
         if ts <= cutoff_ms:
             continue
-        removed = a.get("removed") or []
         added = a.get("added") or []
-        if any((x or {}).get("name") == "PHASE 1" for x in removed) and \
-           any((x or {}).get("name") == "PHASE 2" for x in added):
+        if any((x or {}).get("name") == phase_name for x in added):
             if latest is None or ts > latest:
                 latest = ts
-    return (latest is not None), latest
+    return latest
 
 def _build_story_epic_map(cats):
     """PURE: {story_id -> epic_id} from categorized epics' Subtask/OUTWARD children.
@@ -608,8 +658,8 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     Discovers every open in-scope epic PLUS epics resolved after `cutoff_iso`,
     categorizes them (DONE/PENDING/MIXED/NO_STORIES) from their Subtask/OUTWARD
     stories, rolls up Server+UI+Testing estimation over the pending in-scope stories
-    (with an epic-level fallback), computes the P2 backlog from Scope-change activity
-    history, and attributes TRUE logged time (a single phase-wide work-item sweep,
+    (with an epic-level fallback), computes the P2/P3 backlog from Scope-change
+    activity history, and attributes TRUE logged time (a single phase-wide work-item sweep,
     joined story->epic) with an overshoot flag.
 
     Returns structured data — sections + per-section totals + a grand total — so any
@@ -689,25 +739,65 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     mixed = [r for r in cats if r["category"] == "MIXED"]
     no_stories = [r for r in cats if r["category"] == "NO_STORIES"]
 
-    # --- P2 backlog: Scope PHASE 1->PHASE 2 after cutoff, via activity history ---
-    # Candidates are the current open PHASE 2 epics; the PHASE 1->PHASE 2 direction and
-    # the after-cutoff timing are enforced by _scope_changed_p1_to_p2 on each activity.
-    # Candidates carry summary/created/Assignee up front so a match needs no
-    # second per-epic meta GET (was: one extra GET per matched candidate).
-    p2_candidates = get_issues(ctx, "project: %s TaskType: EPIC Scope: {PHASE 2} #Unresolved" % project,
-                               fields="idReadable,summary,created,customFields(name,value(name))", top=300)
+    # --- P2 backlog: was PHASE 1 AT the cutoff, has since moved to {PHASE 2 or
+    # PHASE 3}, via activity history. Broadened 2026-07-18: epics moved straight
+    # to Phase 3 (or moved to Phase 2 and later to Phase 3) used to be invisible
+    # here since candidates were queried as Scope: {PHASE 2} only. Candidates
+    # are now the current open PHASE 2 OR PHASE 3 epics.
+    #
+    # ELIGIBILITY (2026-07-18 fix, PXB1-4916 vs PXB1-49): must have been PHASE 1
+    # specifically AT the cutoff (_scope_at_or_before) — NOT merely "did some
+    # post-cutoff activity land on the current phase" (that broader check wrongly
+    # included epics like PXB1-4916 that were already PHASE 2 before the cutoff
+    # and later reclassified PHASE 2->PHASE 3, which isn't a fresh departure from
+    # Phase 1). An epic like PXB1-49 that was PHASE 1 at the cutoff and left
+    # afterward (to PHASE 2, possibly on to PHASE 3) is correctly included.
+    #
+    # `changed_at`/`phase` report the epic's CURRENT phase and when it arrived
+    # there specifically (PXB1-2201): an epic that hopped PHASE 1 -> PHASE 2 ->
+    # PHASE 3 reports "PHASE 3, on <the 2->3 date>", not the earlier 1->2 hop's
+    # date — see _scope_arrived_at_after_cutoff's docstring.
+    #
+    # `stories` (additive) carries the epic's PENDING stories only (done ones
+    # excluded — this section is about outstanding work), each phase-labeled on
+    # the dashboard the same way Watch List's drill-down is, per request.
+    #
+    # LOAD CUT (2026-07-23): the candidates query itself now carries the full
+    # meta fieldset (summary/created/Scope/Estimations + links for the pending-
+    # story drill-down), so the old per-candidate meta GET is gone — one bulk
+    # query + one activities GET per candidate is all this section costs. The
+    # Scope re-check below is retained purely defensively (single fetch = no
+    # drift window, but a mis-matched row must still never slip through).
+    #
+    # Field/key names (`p2_backlog`, `p2_candidates`) are kept as-is (wire-
+    # format stability) even though the set now also includes Phase 3 moves;
+    # `phase`/`stories` are new, additive fields — older snapshots simply lack
+    # them.
+    p2_candidates = get_issues(ctx, "project: %s TaskType: EPIC Scope: {PHASE 2}, {PHASE 3} #Unresolved" % project,
+                               fields="idReadable,summary,created,"
+                                      "customFields(name,value(name,minutes)),"
+                                      "links(direction,linkType(name),issues(idReadable,summary,created,"
+                                      "customFields(name,value(name,minutes))))", top=300)
     p2_backlog = []
     for e in p2_candidates:
         pid = e.get("idReadable")
         if not pid or pid in exclude:
             continue
+        current_phase = _cf_str(e, "Scope")
+        if current_phase not in _DEFERRED_PHASES:
+            continue  # defensive: the query matched, but never trust a stray row
         act = GET(ctx, "/api/issues/%s/activities?categories=CustomFieldCategory"
                        "&fields=timestamp,added(name),removed(name),field(name)" % pid)
-        matched, changed_at = _scope_changed_p1_to_p2(act if isinstance(act, list) else [], cutoff_ms)
-        if matched:
+        acts = act if isinstance(act, list) else []
+        if _scope_at_or_before(acts, cutoff_ms) != "PHASE 1":
+            continue
+        changed_at = _scope_arrived_at_after_cutoff(acts, cutoff_ms, current_phase)
+        if changed_at is not None:
+            pending_stories = [s for s in _epic_stories(e) if not is_done_state(s.get("state"))]
             p2_backlog.append({"id": pid, "summary": e.get("summary") or "",
                                "assignee": _cf_str(e, "Assignee"),
-                               "created": e.get("created"), "changed_at": changed_at})
+                               "created": e.get("created"), "changed_at": changed_at,
+                               "phase": current_phase, "stories": pending_stories})
 
     def _sum_section(recs):
         s = {"server": 0, "ui": 0, "testing": 0, "total": 0, "spent": 0}
@@ -801,8 +891,8 @@ def _effort_blocks(rep):
     blocks.append({"kind": "table", "headers": ["Epic", "Summary", "Assignee", "Created"],
                    "rows": [[r["id"], (r["summary"] or "")[:50], r["assignee"] or "—",
                              days_since(r["created"])] for r in rep["sections"]["no_stories"]]})
-    # Section 4 — P2 backlog (Epic, Summary, Assignee, Created only — per v14)
-    blocks.append({"kind": "raw", "s": "\n## P2 Backlog — Scope moved PHASE 1→PHASE 2 after cutoff (%d)" % c["p2_backlog"]})
+    # Section 4 — P2/P3 backlog (Epic, Summary, Assignee, Created only — per v14)
+    blocks.append({"kind": "raw", "s": "\n## P2/P3 Backlog — Scope moved out of PHASE 1 after cutoff (%d)" % c["p2_backlog"]})
     blocks.append({"kind": "table", "headers": ["Epic", "Summary", "Assignee", "Created"],
                    "rows": [[r["id"], (r["summary"] or "")[:50], r["assignee"] or "—",
                              days_since(r["created"])] for r in rep["sections"]["p2_backlog"]]})

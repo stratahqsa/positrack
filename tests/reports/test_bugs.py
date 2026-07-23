@@ -73,6 +73,32 @@ def test_t11_null_module_groups_under_no_module_bucket():
     mods = bugs.module_insights(seven)
     assert mods == [{"module": "(No module)", "count": 3, "submodules": []}]
 
+def test_module_insights_merges_submodule_near_duplicates():
+    # 2026-07-21: "POS" / "POS Screen" / "Web POS" under the same Module used
+    # to count as 3 separate submodule rows; must now merge into one.
+    seven = ([{"summary": "Sale: POS - crash", "module": "Sale"}] * 2
+             + [{"summary": "Sale: POS Screen - freeze", "module": "Sale"}] * 3
+             + [{"summary": "Sale: Web POS - blank", "module": "Sale"}])
+    mods = bugs.module_insights(seven)
+    assert mods[0]["module"] == "Sale"
+    assert mods[0]["submodules"] == [{"submodule": "POS", "count": 6}]
+
+def test_module_insights_auto_merges_casing_and_plural_without_alias_entry():
+    # 2026-07-22: NOT in parse._SUBMODULE_ALIASES — proves the generic
+    # fold-key layer catches future casing/pluralization duplicates on its
+    # own, without needing every future pair reported and added by hand.
+    seven = ([{"summary": "Reports: Widget Config - a", "module": "Reports"}] * 4
+             + [{"summary": "Reports: widget config - b", "module": "Reports"}]
+             + [{"summary": "Reports: Widget Configs - c", "module": "Reports"}])
+    mods = bugs.module_insights(seven)
+    assert mods[0]["submodules"] == [{"submodule": "Widget Config", "count": 6}]
+
+def test_module_insights_tie_break_prefers_title_case():
+    seven = ([{"summary": "Reports: Widget Config - a", "module": "Reports"}]
+             + [{"summary": "Reports: widget config - b", "module": "Reports"}])
+    mods = bugs.module_insights(seven)
+    assert mods[0]["submodules"] == [{"submodule": "Widget Config", "count": 2}]
+
 def test_t13_reopen_and_open_are_distinct_state_breakdown_rows():
     # Examples_1 §9 T13: RE-OPEN must not be mis-bucketed as OPEN (exact-value
     # tally, no substring collapsing between the two states).

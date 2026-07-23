@@ -6,7 +6,7 @@ import { BugKpi } from "@/components/bugs/bug-kpi";
 import { BugTable } from "@/components/bugs/bug-table";
 import { Section } from "@/components/bugs/section";
 import { StateBreakdown } from "@/components/bugs/state-breakdown";
-import { ModuleInsights } from "@/components/bugs/module-insights";
+import { ModuleInsightsPanel } from "@/components/bugs/module-insights-panel";
 import { priorityVariant } from "@/components/weekly/badge-tone";
 
 // Snapshot is read from disk (dev) or the Release (prod) per request —
@@ -37,7 +37,7 @@ export default async function BugsPage() {
           <h1 className="text-[15px] font-semibold tracking-tight text-fg">Bug Analysis Report</h1>
           <p className="mt-0.5 text-[12px] text-muted">
             {bugs
-              ? `Covers: ${bugs.window.label} · open High/Med/Low · module insights (7d)`
+              ? `Covers: ${bugs.window.label} · open High/Med/Low · module insights (7d / all open)`
               : `${meta.project} · ${meta.scope} · bug data not available in this snapshot`}
           </p>
         </div>
@@ -65,7 +65,10 @@ export default async function BugsPage() {
                         {bugs.new_in_window[pri].length === 1 ? "" : "s"}
                       </span>
                     </div>
-                    <BugTable rows={bugs.new_in_window[pri]} />
+                    {/* High absorbs Urgent (scripts/reports/bugs.py::build_bugs) — the
+                        per-row Priority badge is the only way to tell the two apart here,
+                        since Medium/Low can't mix priorities there's nothing to disambiguate. */}
+                    <BugTable rows={bugs.new_in_window[pri]} showPriority={pri === "High"} />
                   </div>
                 ))}
               </div>
@@ -73,7 +76,8 @@ export default async function BugsPage() {
 
             <Section title="Older Open High Priority Bugs" tone="danger-dim" count={bugs.open_high_older.length}>
               <div className="p-4">
-                <BugTable rows={bugs.open_high_older} />
+                {/* Also a High+Urgent mix (see note above) — Priority badge tags which is which. */}
+                <BugTable rows={bugs.open_high_older} showPriority />
               </div>
             </Section>
 
@@ -88,8 +92,11 @@ export default async function BugsPage() {
               </div>
             </Section>
 
-            <Section title="Module Insights (7d)" tone="violet" count={bugs.module_insights.length}>
-              <ModuleInsights modules={bugs.module_insights} />
+            <Section title="Module Insights" tone="violet" count={bugs.module_insights.length}>
+              <ModuleInsightsPanel
+                sevenDayBugs={bugs.seven_day_bugs ?? []}
+                openBugs={bugs.open_bugs ?? []}
+              />
             </Section>
           </>
         )}

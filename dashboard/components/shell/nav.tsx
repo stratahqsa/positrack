@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, CalendarClock, Rocket, Bug, Gauge, Sparkles } from "lucide-react";
+import { Activity, CalendarClock, Rocket, Bug, Gauge, ShieldAlert, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Surface {
@@ -14,12 +14,12 @@ interface Surface {
 }
 
 /**
- * The 6 report surfaces — Health, Weekly Deadline, Release Schedule, Bug
- * Analysis, Effort, and Insights all have real routes now. `href` stays
- * optional on `Surface` so a future surface without a route yet can still
- * render as a disabled "soon" item, same as every surface here did before
- * its own plan wired it up. Insights is the odd one out functionally (an
- * AI-generated read-only briefing, not a direct snapshot-block view) but
+ * The 7 report surfaces — Health, Weekly Deadline, Release Schedule, Bug
+ * Analysis, Effort, Bug Blocker, and Insights all have real routes now.
+ * `href` stays optional on `Surface` so a future surface without a route yet
+ * can still render as a disabled "soon" item, same as every surface here did
+ * before its own plan wired it up. Insights is the odd one out functionally
+ * (an AI-generated read-only briefing, not a direct snapshot-block view) but
  * navigates the same way as the rest.
  */
 const SURFACES: Surface[] = [
@@ -28,6 +28,7 @@ const SURFACES: Surface[] = [
   { key: "release-schedule", label: "Release Schedule", icon: Rocket, href: "/schedule" },
   { key: "bug-analysis", label: "Bug Analysis", icon: Bug, href: "/bugs" },
   { key: "effort", label: "Effort", icon: Gauge, href: "/effort" },
+  { key: "bug-blocker", label: "Bug Blocker", icon: ShieldAlert, href: "/blocker" },
   { key: "insights", label: "Insights", icon: Sparkles, href: "/insights" },
 ];
 

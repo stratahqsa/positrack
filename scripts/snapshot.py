@@ -4,9 +4,11 @@ snapshot.py — the POSX Control Tower snapshot PRODUCER (Phase B data layer).
 
 WHY PRECOMPUTE, NOT LIVE: a full effort_report takes ~285s against YouTrack, which
 blows the 60s ceiling of a Vercel Hobby function. So the data path is: this producer
-runs hourly in GitHub Actions (or locally), composes a single JSON snapshot, and
-commits it under web/data/. The Next.js UI reads that JSON SERVER-SIDE — no
-Python on Vercel, no raw-data endpoints, no token in the browser.
+runs on a schedule in GitHub Actions (5x/day: 5am/8am/12pm/4pm/7pm IST — see
+.github/workflows/snapshot.yml; moved down from hourly 2026-07-17, the hourly sweep
+was noticeably slowing down YouTrack's own frontend) or locally, composes a single
+JSON snapshot, and commits it under web/data/. The Next.js UI reads that JSON
+SERVER-SIDE — no Python on Vercel, no raw-data endpoints, no token in the browser.
 
 It composes ONE snapshot dict from the shared engine (core/ytcore.py):
   * effort         — full effort_report(project, scope) output (the report shape).
@@ -21,9 +23,9 @@ It composes ONE snapshot dict from the shared engine (core/ytcore.py):
   * meta           — generated_at + project/scope/sprint + as-of HH:MM + engine_version.
 
 Output: web/data/snapshot-<UTCdate>.json (kept for history, frozen on the first run
-of each UTC day) AND web/data/latest.json (overwritten every run, hourly). These
-are read server-side by the UI; they are NOT in web/public and are never shipped
-to the browser.
+of each UTC day) AND web/data/latest.json (overwritten every run). These are read
+server-side by the UI; they are NOT in web/public and are never shipped to the
+browser.
 
 Run:
     set -a; . ~/.positrack-yt.env; set +a
@@ -55,7 +57,7 @@ sys.path.insert(0, _HERE)  # for gamification.py
 import ytcore as yt  # noqa: E402
 import gamification as gam  # noqa: E402
 from reports.config import load_config  # scripts/ is already on sys.path (line 53)
-from reports import bugs as rbugs, schedule as rsched, drilldown as rdrill  # noqa: E402
+from reports import bugs as rbugs, schedule as rsched, drilldown as rdrill, bug_blocker as rblocker  # noqa: E402
 
 ENGINE_VERSION = "control-tower-b1"
 DATA_DIR = os.path.join(_ROOT, "web", "data")
@@ -208,11 +210,11 @@ def _prior_snapshot_red(project, scope, exclude_date=None):
     (path, red_dict) or (None, None).
 
     `exclude_date` (a "YYYY-MM-DD" string) skips today's own dated file. This
-    matters now that the producer runs hourly and a run's own frozen file for
-    today may already be on disk (seeded from the release so write_snapshot()'s
-    freeze check can see it) — without this exclusion, the 2nd+ run of a day
-    would diff today's snapshot against itself (delta ~0) instead of against
-    yesterday's, silently breaking the "day-over-day" label."""
+    matters whenever the producer runs more than once a day, since a run's own
+    frozen file for today may already be on disk (seeded from the release so
+    write_snapshot()'s freeze check can see it) — without this exclusion, the
+    2nd+ run of a day would diff today's snapshot against itself (delta ~0)
+    instead of against yesterday's, silently breaking the "day-over-day" label."""
     paths = sorted(glob.glob(os.path.join(DATA_DIR, "snapshot-*.json")))
     for p in reversed(paths):
         if exclude_date and os.path.basename(p) == "snapshot-%s.json" % exclude_date:
@@ -536,6 +538,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     bugs_block = rbugs.build_bugs(ctx, yt, rcfg, now_ms)
     schedule_block = rsched.build_schedule(ctx, yt, rcfg)
     rdrill.attach_drilldown(ctx, yt, schedule_block["stories"])
+    bug_blocker_block = rblocker.build_bug_blocker(ctx, yt, rcfg)
     config_block = {
         "project": rcfg.project, "scope": rcfg.scope, "exclude_ids": rcfg.exclude_ids,
         "man_day_minutes": rcfg.man_day_minutes, "jun29_cutoff_iso": rcfg.jun29_cutoff_iso,
@@ -564,6 +567,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
         "config": config_block,
         "bugs": bugs_block,
         "schedule": schedule_block,
+        "bug_blocker": bug_blocker_block,
     }
 
 
@@ -585,11 +589,12 @@ def _load_roster():
 def write_snapshot(snapshot):
     """Write web/data/snapshot-<UTCdate>.json (history) AND overwrite latest.json.
 
-    The producer now runs hourly, but day-over-day RED delta (build_insights) and
-    the trend chart both assume exactly one historical file per calendar day. So
-    the dated file is written ONCE per day (first run after UTC midnight freezes
-    it) and left alone on every later run that day; latest.json always reflects
-    the most recent run so the live dashboard is hourly-fresh regardless.
+    The producer runs more than once a day, but day-over-day RED delta
+    (build_insights) and the trend chart both assume exactly one historical
+    file per calendar day. So the dated file is written ONCE per day (first
+    run after UTC midnight freezes it) and left alone on every later run that
+    day; latest.json always reflects the most recent run so the live
+    dashboard is as fresh as the last scheduled run regardless.
 
     Returns the two paths."""
     os.makedirs(DATA_DIR, exist_ok=True)

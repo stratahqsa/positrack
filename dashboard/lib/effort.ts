@@ -32,12 +32,15 @@ function toWatchItem(epic: Epic, source: WatchSource): WatchListItem {
 
 /**
  * S5 Watch List (PRD_3 "Watch List (S5)" / Examples_3 §8): PENDING (S1) and
- * MIXED (S2) epics that contain at least one Phase 2 story
- * (`p2_stories > 0`) — DONE/NO_STORIES epics are never watch-list candidates
- * regardless of their fields, since only `sections.pending`/`sections.mixed`
- * are read. `ready` = the PM's action is to flip the epic's Scope to Phase 2
- * — true iff there's no Phase 1 work left blocking that (`p1_pending === 0`,
- * T13). S1 entries precede S2 entries (Examples_3 §8's own row order).
+ * MIXED (S2) epics that contain at least one story deferred to a later phase
+ * — Phase 2 or Phase 3 (`p2_stories > 0`; the field name predates the Phase-3
+ * broadening on 2026-07-18 and is kept for wire-format stability) —
+ * DONE/NO_STORIES epics are never watch-list candidates regardless of their
+ * fields, since only `sections.pending`/`sections.mixed` are read. `ready` =
+ * the PM's action is to flip the epic's Scope to whichever later phase its
+ * stories moved to — true iff there's no Phase 1 work left blocking that
+ * (`p1_pending === 0`, T13). S1 entries precede S2 entries (Examples_3 §8's
+ * own row order).
  * `p1_pending`/`p2_stories` default to 0 when absent (optional fields on
  * older snapshots) so a legacy epic never crashes and never wrongly
  * qualifies.
@@ -63,7 +66,7 @@ export function missingEstCount(effort: Effort): number {
 }
 
 /** Info-bar count: how many epics are on the watch list at all (S1+S2
- *  combined) — the "N Phase-1 epics contain Phase 2 stories" figure. */
+ *  combined) — the "N Phase-1 epics contain P2/P3 stories" figure. */
 export function hasP2Count(effort: Effort): number {
   return watchList(effort).length;
 }

@@ -58,14 +58,73 @@ def is_done(state):
     s = (state or "").lower()
     return any(d in s for d in DONE_STATES)
 
+def submodule_fold_key(text):
+    """Comparison key for near-duplicate submodule matching: lowercase, plus
+    a conservative singular fold — strip one trailing 's' from the LAST WORD
+    only (never a double-s ending, and only when the word is long enough
+    that it isn't a short acronym like "POS") — so pure casing/pluralization
+    variants (e.g. "Laybuy Report"/"Laybuy report", "Purchase Return"/
+    "Purchase Returns") compare equal without needing a table entry for
+    every future case (2026-07-22). This never REWRITES a submodule's text,
+    only detects a match — used by module_insights() to merge counts and by
+    the dashboard's submodule drill-down/filter, never to alter what a bug
+    record itself displays. Real synonyms/abbreviations that don't differ by
+    mere casing/plurality (e.g. "RG" vs "Goods Receipt") still need an
+    explicit _SUBMODULE_ALIASES entry below — no fold key can safely infer
+    those."""
+    key = (text or "").strip().lower()
+    if not key:
+        return key
+    words = key.rsplit(" ", 1)
+    last = words[-1]
+    if last.endswith("s") and not last.endswith("ss") and len(last) > 4:
+        words[-1] = last[:-1]
+    return " ".join(words)
+
+_SUBMODULE_ALIASES = {
+    # Real synonyms/abbreviations/naming-preference calls that need domain
+    # knowledge — submodule_fold_key() alone can't safely infer these (e.g.
+    # "RG" doesn't textually resemble "Goods Receipt"; "Stock Valuation" vs
+    # "...Report" differs by a whole word, not just casing/plurality).
+    # Keyed by submodule_fold_key(), so only ONE entry is needed per group
+    # regardless of singular/plural spelling — e.g. "Product Imports" already
+    # folds to the same key as "Product Import" below, no separate entry
+    # needed. User-confirmed canonical spellings, 2026-07-21/22.
+    "product category": "Product Category",
+    "product import": "Product Import",
+    "payables management": "Payables Management",
+    "payable management": "Payables Management",
+    "receive good": "Goods Receipt",
+    "goods receipt": "Goods Receipt",
+    "rg": "Goods Receipt",
+    "pos": "POS",
+    "pos screen": "POS",
+    "pos scree": "POS",
+    "web pos": "POS",
+    "customer settlement": "Customer Settlement",
+    "manage customer": "Manage Customer",
+    "manager customer": "Manage Customer",   # typo, flagged by find_submodule_dupes.py (0.97 similarity)
+    "laybuy report": "Laybuy Report",
+    "purchase return": "Purchase Return",
+    "stock valuation": "Stock Valuation Report",
+    "stock valuation report": "Stock Valuation Report",
+}
+
 def submodule(summary):
     """Text after the FIRST colon, cut at the FIRST dash of any type; None if no
-    colon (Examples_1 §6)."""
+    colon (Examples_1 §6). Near-duplicate spellings/casings are folded to a
+    single canonical form via _SUBMODULE_ALIASES so Module Insights counts
+    aren't split across variants of the same submodule. Only covers cases
+    with a confirmed canonical spelling; module_insights() additionally
+    auto-merges casing/pluralization variants that AREN'T in this table yet
+    (submodule_fold_key(), above) without rewriting the per-bug text here."""
     if not summary or ":" not in summary:
         return None
     after = summary.split(":", 1)[1]
     part = _DASH_RE.split(after, 1)[0].strip()
-    return part or None
+    if not part:
+        return None
+    return _SUBMODULE_ALIASES.get(submodule_fold_key(part), part)
 
 def fmt_ist(ms):
     """Epoch ms → 'DD Mon YYYY, h:mm AM/PM' in IST (Examples_1 §4)."""
@@ -73,17 +132,28 @@ def fmt_ist(ms):
     return dt.strftime("%d %b %Y, %-I:%M %p")
 
 def ist_window(now_ms):
-    """The Bug Analysis window: yesterday 00:00 IST → now (Examples_1 §2).
-    Returns start_ms, end_ms, label, yesterday_str (YYYY-MM-DD), seven_days_str."""
+    """The Bug Analysis window: yesterday 00:00 IST → now (Examples_1 §2),
+    EXCEPT on Monday runs, where the window starts the PRECEDING FRIDAY
+    00:00 IST instead — so a Monday-morning run still covers bugs reported
+    over the weekend (Fri/Sat/Sun), which a plain "yesterday" (Sunday)
+    window would silently drop. (2026-07-20: the dashboard never had this
+    Monday rule; the standalone pxb1-bug-analysis skill already did, and
+    this ports the same behavior here.) The day-of-week check runs on the
+    already-IST-localized date, so it can't be thrown off by a UTC/IST
+    calendar-date mismatch near midnight — same care as `in_window` below.
+    Returns start_ms, end_ms, label, window_start_str (YYYY-MM-DD — was
+    `yesterday_str`, renamed since it isn't always yesterday), seven_days_str."""
     now_ist = datetime.datetime.fromtimestamp(now_ms / 1000, IST)
     today = now_ist.date()
-    yest = today - datetime.timedelta(days=1)
-    start_ist = datetime.datetime(yest.year, yest.month, yest.day, 0, 0, tzinfo=IST)
+    days_back = 3 if today.weekday() == 0 else 1  # Monday (weekday()==0) -> back to Friday
+    window_start_date = today - datetime.timedelta(days=days_back)
+    start_ist = datetime.datetime(
+        window_start_date.year, window_start_date.month, window_start_date.day, 0, 0, tzinfo=IST)
     start_ms = int(start_ist.timestamp() * 1000)
     return {
         "start_ms": start_ms,
         "end_ms": now_ms,
-        "yesterday_str": yest.isoformat(),
+        "window_start_str": window_start_date.isoformat(),
         "seven_days_str": (today - datetime.timedelta(days=7)).isoformat(),
         "label": "%s → %s IST" % (fmt_ist(start_ms), fmt_ist(now_ms)),
     }

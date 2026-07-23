@@ -8,6 +8,7 @@ import { Section } from "@/components/effort/section";
 import { EffortKpi } from "@/components/effort/effort-kpi";
 import { EpicEffortTable } from "@/components/effort/epic-effort-table";
 import { WatchList } from "@/components/effort/watch-list";
+import { P2Backlog } from "@/components/effort/p2-backlog";
 import { IssueLink } from "@/components/ui/issue-link";
 
 // Snapshot is read from disk (dev) or the Release (prod) per request —
@@ -59,8 +60,8 @@ export default async function EffortPage() {
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-violet/30 bg-violet/[0.08] px-4 py-2.5 text-[12.5px] text-violet">
                 <Layers className="size-4 shrink-0" />
                 <span>
-                  <strong className="tabular">{hasP2}</strong> Phase-1 epic{hasP2 === 1 ? "" : "s"} contain Phase 2
-                  stories
+                  <strong className="tabular">{hasP2}</strong> Phase-1 epic{hasP2 === 1 ? "" : "s"} contain Phase
+                  2/3 stories
                   {readyToMove > 0 ? (
                     <>
                       {" "}
@@ -133,49 +134,11 @@ export default async function EffortPage() {
                 )}
               </Section>
 
-              <Section title="📁 P2 Backlog (moved after 29 Jun)" tone="violet" count={effort.counts.p2_backlog}>
-                {effort.sections.p2_backlog.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-[12px] text-faint">
-                    No epics currently in the P2 backlog.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto scroll-slim">
-                    <table className="w-full min-w-[560px] border-collapse">
-                      <thead className="bg-surface-2/95">
-                        <tr className="text-[10px] font-semibold uppercase tracking-wide text-faint">
-                          <th className="px-2 py-2 text-left">Epic</th>
-                          <th className="px-2 py-2 text-left">Summary</th>
-                          <th className="px-2 py-2 text-left">Assignee</th>
-                          <th className="px-2 py-2 text-left">Created</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {effort.sections.p2_backlog.map((item) => (
-                          <tr key={item.id} className="border-t border-border/50 text-[12px] hover:bg-elevated/40">
-                            <td className="whitespace-nowrap px-2 py-2 align-top">
-                              <IssueLink id={item.id} showIcon={false} />
-                            </td>
-                            <td className="max-w-[320px] px-2 py-2 align-top">
-                              <span className="line-clamp-2 text-fg/85">{item.summary}</span>
-                              <div className="mt-0.5 text-[10.5px] text-violet/80">
-                                → P2 on {fmtDate(item.changed_at)}
-                              </div>
-                            </td>
-                            <td className="px-2 py-2 align-top text-fg/80">
-                              {item.assignee || <span className="text-faint">Unassigned</span>}
-                            </td>
-                            <td className="whitespace-nowrap px-2 py-2 align-top text-muted">
-                              {fmtDate(item.created)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              <Section title="📁 P2/P3 Backlog (moved after 29 Jun)" tone="violet" count={effort.counts.p2_backlog}>
+                <P2Backlog items={effort.sections.p2_backlog} />
               </Section>
 
-              <Section title="👀 Watch List: P1 Epics with P2 Stories" tone="violet" count={watch.length}>
+              <Section title="👀 Watch List: P1 Epics with P2/P3 Stories" tone="violet" count={watch.length}>
                 <WatchList items={watch} />
               </Section>
             </div>

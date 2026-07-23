@@ -88,7 +88,9 @@ export interface Epic {
   priority?: string;
   /** Owning module/component label. Optional on older snapshots. */
   module?: string;
-  /** Stories deferred to Phase 2 under this P1 epic (scope-leakage). Optional. */
+  /** Stories deferred to a later phase — Phase 2 or Phase 3 — under this P1
+   *  epic (scope-leakage). Field name predates the Phase-3 broadening
+   *  (2026-07-18) and is kept for wire-format stability. Optional. */
   p2_stories?: number;
   /** Still-pending Phase-1 stories. Optional on older snapshots. */
   p1_pending?: number;
@@ -101,7 +103,17 @@ export interface P2Item {
   summary: string;
   assignee: string;
   created: number;
+  /** When the epic arrived at its CURRENT phase specifically (not its first
+   *  departure from Phase 1) — a PHASE 1 -> PHASE 2 -> PHASE 3 epic reports
+   *  the 2->3 date. See core/ytcore.py's _scope_arrived_at_after_cutoff. */
   changed_at: number;
+  /** The epic's current scope, e.g. "PHASE 2" or "PHASE 3". Optional: absent
+   *  on snapshots that predate this field (2026-07-18). */
+  phase?: string;
+  /** The epic's PENDING stories only (done ones already excluded upstream —
+   *  this section is about outstanding work). Optional: absent on snapshots
+   *  that predate this field (2026-07-18). */
+  stories?: Story[];
 }
 
 export interface EffortSections {
@@ -243,8 +255,9 @@ export interface RedCounts {
    */
   role_owned?: number;
   /**
-   * Open P1 epics with stories deferred to Phase 2 (scope leakage / watch list).
-   * A watch signal, NOT summed into total_red. Optional on older snapshots.
+   * Open P1 epics with stories deferred to a later phase — Phase 2 or Phase 3
+   * (scope leakage / watch list). A watch signal, NOT summed into total_red.
+   * Optional on older snapshots.
    */
   deferred?: number;
 }
@@ -290,7 +303,7 @@ export interface Snapshot {
   schedule?: ScheduleBlock;
   /**
    * AI-generated proactive briefing (top issues, since-yesterday deltas, most-
-   * behind people), baked into the snapshot by the hourly GitHub Action.
+   * behind people), baked into the snapshot by the Snapshot GitHub Action.
    * Optional: absent on snapshots that predate the feature, AND fail-soft —
    * a bad/timed-out model call also leaves this absent rather than writing a
    * broken `ai_brief` (see `status`/`reason` on AiBrief for the case where a
@@ -298,6 +311,36 @@ export interface Snapshot {
    * `lib/brief.ts`'s `getBrief()`/`isBriefOk()`, never accessed directly.
    */
   ai_brief?: AiBrief;
+  /** Bug Blocker Dashboard data block (RE-OPEN dev tickets + linked bugs).
+   *  Optional: absent on snapshots that predate the feature. */
+  bug_blocker?: BugBlockerBlock;
+}
+
+/** A bug linked to a Bug Blocker ticket via an OUTWARD "Bugs Reported" link,
+ *  already filtered to unresolved-only (scripts/reports/bug_blocker.py). */
+export interface BlockerBug {
+  id: string;
+  summary: string;
+  state: string;
+  priority: string;
+}
+
+/** A RE-OPEN development ticket (TaskType: Development) with its linked bugs split
+ *  into blocking (Urgent/High/Medium, unresolved) vs low-priority
+ *  (unresolved but non-blocking) — `status` is "blocked" whenever
+ *  `blockingBugs` is non-empty, "ready" otherwise. */
+export interface BlockerTicket {
+  id: string;
+  summary: string;
+  state: string;
+  blockingBugs: BlockerBug[];
+  lowPriorityBugs: BlockerBug[];
+  status: "blocked" | "ready";
+}
+
+export interface BugBlockerBlock {
+  tickets: BlockerTicket[];
+  kpi: { total: number; blocked: number; ready: number };
 }
 
 /**
@@ -424,6 +467,12 @@ export interface BugsBlock {
   medium_by_state: StateBreakdownRow[];
   low_by_state: StateBreakdownRow[];
   module_insights: ModuleInsight[];
+  // Optional: absent on a snapshot published before these fields existed —
+  // the live Blob snapshot is regenerated on its own schedule/on-demand, not
+  // atomically with a dashboard deploy, so a stale snapshot must not crash
+  // the page (2026-07-21).
+  seven_day_bugs?: Bug[];
+  open_bugs?: Bug[];
   kpi: {
     new_high: number;
     new_medium: number;
@@ -432,6 +481,10 @@ export interface BugsBlock {
     open_low: number;
     total_open: number;
     modules_hit: number;
+    // Optional for the same deploy-order reason as seven_day_bugs/open_bugs
+    // above: Urgent sub-counts within the combined "High" bucket.
+    new_urgent?: number;
+    open_urgent?: number;
   };
 }
 

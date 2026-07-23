@@ -18,7 +18,8 @@ Claude), and the review/merge process — in plain language.
 - **Live link:** https://posxphase1.positrack.live · **access code:** `posx2026`
 - It replaces the 4 daily HTML reports that used to be posted in the PosiboltX Admin
   WhatsApp group. **One link, always current, filterable, drill-downable.**
-- Data refreshes **automatically every hour** from YouTrack. Nobody maintains it by hand.
+- Data refreshes **automatically 5×/day (5am / 8am / 12pm / 4pm / 7pm IST)** from
+  YouTrack. Nobody maintains it by hand.
 - To change something: a **maintainer** asks Claude (§4) and opens a PR; the **approver**
   merges it once CI is green (§5).
 
@@ -52,7 +53,7 @@ Open the link, enter the code once (it remembers you). Five tabs across the top:
 The single most important thing to understand.
 
 ```
-YouTrack (support.posibolt.com)  ──►  Python scripts compute ONE snapshot (hourly)
+YouTrack (support.posibolt.com)  ──►  Python scripts compute ONE snapshot (5x/day)
                                               │
                                               ▼
                                       published to Vercel Blob (a file)
@@ -78,8 +79,11 @@ and view helps.
 
 ## 3. Refreshing the data (usually automatic)
 
-- **Automatic:** a scheduled job runs **hourly** — pulls YouTrack, builds the snapshot,
-  publishes it. The dashboard is at most ~1 hour behind on its own.
+- **Automatic:** a scheduled job runs **5×/day, at 5am / 8am / 12pm / 4pm / 7pm IST** —
+  pulls YouTrack, builds the snapshot, publishes it. The dashboard can be up to ~10 hours
+  behind on its own overnight (between the 7pm and 5am runs) — moved down from hourly
+  because the hourly sweep was noticeably slowing down YouTrack's own frontend for the
+  team.
 - **On demand** (fresh *right now*): GitHub → **Actions → "Snapshot" → Run workflow →
   branch `master` → Run**. ~6 min later the dashboard shows the new numbers (no redeploy).
 - **"Data as of HH:MM"** in the header tells you how fresh the current numbers are.
@@ -145,7 +149,8 @@ are fine to merge.
 > **Deploys:** the live site is deployed via the Vercel CLI, so **merging a PR updates the
 > code but not the live site yet.** After merging a UI change, ask Claude to *"deploy the
 > reports dashboard"*, or connect Git auto-deploy once (`vercel git connect`) so merges
-> deploy themselves. **Data changes need no deploy** — they flow through the hourly snapshot.
+> deploy themselves. **Data changes need no deploy** — they flow through the next
+> scheduled snapshot (§3).
 
 ---
 
