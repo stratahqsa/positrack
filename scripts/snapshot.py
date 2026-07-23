@@ -245,75 +245,120 @@ def build_insights(effort, project, scope, today_date=None):
     }
 
 
-# ---------------------------------------------------------------- gamification
-def _person_signals(ctx, project, login, worklog_authors):
-    """Derive the FROZEN hygiene signals for one assignee from ytcore counts.
-
-    Signals (all health fractions in [0,1]):
-      stale_free       = 1 - stale/open        (open work touched within STALE_DAYS)
-      estimated        = 1 - unestimated/open  (open work carrying an estimate)
-      moving           = updated_recent/open   (open work updated within the window)
-      on_time_logging  = 1.0 if the person logged worklog time within the window else 0
-    No output metric (hours/closures) is ever an input — see gamification.py.
-    """
-    q = "project: %s #Unresolved Assignee: %s" % (project, login)
-    open_n = yt.count_soft(ctx, q)
-    if not isinstance(open_n, int) or open_n < 0:
-        open_n = 0
-    stale_n = yt.count_soft(ctx, q + " updated: * .. {minus %dd}" % STALE_DAYS)
-    unest_n = yt.count_soft(ctx, q + " has: -{Estimate}")
-    moved_n = yt.count_soft(ctx, q + " updated: {minus %dd} .. Today" % LOGGING_WINDOW_DAYS)
-    stale_n = stale_n if isinstance(stale_n, int) and stale_n >= 0 else 0
-    unest_n = unest_n if isinstance(unest_n, int) and unest_n >= 0 else 0
-    moved_n = moved_n if isinstance(moved_n, int) and moved_n >= 0 else 0
-    return {
-        "stale_free": _frac(open_n - stale_n, open_n),
-        "estimated": _frac(open_n - unest_n, open_n),
-        "moving": _frac(moved_n, open_n),
-        "on_time_logging": 1.0 if login in worklog_authors else 0.0,
-    }, {"open": open_n, "stale": stale_n, "unestimated": unest_n, "moved": moved_n}
+# ------------------------------------------------- shared open-issues sweep
+# The ONE unresolved-issues sweep every local derivation below shares. Fields
+# carry the assignee (login+name), the update stamp, and the Estimate value so
+# per-person signals, owner resolution, AND board hygiene all come from a
+# single paged query — this replaced 4 polled count queries PER PERSON plus 4
+# more for hygiene (~120 requests/run at 29 assignees).
+OPEN_SWEEP_FIELDS = "idReadable,updated,customFields(name,value(login,fullName,minutes))"
 
 
-def _recent_worklog_authors(ctx, project, sprint):
-    """Set of logins who logged worklog time within LOGGING_WINDOW_DAYS (for the
-    on_time_logging signal). Uses a windowed time_spent sweep grouped by author."""
-    start = (_now() - datetime.timedelta(days=LOGGING_WINDOW_DAYS)).strftime("%Y-%m-%d")
-    try:
-        ws = yt.time_spent(ctx, project=project, sprint=sprint, start=start,
-                           group_by="author", with_items=True)
-    except yt.YTError:
-        return set(), {}
-    logins = set()
-    fullname_by_login = {}
-    for it in ws.get("items", []):
-        lg = it.get("login")
-        if lg:
-            logins.add(lg)
-            fullname_by_login[lg] = it.get("author") or lg
-    return logins, fullname_by_login
+def _fetch_open_issues(ctx, project):
+    return yt.get_issues(ctx, "project: %s #Unresolved" % project,
+                         fields=OPEN_SWEEP_FIELDS, top=500, limit=5000)
 
 
-def _assignee_logins(ctx, project, effort):
-    """Logins that own open work in-scope. We derive assignee display names from the
-    effort epics and resolve them to logins via a single open-work sweep so per-owner
-    hygiene queries (which key on login) are exact. Returns {login: fullName}."""
-    # Pull open issues with assignee login+name once; build name->login and the login
-    # set for everyone who currently owns open work in the project.
-    issues = yt.get_issues(
-        ctx, "project: %s #Unresolved" % project,
-        fields="idReadable,customFields(name,value(login,fullName))", limit=5000)
+def _issue_cf(it, name):
+    for cf in it.get("customFields", []):
+        if cf.get("name") == name:
+            return cf.get("value")
+    return None
+
+
+def _signals_from_issues(issues, now_ms):
+    """Per-login hygiene signal COUNTS from the shared unresolved sweep. Mirrors
+    the retired per-person YouTrack queries: stale = not updated within
+    STALE_DAYS; moved = updated within LOGGING_WINDOW_DAYS; unestimated =
+    Estimate EMPTY (has: -{Estimate}). Local ms comparison vs the server's
+    day-granular date math can differ ±1 on exact-boundary items — accepted for
+    these signals (documented in the design spec)."""
+    stale_cut = now_ms - STALE_DAYS * 86400000
+    moved_cut = now_ms - LOGGING_WINDOW_DAYS * 86400000
+    per = {}
+    for it in issues:
+        a = _issue_cf(it, "Assignee")
+        login = a.get("login") if isinstance(a, dict) else None
+        if not login:
+            continue
+        est = _issue_cf(it, "Estimate")
+        rec = per.setdefault(login, {"open": 0, "stale": 0, "unestimated": 0, "moved": 0})
+        rec["open"] += 1
+        upd = it.get("updated") or 0
+        if upd < stale_cut:
+            rec["stale"] += 1
+        if upd >= moved_cut:
+            rec["moved"] += 1
+        if not (isinstance(est, dict) and est.get("minutes") is not None):
+            rec["unestimated"] += 1
+    return per
+
+
+def _owners_from_issues(issues):
+    """{login: fullName} for real (non-role) owners of open work, from the same
+    sweep (was `_assignee_logins`, its own dedicated query)."""
     out = {}
     for it in issues:
-        for cf in it.get("customFields", []):
-            if cf.get("name") == "Assignee":
-                v = cf.get("value")
-                if (isinstance(v, dict) and v.get("login")
-                        and not is_role_account(name=v.get("fullName"), login=v.get("login"))):
-                    out[v["login"]] = v.get("fullName") or v["login"]
+        v = _issue_cf(it, "Assignee")
+        if (isinstance(v, dict) and v.get("login")
+                and not is_role_account(name=v.get("fullName"), login=v.get("login"))):
+            out[v["login"]] = v.get("fullName") or v["login"]
     return out
 
 
-def build_gamification(ctx, project, effort, roster=None):
+def _worklog_authors_from_pool(pool, now_ms):
+    """Logins (and display names) who logged time within LOGGING_WINDOW_DAYS,
+    derived locally from the shared pool's entry dates (was: its own windowed
+    time_spent sweep). Propagated copies are already excluded from pool items."""
+    cutoff = now_ms - LOGGING_WINDOW_DAYS * 86400000
+    logins, names = set(), {}
+    for it in pool["items"]:
+        lg = it.get("login")
+        if lg and (it.get("date") or 0) >= cutoff:
+            logins.add(lg)
+            names[lg] = it.get("author") or lg
+    return logins, names
+
+
+def _timespent_for_issue_ids(pool, issue_ids, scope):
+    """time_spent-shaped block for the pool items whose issue is in `issue_ids`
+    (a sprint's membership set). Pure — the sprint's issue ids are the only
+    network cost, fetched by the caller with a cheap id-only query."""
+    kept = [it for it in pool["items"] if it["issue"] in issue_ids]
+    dropped = [it for it in pool["dropped"] if it["issue"] in issue_ids]
+    return yt.timespent_from_items(kept, dropped, scope)
+
+
+def _hygiene_blocks_local(project, issues, now_ms):
+    """Board-hygiene blocks in the exact shape of yt.report(rtype='hygiene')
+    (single-project case), computed locally from the shared sweep — the counts
+    are always plain non-negative ints, matching report()'s _cell() output."""
+    stale_cut = now_ms - STALE_DAYS * 86400000
+    op, st, un, ue = len(issues), 0, 0, 0
+    for it in issues:
+        a = _issue_cf(it, "Assignee")
+        est = _issue_cf(it, "Estimate")
+        if (it.get("updated") or 0) < stale_cut:
+            st += 1
+        if not (isinstance(a, dict) and a.get("login")):
+            un += 1
+        if not (isinstance(est, dict) and est.get("minutes") is not None):
+            ue += 1
+    score = round(100 * (op - st) / op) if op else 100
+    attention = st + un + ue
+    rows = [[project, op, st, un, ue, "%d%%" % score, yt.bar(score, 100)]]
+    return [{"kind": "raw", "s": "# Board hygiene\n"},
+            {"kind": "table",
+             "headers": ["Proj", "Open", "Stale", "Unassigned", "No-est", "Hygiene", "▕"],
+             "rows": rows},
+            {"kind": "raw", "s": "\n**%d item(s) need attention (stale / unassigned / "
+                                 "unestimated) — clear them to push hygiene toward 100%%.**" % attention}]
+
+
+# ---------------------------------------------------------------- gamification
+
+
+def build_gamification(project, effort, open_issues, pool, now_ms, roster=None):
     """Per-person + per-team hygiene scores (Consensus Rev #4).
 
     Per-person hygiene is computed ONLY for logins that own open work (assignees).
@@ -326,14 +371,24 @@ def build_gamification(ctx, project, effort, roster=None):
     Leaderboards rank on HYGIENE (and red-count reduction), NEVER hours/closures.
     Teams come from an optional roster {team: [logins]}; without one we emit a single
     "All" team over every scored person.
+
+    NETWORK-FREE since the load-cut rework: everything derives from the shared
+    `open_issues` sweep + work-item `pool` the caller already fetched (was: 4
+    polled count queries per person + 2 dedicated sweeps).
     """
-    sprint = effort.get("_sprint")  # threaded in by build_snapshot
-    worklog_authors, worklog_names = _recent_worklog_authors(ctx, project, sprint)
-    owners = _assignee_logins(ctx, project, effort)
+    worklog_authors, worklog_names = _worklog_authors_from_pool(pool, now_ms)
+    owners = _owners_from_issues(open_issues)
+    per_login = _signals_from_issues(open_issues, now_ms)
 
     people = []
     for login in sorted(owners):
-        signals, raw = _person_signals(ctx, project, login, worklog_authors)
+        raw = per_login.get(login) or {"open": 0, "stale": 0, "unestimated": 0, "moved": 0}
+        signals = {
+            "stale_free": _frac(raw["open"] - raw["stale"], raw["open"]),
+            "estimated": _frac(raw["open"] - raw["unestimated"], raw["open"]),
+            "moving": _frac(raw["moved"], raw["open"]),
+            "on_time_logging": 1.0 if login in worklog_authors else 0.0,
+        }
         # red_reduction placeholder is 0 here (no prior per-person snapshot in this
         # producer pass); the leaderboard still ranks on hygiene first.
         people.append({
@@ -421,9 +476,16 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     """Compose the ONE snapshot dict. Raises yt.YTError upward (caller maps to a
     BLOCKED report). Every heavy call is the engine's; nothing is re-derived here."""
     now = _now()
+    now_ms = int(now.timestamp() * 1000)
 
-    # 1) effort — the full report (this is the ~285s sweep).
-    effort = yt.effort_report(ctx, project=project, scope=scope)
+    # 0) ONE project-wide work-item pool — reused by the effort spend join, the
+    #    active-sprint block, every sprint-picker block, and the worklog window
+    #    (was: five separate full sweeps against YouTrack).
+    pool = yt.work_item_pool(ctx, project=project)
+
+    # 1) effort — the full report, spend joined from the shared pool.
+    effort = yt.effort_report(ctx, project=project, scope=scope,
+                              sweep_items=pool["items"])
     # Owner-accountability flags for the UI: a role/system placeholder (e.g. "Dev Lead")
     # owning an epic means no individual is accountable -> treat as needs_owner.
     for _sec in ("pending", "mixed", "no_stories", "done", "p2_backlog"):
@@ -432,10 +494,17 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
             e["role_owner"] = bool(_a) and is_role_account(name=_a)
             e["needs_owner"] = (not _a) or e["role_owner"]
 
-    # 2) timespent — latest active sprint (fallback beta1-19), propagated-excluded.
+    # 2) timespent — latest active sprint (fallback beta1-19), rebuilt from the
+    #    pool; the only network cost per sprint is an id-only membership query.
     sprint = sprint or latest_active_sprint(ctx, project)
-    timespent = yt.time_spent(ctx, project=project, sprint=sprint, group_by="author")
-    effort["_sprint"] = sprint  # thread the sprint to gamification's worklog window
+
+    def _sprint_ids(sp):
+        return {i.get("idReadable") for i in yt.get_issues(
+            ctx, "project: %s Sprints: {%s}" % (project, sp),
+            fields="idReadable", top=500)}
+
+    timespent = _timespent_for_issue_ids(pool, _sprint_ids(sprint),
+                                         yt.wi_scope(project=project, sprint=sprint))
 
     # 2b) per-sprint time for the UI sprint picker (last few active sprints).
     sprints_available = recent_sprints(ctx, project, n=4)
@@ -444,26 +513,26 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     timespent_by_sprint = {}
     for sp in sprints_available:
         if sp == sprint:
-            timespent_by_sprint[sp] = timespent  # reuse the sweep we already did
+            timespent_by_sprint[sp] = timespent  # reuse the block we already built
             continue
         try:
-            timespent_by_sprint[sp] = yt.time_spent(ctx, project=project, sprint=sp,
-                                                     group_by="author")
+            timespent_by_sprint[sp] = _timespent_for_issue_ids(
+                pool, _sprint_ids(sp), yt.wi_scope(project=project, sprint=sp))
         except yt.YTError:
             pass
 
-    # 3) hygiene — board hygiene blocks (report shape) for the project.
-    hygiene_blocks = yt.report(ctx, "hygiene", project=project)
-
-    # 4) gamification — per-person + per-team hygiene (pure scorer).
-    gamification = build_gamification(ctx, project, effort, roster=roster)
+    # 3+4) ONE unresolved-issues sweep powers board hygiene AND per-person
+    #      gamification locally (was: 4 polled counts + 4 per person).
+    open_issues = _fetch_open_issues(ctx, project)
+    hygiene_blocks = _hygiene_blocks_local(project, open_issues, now_ms)
+    gamification = build_gamification(project, effort, open_issues, pool, now_ms,
+                                      roster=roster)
 
     # 5) insights — RED counts + day-over-day delta.
     insights = build_insights(effort, project, scope, today_date=now.strftime("%Y-%m-%d"))
 
     # 6) reports data foundation (Bug Analysis + schedule for Release/Weekly views)
     rcfg = load_config()
-    now_ms = int(now.timestamp() * 1000)
     bugs_block = rbugs.build_bugs(ctx, yt, rcfg, now_ms)
     schedule_block = rsched.build_schedule(ctx, yt, rcfg)
     rdrill.attach_drilldown(ctx, yt, schedule_block["stories"])
@@ -472,8 +541,6 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
         "man_day_minutes": rcfg.man_day_minutes, "jun29_cutoff_iso": rcfg.jun29_cutoff_iso,
         "mtg_cutoff_iso": rcfg.mtg_cutoff_iso, "week1_anchor": rcfg.week1_anchor,
     }
-
-    effort.pop("_sprint", None)  # keep it out of the serialized effort block
 
     meta = {
         "generated_at_iso": now.isoformat(),
@@ -592,6 +659,7 @@ def main(argv=None):
     print("gamification: %d people scored · %d team(s) · sprint %s"
           % (len(snapshot["gamification"]["people"]),
              len(snapshot["gamification"]["teams"]), snapshot["meta"]["sprint"]))
+    print("YouTrack requests this run: %d" % yt.REQUEST_COUNT)
     return 0
 
 
