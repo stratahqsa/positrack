@@ -24,10 +24,18 @@ HTTP server):
 Projects, fields, states and allowed values are all discovered live, with
 non-admin fallbacks, so this adapts as the instance changes.
 """
-import json, re, time, urllib.request, urllib.parse, urllib.error, mimetypes, uuid, datetime
+import json, os, re, time, urllib.request, urllib.parse, urllib.error, mimetypes, uuid, datetime
 from collections import Counter
 
 DEFAULT_BASE = "https://support.posibolt.com"
+
+# Observability + gentleness knobs for bulk sweeps (snapshot producer):
+# REQUEST_COUNT counts every YouTrack HTTP call made by this process (pure
+# telemetry — never read by engine logic); YT_THROTTLE_MS (env, read once at
+# import like any config constant, default 0) sleeps briefly before each call
+# so a long sweep never bursts against the shared YouTrack server.
+REQUEST_COUNT = 0
+_THROTTLE_MS = float(os.environ.get("YT_THROTTLE_MS", "0") or 0)
 
 # ---------- error model + per-call context ----------
 _TOKEN_RE = re.compile(r"perm-[A-Za-z0-9._\-]+")
@@ -81,6 +89,10 @@ def _req(ctx, method, path, body=None, raw=None, content_type=None, soft=False):
         data = json.dumps(body).encode()
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(ctx.base + path, data=data, headers=headers, method=method)
+    global REQUEST_COUNT
+    REQUEST_COUNT += 1
+    if _THROTTLE_MS > 0:
+        time.sleep(_THROTTLE_MS / 1000.0)
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             txt = r.read().decode()
@@ -181,6 +193,22 @@ def count(ctx, query):
             return c
         time.sleep(0.3)
     return -1
+
+def get_issues_by_ids(ctx, ids, fields, chunk=30):
+    """Bulk-fetch issues by idReadable via chunked `issue ID:` queries, returned in
+    the SAME order as `ids`. Replaces per-issue GET loops (N+1) with ~N/chunk paged
+    queries; chunk stays small because `fields` is often a heavy nested set. Ids the
+    server doesn't return (deleted/inaccessible) are skipped rather than raising."""
+    by_id = {}
+    ids = [i for i in ids if i]
+    for start in range(0, len(ids), chunk):
+        batch = ids[start:start + chunk]
+        q = "issue ID: " + ", ".join(batch)
+        for it in get_issues(ctx, q, fields=fields, top=max(len(batch), 50)):
+            rid = it.get("idReadable")
+            if rid:
+                by_id[rid] = it
+    return [by_id[i] for i in ids if i in by_id]
 
 # ---------- pure helpers (no network) ----------
 def cf_map(it): return {c["name"]: c.get("value") for c in it.get("customFields", [])}
@@ -573,7 +601,8 @@ def _child_parent_map(ctx, parent_ids, chunk=80):
     return out
 
 def effort_report(ctx, project="PXB1", scope="PHASE 1",
-                  cutoff_iso=EFFORT_CUTOFF_DEFAULT, exclude_ids=("PXB1-3295",)):
+                  cutoff_iso=EFFORT_CUTOFF_DEFAULT, exclude_ids=("PXB1-3295",),
+                  sweep_items=None):
     """Port of Suhail's PXB1 Phase-1 Effort Report onto the engine (stdlib only).
 
     Discovers every open in-scope epic PLUS epics resolved after `cutoff_iso`,
@@ -629,10 +658,9 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
                "customFields(name,value(name,minutes,presentation)),"
                "links(direction,linkType(name),issues(idReadable,summary,created,"
                "assignee(name),customFields(name,value(name,minutes))))")
-    cats = []
-    for iid in epic_ids:
-        raw = GET(ctx, "/api/issues/%s?fields=%s" % (iid, urllib.parse.quote(epic_sf)))
-        cats.append(categorize_epic(raw))
+    # Chunked bulk fetch (same order as epic_ids) — was one GET per epic (N+1).
+    cats = [categorize_epic(raw)
+            for raw in get_issues_by_ids(ctx, epic_ids, epic_sf)]
 
     # --- true spend: ONE phase-wide work-item sweep, joined story->epic (Rev #2) ---
     # The issue-level 'Spent time' rollup is NOT backed by work items on the epic
@@ -642,8 +670,10 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     # time would be dropped unless we resolve bug->story: one CHUNKED bulk link fetch
     # over the epics+stories builds that {bug -> parent} map (no N+1).
     story_epic_map = _build_story_epic_map(cats)
-    sweep = time_spent(ctx, project=project, group_by="issue", with_items=True, top=1000)
-    items = sweep.get("items", [])
+    if sweep_items is None:
+        sweep = time_spent(ctx, project=project, group_by="issue", with_items=True, top=1000)
+        sweep_items = sweep.get("items", [])
+    items = sweep_items
     bug_parent_map = _child_parent_map(ctx, epic_ids + list(story_epic_map.keys()))
     spend_by_epic, unattributed = _attribute_spend(items, story_epic_map, epic_ids, bug_parent_map)
 
@@ -662,8 +692,10 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     # --- P2 backlog: Scope PHASE 1->PHASE 2 after cutoff, via activity history ---
     # Candidates are the current open PHASE 2 epics; the PHASE 1->PHASE 2 direction and
     # the after-cutoff timing are enforced by _scope_changed_p1_to_p2 on each activity.
+    # Candidates carry summary/created/Assignee up front so a match needs no
+    # second per-epic meta GET (was: one extra GET per matched candidate).
     p2_candidates = get_issues(ctx, "project: %s TaskType: EPIC Scope: {PHASE 2} #Unresolved" % project,
-                               fields="idReadable", top=300)
+                               fields="idReadable,summary,created,customFields(name,value(name))", top=300)
     p2_backlog = []
     for e in p2_candidates:
         pid = e.get("idReadable")
@@ -673,10 +705,9 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
                        "&fields=timestamp,added(name),removed(name),field(name)" % pid)
         matched, changed_at = _scope_changed_p1_to_p2(act if isinstance(act, list) else [], cutoff_ms)
         if matched:
-            meta = GET(ctx, "/api/issues/%s?fields=idReadable,summary,created,customFields(name,value(name))" % pid)
-            p2_backlog.append({"id": pid, "summary": meta.get("summary") or "",
-                               "assignee": _cf_str(meta, "Assignee"),
-                               "created": meta.get("created"), "changed_at": changed_at})
+            p2_backlog.append({"id": pid, "summary": e.get("summary") or "",
+                               "assignee": _cf_str(e, "Assignee"),
+                               "created": e.get("created"), "changed_at": changed_at})
 
     def _sum_section(recs):
         s = {"server": 0, "ui": 0, "testing": 0, "total": 0, "spent": 0}
@@ -1130,6 +1161,35 @@ def time_spent(ctx, query="", project="", location="", sprint="", author="",
         out["window"] = {"start": start or None, "end": end or None}
     if with_items:
         out["items"] = items
+    return out
+
+def wi_scope(query="", project="", location="", sprint=""):
+    """Public alias of the work-item scope-query builder, so callers rebuilding
+    time_spent-shaped blocks from a shared pool label them identically."""
+    return _wi_query(query, project, location, sprint)
+
+def work_item_pool(ctx, project="", top=1000, limit=20000):
+    """ONE project-wide work-item fetch, normalized and split by the standard
+    propagated-time rule. The snapshot producer reuses this single pool for the
+    effort spend join, every per-sprint picker block, and the recent-worklog
+    window — replacing five separate full sweeps (the whole point: YouTrack is
+    hit once for work items per snapshot, not five times)."""
+    scoped = _wi_query(project=project)
+    raw = [_wi_norm(w) for w in work_items(ctx, query=scoped, limit=limit, top=top)]
+    kept, dropped = _split_by_type(raw, True, None)
+    return {"scope": scoped, "items": kept, "dropped": dropped}
+
+def timespent_from_items(kept, dropped, scope, group_by="author", window=None):
+    """Pure: rebuild a time_spent()-shaped block from pre-fetched pool items,
+    including the propagated-time exclusion disclosure. No network."""
+    out = aggregate_work(kept, group_by)
+    out["scope"] = scope
+    if dropped:
+        dmin = sum(it["minutes"] for it in dropped)
+        out["excluded"] = {"entries": len(dropped), "minutes": dmin,
+                           "total": fmt_minutes(dmin)}
+    if window:
+        out["window"] = window
     return out
 
 def reassign(ctx, from_user, to_user, project="", comment="", commit=False, instance_wide=False):
