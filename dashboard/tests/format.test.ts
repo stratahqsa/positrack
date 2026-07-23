@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtDate, fmtDateTimeIst, fmtHours, fmtMd, verdictVsQa } from "../lib/format";
+import { fmtDate, fmtDateTime, fmtDateTimeIst, fmtHours, fmtMd, fmtTimeShort, tzLabel, verdictVsQa } from "../lib/format";
 
 /**
  * Display/format helpers. Cases lifted from docs/reports-dashboard/reference/specs/
@@ -131,5 +131,35 @@ describe("verdictVsQa", () => {
 
   it("null qa deadline -> null (no deadline to compare against)", () => {
     expect(verdictVsQa(Date.UTC(2026, 6, 6), null)).toBeNull();
+  });
+});
+
+describe("fmtDateTime (tz-aware)", () => {
+  it("matches fmtDateTimeIst exactly for IST", () => {
+    for (const ms of [1751971500000, 1783941449646, 1783953000000]) {
+      expect(fmtDateTime(ms, "Asia/Kolkata")).toBe(fmtDateTimeIst(ms));
+    }
+  });
+
+  it("renders SAST 3.5h behind IST", () => {
+    // 1783941449646 = 13 Jul 2026, 4:47 PM IST -> 1:17 PM SAST
+    expect(fmtDateTime(1783941449646, "Africa/Johannesburg")).toBe("13 Jul 2026, 1:17 PM");
+  });
+
+  it("null -> em dash", () => {
+    expect(fmtDateTime(null, "Asia/Kolkata")).toBe("—");
+  });
+});
+
+describe("fmtTimeShort / tzLabel", () => {
+  it("HH:mm in the target zone", () => {
+    expect(fmtTimeShort(1783941449646, "Asia/Kolkata")).toBe("16:47");
+    expect(fmtTimeShort(null, "Asia/Kolkata")).toBe("—");
+  });
+
+  it("labels the team zones, falls back to short name", () => {
+    expect(tzLabel("Asia/Kolkata")).toBe("IST");
+    expect(tzLabel("Africa/Johannesburg")).toBe("SAST");
+    expect(typeof tzLabel("Asia/Dubai")).toBe("string");
   });
 });
