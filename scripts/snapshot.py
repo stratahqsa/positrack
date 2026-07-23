@@ -486,8 +486,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     pool = yt.work_item_pool(ctx, project=project)
 
     # 1) effort — the full report, spend joined from the shared pool.
-    effort = yt.effort_report(ctx, project=project, scope=scope,
-                              sweep_items=pool["items"])
+    effort = yt.effort_report(ctx, project=project, scope=scope, pool=pool)
     # Owner-accountability flags for the UI: a role/system placeholder (e.g. "Dev Lead")
     # owning an epic means no individual is accountable -> treat as needs_owner.
     for _sec in ("pending", "mixed", "no_stories", "done", "p2_backlog"):

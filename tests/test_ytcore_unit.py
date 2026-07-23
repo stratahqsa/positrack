@@ -342,3 +342,18 @@ def test_timespent_from_items_no_dropped_no_excluded_key():
 
 def test_wi_scope_matches_private_builder():
     assert yt.wi_scope(project="PXB1", sprint="beta1-19") == "project: PXB1 Sprints: {beta1-19}"
+
+
+def test_effort_report_accepts_injected_pool(monkeypatch):
+    """Regression: the spend disclosure block must build from the injected pool
+    (a live run caught `sweep` referenced-before-assignment when items were
+    injected but the disclosure still read the internal sweep dict)."""
+    monkeypatch.setattr(yt, "get_issues", lambda *a, **k: [])
+    pool = {"scope": "project: PXB1",
+            "items": [_wi_fixture("A-1", "amy", 60)],
+            "dropped": [_wi_fixture("A-1", "amy", 30, text="Propagated from Bug A-9")]}
+    rep = yt.effort_report(None, project="PXB1", scope="PHASE 1", pool=pool)
+    assert rep["spend"]["scope_query"] == "project: PXB1"
+    assert rep["spend"]["total_minutes"] == 60
+    assert rep["spend"]["excluded"] == {"entries": 1, "minutes": 30, "total": yt.fmt_minutes(30)}
+    assert rep["counts"]["epics_discovered"] == 0

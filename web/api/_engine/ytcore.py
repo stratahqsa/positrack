@@ -652,7 +652,7 @@ def _child_parent_map(ctx, parent_ids, chunk=80):
 
 def effort_report(ctx, project="PXB1", scope="PHASE 1",
                   cutoff_iso=EFFORT_CUTOFF_DEFAULT, exclude_ids=("PXB1-3295",),
-                  sweep_items=None):
+                  pool=None):
     """Port of Suhail's PXB1 Phase-1 Effort Report onto the engine (stdlib only).
 
     Discovers every open in-scope epic PLUS epics resolved after `cutoff_iso`,
@@ -720,10 +720,12 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     # time would be dropped unless we resolve bug->story: one CHUNKED bulk link fetch
     # over the epics+stories builds that {bug -> parent} map (no N+1).
     story_epic_map = _build_story_epic_map(cats)
-    if sweep_items is None:
-        sweep = time_spent(ctx, project=project, group_by="issue", with_items=True, top=1000)
-        sweep_items = sweep.get("items", [])
-    items = sweep_items
+    # `pool` (work_item_pool shape) can be injected by the snapshot producer so
+    # ONE project-wide fetch serves this join AND every timespent block; when
+    # absent (CLI/MCP callers) we fetch it ourselves — same query either way.
+    if pool is None:
+        pool = work_item_pool(ctx, project=project, top=1000)
+    items = pool["items"]
     bug_parent_map = _child_parent_map(ctx, epic_ids + list(story_epic_map.keys()))
     spend_by_epic, unattributed = _attribute_spend(items, story_epic_map, epic_ids, bug_parent_map)
 
@@ -828,8 +830,13 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
                      "no_stories": no_stories, "p2_backlog": p2_backlog},
         "totals": {"pending": t_pending, "mixed": t_mixed, "no_stories": t_ns,
                    "done": t_done, "grand_total": grand},
-        "spend": {"scope_query": sweep.get("scope"), "total_minutes": sweep.get("total_minutes", 0),
-                  "unattributed_minutes": unattributed, "excluded": sweep.get("excluded")},
+        "spend": {"scope_query": pool["scope"],
+                  "total_minutes": sum(it["minutes"] for it in items),
+                  "unattributed_minutes": unattributed,
+                  "excluded": ({"entries": len(pool["dropped"]),
+                                "minutes": sum(it["minutes"] for it in pool["dropped"]),
+                                "total": fmt_minutes(sum(it["minutes"] for it in pool["dropped"]))}
+                               if pool["dropped"] else None)},
     }
 
 def _effort_blocks(rep):
