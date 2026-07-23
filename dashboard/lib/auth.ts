@@ -10,6 +10,9 @@
  */
 
 export const SESSION_COOKIE = "posx_ct_session";
+/** Separate admin session — signed with ADMIN_CODE, so the viewer PIN can
+ *  never mint it and rotating either code invalidates only its own sessions. */
+export const ADMIN_COOKIE = "posx_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const encoder = new TextEncoder();
 

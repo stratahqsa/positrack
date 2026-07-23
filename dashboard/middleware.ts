@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
+import { ADMIN_COOKIE, SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 
 /**
  * Server-side access gate (Consensus Rev #1).
@@ -13,9 +13,36 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Public paths: the login page and its POST/DELETE handler.
-  if (pathname === "/login" || pathname === "/api/login") {
+  // Public paths: the login page + its handler, and the cron tick (self-
+  // guarded by CRON_SECRET — Vercel Cron sends no session cookie).
+  if (
+    pathname === "/login" ||
+    pathname === "/api/login" ||
+    pathname === "/api/cron/refresh"
+  ) {
     return NextResponse.next();
+  }
+
+  // Admin surface: /admin* pages + /api/admin/* need the ADMIN session
+  // (separate ADMIN_CODE — the shared viewer PIN must not manage schedules).
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
+    if (pathname === "/admin/login" || pathname === "/api/admin/login") {
+      return NextResponse.next();
+    }
+    const adminCode = process.env.ADMIN_CODE;
+    if (!adminCode) return NextResponse.next(); // page renders a config notice
+    const adminTok = req.cookies.get(ADMIN_COOKIE)?.value;
+    if (await verifySessionToken(adminTok, adminCode)) return NextResponse.next();
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { ok: false, error: "admin session required" },
+        { status: 401 },
+      );
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = "/admin/login";
+    url.search = "";
+    return NextResponse.redirect(url);
   }
 
   const accessCode = process.env.ACCESS_CODE;

@@ -31,22 +31,42 @@ def resolve_bugs(candidates, fetch_bug):
                      "priority": parse.cf_name(raw, "Priority"), "devTicketId": dev_id})
     return kept
 
-def attach_drilldown(ctx, yt, stories):
-    """For each RE-OPEN story, fetch its links, resolve open bugs, attach as
-    story['bugs']. Non-RE-OPEN stories get []. Mutates and returns stories."""
+def attach_drilldown(ctx, yt, stories, chunk=40):
+    """For each RE-OPEN story, resolve open bugs via its dev-ticket links and
+    attach as story['bugs']; others get []. Batched: ONE chunked `issue ID:`
+    query fetches every re-open story's nested links, then ONE more fetches all
+    candidate bugs (was: a GET per story + a GET per bug). Mutates + returns."""
     LF = ("id,idReadable,links(direction,linkType(name),"
           "issues(id,idReadable,summary,links(direction,linkType(name),issues(id,idReadable))))")
     BF = "id,idReadable,summary,resolved,customFields(name,value(name,text))"
-    seen_bug = {}
-    def fetch_bug(bid):
-        if bid not in seen_bug:
-            res = yt.get_issues(ctx, "issue ID: %s" % bid, fields=BF, limit=1)
-            seen_bug[bid] = res[0] if res else {"idReadable": bid, "customFields": []}
-        return seen_bug[bid]
+    reopen = [s for s in stories if "re-open" in (s.get("state") or "").lower()]
     for s in stories:
-        if "re-open" not in (s.get("state") or "").lower():
-            s["bugs"] = []
-            continue
-        links = yt.GET(ctx, "/api/issues/%s?fields=%s" % (s["storyId"], LF))
-        s["bugs"] = resolve_bugs(bug_candidates(links or {}), fetch_bug)
+        s["bugs"] = []
+    if not reopen:
+        return stories
+
+    def bulk(ids, fields):
+        out = {}
+        ids = [i for i in ids if i]
+        for start in range(0, len(ids), chunk):
+            batch = ids[start:start + chunk]
+            for it in yt.get_issues(ctx, "issue ID: " + ", ".join(batch),
+                                    fields=fields, top=max(len(batch), 50)):
+                rid = it.get("idReadable")
+                if rid:
+                    out[rid] = it
+        return out
+
+    links_by_story = bulk([s["storyId"] for s in reopen], LF)
+    candidates_by_story = {
+        s["storyId"]: bug_candidates(links_by_story.get(s["storyId"]) or {})
+        for s in reopen}
+    all_bug_ids = {b for cand in candidates_by_story.values() for b in cand}
+    bugs_by_id = bulk(sorted(all_bug_ids), BF)
+
+    def fetch_bug(bid):
+        return bugs_by_id.get(bid) or {"idReadable": bid, "customFields": []}
+
+    for s in reopen:
+        s["bugs"] = resolve_bugs(candidates_by_story[s["storyId"]], fetch_bug)
     return stories

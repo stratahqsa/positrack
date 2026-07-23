@@ -1,4 +1,5 @@
 import { loadSnapshot } from "@/lib/data";
+import { currentTz } from "@/lib/tz-server";
 import { Header } from "@/components/shell/header";
 import { Nav } from "@/components/shell/nav";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ const WINDOW_PRIORITIES = ["High", "Medium", "Low"] as const;
 export default async function BugsPage() {
   const snap = await loadSnapshot();
   const { meta, bugs } = snap;
+  const tz = await currentTz();
 
   return (
     <div className="min-h-screen">
@@ -68,7 +70,7 @@ export default async function BugsPage() {
                     {/* High absorbs Urgent (scripts/reports/bugs.py::build_bugs) — the
                         per-row Priority badge is the only way to tell the two apart here,
                         since Medium/Low can't mix priorities there's nothing to disambiguate. */}
-                    <BugTable rows={bugs.new_in_window[pri]} showPriority={pri === "High"} />
+                    <BugTable rows={bugs.new_in_window[pri]} showPriority={pri === "High"} tz={tz} />
                   </div>
                 ))}
               </div>
@@ -77,7 +79,7 @@ export default async function BugsPage() {
             <Section title="Older Open High Priority Bugs" tone="danger-dim" count={bugs.open_high_older.length}>
               <div className="p-4">
                 {/* Also a High+Urgent mix (see note above) — Priority badge tags which is which. */}
-                <BugTable rows={bugs.open_high_older} showPriority />
+                <BugTable rows={bugs.open_high_older} showPriority tz={tz} />
               </div>
             </Section>
 
@@ -96,6 +98,7 @@ export default async function BugsPage() {
               <ModuleInsightsPanel
                 sevenDayBugs={bugs.seven_day_bugs ?? []}
                 openBugs={bugs.open_bugs ?? []}
+                tz={tz}
               />
             </Section>
           </>

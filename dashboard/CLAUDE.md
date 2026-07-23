@@ -18,7 +18,8 @@ Five surfaces, all reading the same underlying data:
 | `/schedule` | **Release Schedule Tracker** | Epics grouped by milestone, DONE vs NOT-DONE against the meeting baseline. |
 | `/bugs` | **Bug Analysis** | New bugs in the reporting window, older open High, state breakdowns, module hotspots. |
 | `/effort` | **Effort Report** | The 6-section epic effort tracker (done/pending/mixed/no-stories/P2-backlog/watch-list) + Grand Total. |
-| `/insights` | **AI Insights** | A proactive, auto-generated briefing — top issues now, since-yesterday deltas, most-behind people. Read-only over `snapshot.ai_brief`, baked in upstream by the Snapshot job (5x/day: 5am/8am/12pm/4pm/7pm IST); fail-soft (renders a graceful "unavailable" state, never an error) when generation didn't succeed this cycle. |
+| `/insights` | **AI Insights** | A proactive, auto-generated briefing — top issues now, since-yesterday deltas, most-behind people. Read-only over `snapshot.ai_brief`, baked in upstream by the Snapshot job (admin-scheduled; default 08:00/09:45/12:00/16:00/19:00 IST); fail-soft (renders a graceful "unavailable" state, never an error) when generation didn't succeed this cycle. |
+| `/admin` | **Admin — Refresh Control** | Schedule editor (days/IST slots/pause), debounced Refresh Now, run history. Gated by a SEPARATE `ADMIN_CODE` (viewer PIN insufficient). |
 
 Project scope today: **PXB1, Phase 1** only. The architecture is config-driven
 so Phase 2 (or another project) is a config edit, not a code change — see
@@ -27,22 +28,45 @@ so Phase 2 (or another project) is a config edit, not a code change — see
 ## Architecture / data flow
 
 ```
+Vercel Cron (*/15, vercel.json) ──▶ /api/cron/refresh (CRON_SECRET-guarded)
+        │  reads schedule.json (admin-managed, secret Blob path); when an IST
+        │  slot is due → GitHub workflow_dispatch (GH_DISPATCH_TOKEN)
+        ▼
+.github/workflows/snapshot.yml  (also: nightly 5am-IST fallback behind a
+        │   config gate, + manual dispatch from /admin's Refresh Now or GH UI)
+        ▼
 YouTrack (support.posibolt.com, PXB1 / PHASE 1)
-        │  read-only service token ($YT_TOKEN)
+        │  read-only service token ($YT_TOKEN) — ~50-65 batched requests/run
         ▼
 scripts/reports/*.py  +  scripts/snapshot.py     (Python, runs OUTSIDE the dashboard)
         │  composes ONE snapshot dict
         ▼
 web/data/latest.json  +  web/data/snapshot-<date>.json
-        │  published as assets on the GitHub Release "snapshot-latest"
-        │  (.github/workflows/snapshot.yml — nightly cron + workflow_dispatch)
+        │  published to Vercel Blob under the SECRET path prefix
+        │  (scripts/blob_publish.mjs; no public GitHub Release)
         ▼
 dashboard/lib/data.ts :: loadSnapshot()          (Next.js, server-side only)
         │  dev: reads dashboard/data/latest.json from disk if present
-        │  prod: fetches the GitHub Release asset (SNAPSHOT_DATA_URL override)
+        │  prod: fetches <SNAPSHOT_DATA_URL>/latest.json (60s in-memory cache,
+        │  stale-on-error)
         ▼
 app/*/page.tsx  →  lib/*.ts (pure derivations)  →  components/*  (render)
 ```
+
+**Refresh scheduling is admin-managed, not code-managed.** `/admin` (separate
+`ADMIN_CODE` gate — the shared viewer PIN cannot reach it) edits
+`schedule.json` (enabled / weekday mask / IST slots / pause-until) stored on
+the secret Blob path; the 15-min Vercel Cron tick consults it via
+`lib/schedule-rules.ts::dueSlot()`. Changing refresh times/days needs no
+deploy. `/admin` also has a debounced **Refresh Now** and the recent
+workflow-run history (`lib/github.ts`).
+
+**Timestamps follow a per-browser timezone preference.** `TzInit` writes the
+browser's IANA zone to a cookie; `lib/tz-server.ts::currentTz()` resolves
+Auto/IST/SAST per request and pages render server-side in that zone
+(`fmtDateTime(ms, tz)` — never client-side reformatting). The header's
+`TzToggle` cycles the preference; the SAST·IST dual clock stays as the shared
+team anchor, and a `data Nh old` chip appears when the snapshot is >3.5h old.
 
 **The dashboard is READ-ONLY over the snapshot.** It never talks to YouTrack,
 never computes effort/bug/schedule data from scratch, and ships no service
@@ -52,10 +76,13 @@ looks wrong, first ask "is this a display bug (dashboard) or a data bug
 (Python)?" — see "Where to fix what" below.
 
 Snapshot producer is `scripts/snapshot.py` — see its own module docstring for
-why precompute (a full effort sweep is ~285s, too slow for a Vercel function).
-It composes `effort`, `timespent`, `hygiene`, `gamification`, `insights`,
-`config`, `bugs`, `schedule` into one dict and writes both a dated file
-(history) and `latest.json` (what the dashboard reads).
+why precompute. Since the 2026-07-23 load cut it issues ~50-65 batched
+YouTrack requests per run (one shared work-item pool + one unresolved-issues
+sweep + chunked `issue ID:` bulk fetches — was ~300-450 requests over 5-17
+min, which made YouTrack visibly slow for the team). It composes `effort`,
+`timespent`, `hygiene`, `gamification`, `insights`, `config`, `bugs`,
+`schedule`, `bug_blocker` into one dict and writes both a dated file (history)
+and `latest.json` (what the dashboard reads).
 
 ## Where things live
 
