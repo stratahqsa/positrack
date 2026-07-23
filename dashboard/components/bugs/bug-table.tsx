@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fmtDateTimeIst } from "@/lib/format";
+import { fmtDateTime } from "@/lib/format";
 import type { Bug } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
@@ -122,7 +122,7 @@ function Th({
  * order is `created` ascending, matching the original always-sorted-by-created
  * behavior, so nothing changes visually until a header is clicked.
  */
-export function BugTable({ rows, showPriority = false }: { rows: Bug[]; showPriority?: boolean }) {
+export function BugTable({ rows, showPriority = false, tz }: { rows: Bug[]; showPriority?: boolean; tz: string }) {
   const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
   const [sorted, setSorted] = React.useState<Bug[]>(() => sortBugs(rows, DEFAULT_SORT));
   const columns = showPriority ? [...COLUMNS.slice(0, 4), PRIORITY_COLUMN, ...COLUMNS.slice(4)] : COLUMNS;
@@ -165,7 +165,7 @@ export function BugTable({ rows, showPriority = false }: { rows: Bug[]; showPrio
                 <span className="text-fg/85">{bug.summary}</span>
               </td>
               <td className="whitespace-nowrap px-2 py-2 align-top text-[11px] text-muted">
-                {fmtDateTimeIst(bug.created)}
+                {fmtDateTime(bug.created, tz)}
               </td>
               <td className="px-2 py-2 align-top">
                 {/* Bugs in this block are always open/unresolved (upstream

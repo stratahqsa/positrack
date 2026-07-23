@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { TzInit } from "@/components/shell/tz-init";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,7 +24,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
-      <body className="min-h-screen bg-bg text-fg antialiased">{children}</body>
+      <body className="min-h-screen bg-bg text-fg antialiased">
+        {children}
+        <TzInit />
+      </body>
     </html>
   );
 }

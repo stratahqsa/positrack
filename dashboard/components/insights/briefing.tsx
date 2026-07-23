@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, CloudOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IssueLink } from "@/components/ui/issue-link";
-import { fmtDateTimeIst } from "@/lib/format";
+import { fmtDateTime, tzLabel } from "@/lib/format";
 import { briefAgeMs, formatBriefAge, isBriefOk } from "@/lib/brief";
 import { cn } from "@/lib/utils";
 import type { AiBrief, AiBriefItem, AiBriefSource } from "@/lib/types";
@@ -47,12 +47,12 @@ function Finding({ item }: { item: AiBriefItem }) {
 
 /** "Generated 42 min ago · 16 Jul 2026, 8:42 AM IST · deepseek/deepseek-chat" —
  *  relative age (formatBriefAge, render-time) + absolute IST stamp + model. */
-function GeneratedAtLine({ brief, nowMs }: { brief: AiBrief; nowMs: number }) {
+function GeneratedAtLine({ brief, nowMs, tz }: { brief: AiBrief; nowMs: number; tz: string }) {
   return (
     <p className="text-[11px] text-faint">
       Generated {formatBriefAge(briefAgeMs(brief, nowMs))}
       <span className="mx-1">·</span>
-      {fmtDateTimeIst(brief.generated_at)} IST
+      {fmtDateTime(brief.generated_at, tz)} {tzLabel(tz)}
       <span className="mx-1">·</span>
       <span className="font-mono">{brief.model_id}</span>
     </p>
@@ -74,7 +74,7 @@ function GeneratedAtLine({ brief, nowMs }: { brief: AiBrief; nowMs: number }) {
  * The brief is expected to already be re-hydrated (pseudonyms → real names) by
  * the page via lib/brief.ts::rehydrateBrief before it reaches here.
  */
-export function Briefing({ brief, nowMs }: { brief: AiBrief | null; nowMs: number }) {
+export function Briefing({ brief, nowMs, tz }: { brief: AiBrief | null; nowMs: number; tz: string }) {
   if (!isBriefOk(brief)) {
     return (
       <section
@@ -102,7 +102,7 @@ export function Briefing({ brief, nowMs }: { brief: AiBrief | null; nowMs: numbe
         <p className="mt-3 text-[13px] font-medium text-fg">Nothing notable this cycle.</p>
         {brief.top_finding ? <p className="mt-1 text-[12px] text-muted">{brief.top_finding}</p> : null}
         <div className="mt-4 flex justify-center">
-          <GeneratedAtLine brief={brief} nowMs={nowMs} />
+          <GeneratedAtLine brief={brief} nowMs={nowMs} tz={tz} />
         </div>
       </section>
     );
@@ -110,7 +110,7 @@ export function Briefing({ brief, nowMs }: { brief: AiBrief | null; nowMs: numbe
 
   return (
     <section aria-label="AI briefing" className="space-y-4">
-      <GeneratedAtLine brief={brief} nowMs={nowMs} />
+      <GeneratedAtLine brief={brief} nowMs={nowMs} tz={tz} />
 
       <div className="space-y-4">
         {brief.sections.map((section) => (

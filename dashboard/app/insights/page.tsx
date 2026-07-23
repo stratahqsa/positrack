@@ -1,4 +1,5 @@
 import { loadSnapshot } from "@/lib/data";
+import { currentTz } from "@/lib/tz-server";
 import { getBrief, rehydrateBrief } from "@/lib/brief";
 import { Header } from "@/components/shell/header";
 import { Nav } from "@/components/shell/nav";
@@ -23,6 +24,7 @@ export default async function InsightsPage() {
   // tautological (both are baked into the same snapshot in the same CI run,
   // so the "age" would always read ~0) — see lib/brief.ts's briefAgeMs doc.
   const nowMs = Date.now();
+  const tz = await currentTz();
 
   return (
     <div className="min-h-screen">
@@ -42,7 +44,7 @@ export default async function InsightsPage() {
           </p>
         </div>
 
-        <Briefing brief={brief} nowMs={nowMs} />
+        <Briefing brief={brief} nowMs={nowMs} tz={tz} />
 
         <footer className="flex flex-col items-start justify-between gap-2 border-t border-border/60 pt-4 text-[11px] text-faint sm:flex-row sm:items-center">
           <span>
