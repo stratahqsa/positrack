@@ -13,8 +13,13 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Public paths: the login page and its POST/DELETE handler.
-  if (pathname === "/login" || pathname === "/api/login") {
+  // Public paths: the login page + its handler, and the cron tick (self-
+  // guarded by CRON_SECRET — Vercel Cron sends no session cookie).
+  if (
+    pathname === "/login" ||
+    pathname === "/api/login" ||
+    pathname === "/api/cron/refresh"
+  ) {
     return NextResponse.next();
   }
 
