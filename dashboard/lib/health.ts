@@ -4,7 +4,7 @@
  * what makes them unit-testable against a fixture (see tests/health.test.ts).
  */
 import { DEFAULT_WEEK1_ANCHOR, isThisWeek, parseAnchor } from "./week";
-import type { ScheduleStory, Snapshot } from "./types";
+import type { Epic, ScheduleStory, Snapshot } from "./types";
 
 /** Overdue systemic-count threshold that alone marks the project "behind" (see onTrackVerdict). */
 const BEHIND_OVERDUE_THRESHOLD = 5;
@@ -43,6 +43,75 @@ export function lateThisWeekStories(s: Snapshot, nowMs: number): ScheduleStory[]
   return overdueStories(s, nowMs).filter(
     (story) => story.qaTs != null && isThisWeek(story.qaTs, nowMs, anchor),
   );
+}
+
+/** The actual stories behind accountability().reopened's count. */
+export function reopenedStories(s: Snapshot): ScheduleStory[] {
+  return (s.schedule?.stories ?? []).filter((story) =>
+    (story.state ?? "").toLowerCase().includes("re-open"),
+  );
+}
+
+/** Open epics (pending/mixed/no_stories sections — the same 3 sections
+ *  scripts/snapshot.py::_red_counts_from_effort sums over). */
+function openEpics(s: Snapshot): Epic[] {
+  const sections = s.effort?.sections;
+  if (!sections) return [];
+  return [...sections.pending, ...sections.mixed, ...sections.no_stories];
+}
+
+/** Needs a REAL owner: blank assignee OR a role/system placeholder. Prefers
+ *  the precomputed `needs_owner` flag (matches _needs_owner in
+ *  scripts/snapshot.py exactly, incl. role-account detection); falls back to
+ *  a blank-assignee check on snapshots that predate that field. */
+function epicNeedsOwner(e: Epic): boolean {
+  return e.needs_owner ?? isUnowned(e.assignee);
+}
+
+/** The actual epics behind insights.red_counts.unowned's count — the "Needs
+ *  an owner" stat on the Accountability strip (NOT accountability().unowned,
+ *  which is story-level and near-zero in real data) (2026-07-24). */
+export function unownedEpicsList(s: Snapshot): Epic[] {
+  return openEpics(s).filter(epicNeedsOwner);
+}
+
+/** The actual epics behind insights.red_counts.overshoot's count — the
+ *  "N overshooting" stat on the Effort tile. */
+export function overshootingEpics(s: Snapshot): Epic[] {
+  return openEpics(s).filter((e) => e.overshoot);
+}
+
+export interface RedEpic {
+  epic: Epic;
+  /** Every RED category this epic matches — an epic can carry more than one
+   *  (e.g. unowned AND overshooting), which is exactly why this list's
+   *  length can be LESS than insights.red_counts.total_red: that number is
+   *  an arithmetic SUM of 5 independent category counts (mirrors
+   *  scripts/snapshot.py::_red_counts_from_effort), so an epic flagged under
+   *  two categories contributes 2 to total_red but appears once here. */
+  reasons: string[];
+}
+
+/** Every open epic flagged RED for at least one reason, deduplicated by
+ *  epic — the "N total RED" drill-down on the Effort tile. Mirrors
+ *  _red_counts_from_effort's 5 conditions exactly, reading `stale_days` from
+ *  the snapshot itself (insights.red_counts.stale_days) rather than
+ *  hardcoding it, so this can never drift from what Python actually used. */
+export function redEpics(s: Snapshot, nowMs: number): RedEpic[] {
+  const staleDays = s.insights?.red_counts?.stale_days ?? 30;
+  const out: RedEpic[] = [];
+  for (const e of openEpics(s)) {
+    const reasons: string[] = [];
+    if (epicNeedsOwner(e)) reasons.push("Needs an owner");
+    if (e.missing_est) reasons.push("Missing estimate");
+    if (e.created && (nowMs - e.created) / 86_400_000 > staleDays && (e.spent || 0) === 0) {
+      reasons.push("Stale");
+    }
+    if (/block|hold/i.test(e.epic_state || "")) reasons.push("Blocked/On hold");
+    if (e.overshoot) reasons.push("Overshooting");
+    if (reasons.length > 0) out.push({ epic: e, reasons });
+  }
+  return out;
 }
 
 export function bugPressure(s: Snapshot): {
@@ -130,8 +199,7 @@ export function accountability(
   return {
     unowned: stories.filter((story) => isUnowned(story.assignee)).length,
     overdue: overdueStories(s, nowMs).length,
-    reopened: stories.filter((story) => (story.state ?? "").toLowerCase().includes("re-open"))
-      .length,
+    reopened: reopenedStories(s).length,
     byPerson,
   };
 }

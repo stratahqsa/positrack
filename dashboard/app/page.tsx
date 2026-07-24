@@ -5,8 +5,12 @@ import {
   lateThisWeekStories,
   onTrackVerdict,
   overdueStories,
+  overshootingEpics,
+  redEpics,
   remainingEffort,
+  reopenedStories,
   thisWeekDeadlines,
+  unownedEpicsList,
 } from "@/lib/health";
 import { getBrief, rehydrateBrief } from "@/lib/brief";
 import { Header } from "@/components/shell/header";
@@ -44,6 +48,10 @@ export default async function Home() {
   const acc = accountability(snapshot, nowMs);
   const lateStories = lateThisWeekStories(snapshot, nowMs);
   const overdueStoriesList = overdueStories(snapshot, nowMs);
+  const reopenedStoriesList = reopenedStories(snapshot);
+  const unownedEpicsListVal = unownedEpicsList(snapshot);
+  const overshootingEpicsList = overshootingEpics(snapshot);
+  const redEpicsList = redEpics(snapshot, nowMs);
 
   return (
     <div className="min-h-screen">
@@ -65,6 +73,8 @@ export default async function Home() {
             hours={effort.hours}
             totalRed={insights.red_counts.total_red}
             overshoot={insights.red_counts.overshoot}
+            redEpicsList={redEpicsList}
+            overshootingEpicsList={overshootingEpicsList}
           />
           <DeadlinesTile
             due={deadlines.due}
@@ -82,9 +92,11 @@ export default async function Home() {
 
         <AccountabilityStrip
           unownedEpics={insights.red_counts.unowned}
+          unownedEpicsList={unownedEpicsListVal}
           overdue={acc.overdue}
           overdueStoriesList={overdueStoriesList}
           reopened={acc.reopened}
+          reopenedStoriesList={reopenedStoriesList}
           byPerson={acc.byPerson}
         />
 
