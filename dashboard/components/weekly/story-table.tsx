@@ -19,6 +19,7 @@ type SortKey =
   | "devEst"
   | "uiEst"
   | "qaEst"
+  | "totalEst"
   | "spent"
   | "ddTs"
   | "qaTs"
@@ -42,12 +43,33 @@ const COLUMNS: { key: SortKey; label: string; align?: "right"; tint?: boolean }[
   { key: "devEst", label: "Dev", align: "right" },
   { key: "uiEst", label: "UI", align: "right" },
   { key: "qaEst", label: "QA", align: "right" },
+  { key: "totalEst", label: "Total Est", align: "right" },
   { key: "spent", label: "Spent", align: "right", tint: true },
   { key: "ddTs", label: "Dev DL" },
   { key: "qaTs", label: "QA DL" },
   { key: "resolved", label: "Resolved" },
 ];
 const COLUMN_COUNT = COLUMNS.length;
+
+/**
+ * The epic a story rolls up to, for display/linking. `epicId` is scope-gated
+ * upstream (scripts/reports/schedule.py's match_epics() only sets it when
+ * the parent epic is ALSO in the current Phase-1-scope epic fetch) — an
+ * epic that's since drifted to Phase 2/3 (because one of ITS pending
+ * stories moved) drops out of that fetch, leaving `epicId` null even though
+ * the story's own parent link is intact. `parentId` is captured
+ * unconditionally, so it's the fallback here — this is what makes a
+ * scope-drifted epic still show up (as a bare ticket id, since its title
+ * isn't in `epicNames` either) instead of a blank cell (2026-07-25).
+ */
+function resolveEpic(
+  story: ScheduleStory,
+  epicNames: Record<string, string>,
+): { id: string | null; label: string } {
+  const id = story.epicId ?? story.parentId;
+  const label = (id ? epicNames[id] : null) ?? id ?? "—";
+  return { id, label };
+}
 
 function sortValue(
   s: ScheduleStory,
@@ -65,14 +87,18 @@ function sortValue(
       return s.assignee || null;
     case "sprint":
       return s.sprint || null;
-    case "epic":
-      return (s.epicId ? epicNames[s.epicId] : null) ?? s.epicId ?? null;
+    case "epic": {
+      const r = resolveEpic(s, epicNames);
+      return r.id ? r.label : null;
+    }
     case "devEst":
       return s.devEst;
     case "uiEst":
       return s.uiEst;
     case "qaEst":
       return s.qaEst;
+    case "totalEst":
+      return s.devEst + s.uiEst + s.qaEst;
     case "spent":
       return s.spent;
     case "ddTs":
@@ -165,12 +191,14 @@ function Th({
 
 function StoryRow({
   story,
+  epicId,
   epicLabel,
   expanded,
   canExpand,
   onToggle,
 }: {
   story: ScheduleStory;
+  epicId: string | null;
   epicLabel: string;
   expanded: boolean;
   canExpand: boolean;
@@ -222,14 +250,24 @@ function StoryRow({
       <td className="px-2 py-2 align-top text-muted">
         {story.sprint || <span className="text-faint">—</span>}
       </td>
-      <td className="max-w-[160px] px-2 py-2 align-top">
-        <span className="line-clamp-2 text-muted" title={story.epicId ?? undefined}>
-          {epicLabel}
-        </span>
+      <td className="max-w-[180px] px-2 py-2 align-top">
+        {epicId ? (
+          <div className="flex flex-col gap-0.5">
+            <IssueLink id={epicId} showIcon={false} />
+            {epicLabel !== epicId ? (
+              <span className="line-clamp-2 text-[11px] text-muted">{epicLabel}</span>
+            ) : null}
+          </div>
+        ) : (
+          <span className="text-faint">—</span>
+        )}
       </td>
       <td className="px-2 py-2 text-right tabular align-top">{fmtHours(story.devEst)}</td>
       <td className="px-2 py-2 text-right tabular align-top">{fmtHours(story.uiEst)}</td>
       <td className="px-2 py-2 text-right tabular align-top">{fmtHours(story.qaEst)}</td>
+      <td className="px-2 py-2 text-right tabular align-top">
+        {fmtHours(story.devEst + story.uiEst + story.qaEst)}
+      </td>
       <td className="px-2 py-2 text-right tabular align-top">{fmtHours(story.spent)}</td>
       <td className="whitespace-nowrap px-2 py-2 align-top text-muted">{fmtDate(story.ddTs)}</td>
       <td className="whitespace-nowrap px-2 py-2 align-top text-muted">{fmtDate(story.qaTs)}</td>
@@ -290,6 +328,9 @@ function TotalsRow({
       <td className="px-2 py-2 text-right tabular">{fmtHours(totals.devEst)}</td>
       <td className="px-2 py-2 text-right tabular">{fmtHours(totals.uiEst)}</td>
       <td className="px-2 py-2 text-right tabular">{fmtHours(totals.qaEst)}</td>
+      <td className="px-2 py-2 text-right tabular">
+        {fmtHours(totals.devEst + totals.uiEst + totals.qaEst)}
+      </td>
       <td className="px-2 py-2 text-right tabular">{fmtHours(totals.spent)}</td>
       <td className="px-2 py-2 font-normal text-[10.5px] text-faint" colSpan={3}>
         {fmtMd(totals.devEst + totals.uiEst + totals.qaEst)} total effort
@@ -299,7 +340,7 @@ function TotalsRow({
 }
 
 /**
- * The 13-column sortable Weekly Deadline story table (docs/reports-dashboard/
+ * The 14-column sortable Weekly Deadline story table (docs/reports-dashboard/
  * plans/03-weekly-deadline-filters.md Task 5) — the critical interaction.
  *
  * Architecture: `rows` is ONE array of story objects in component state (each
@@ -368,7 +409,7 @@ export function StoryTable({
 
   return (
     <div className="overflow-x-auto scroll-slim">
-      <table className="w-full min-w-[1180px] border-collapse">
+      <table className="w-full min-w-[1260px] border-collapse">
         <thead className="sticky top-0 z-10 bg-surface-2/95 backdrop-blur">
           <tr>
             {COLUMNS.map((c) => (
@@ -388,11 +429,12 @@ export function StoryTable({
           {rows.map((story) => {
             const isExpanded = expanded.has(story.storyId);
             const canExpand = story.bugs.length > 0;
-            const epicLabel = (story.epicId ? epicNames[story.epicId] : null) ?? story.epicId ?? "—";
+            const { id: epicId, label: epicLabel } = resolveEpic(story, epicNames);
             return (
               <React.Fragment key={story.storyId}>
                 <StoryRow
                   story={story}
+                  epicId={epicId}
                   epicLabel={epicLabel}
                   expanded={isExpanded}
                   canExpand={canExpand}
