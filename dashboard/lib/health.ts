@@ -24,6 +24,27 @@ function isOverdue(story: ScheduleStory, nowMs: number): boolean {
   return !story.done && story.qaTs != null && story.qaTs < nowMs;
 }
 
+/**
+ * The actual stories behind accountability().overdue's count — same
+ * `isOverdue` filter, project-wide (not week-scoped). Exists so the "Overdue"
+ * tile can drill down to exactly the tickets it's counting, rather than
+ * someone having to reverse-engineer the number from Weekly Deadline /
+ * Release Schedule (both apply narrower display filters than this raw
+ * project-wide list, so they can under-report vs. this count) (2026-07-24).
+ */
+export function overdueStories(s: Snapshot, nowMs: number): ScheduleStory[] {
+  return (s.schedule?.stories ?? []).filter((story) => isOverdue(story, nowMs));
+}
+
+/** The actual stories behind thisWeekDeadlines().late's count: overdue AND
+ *  due this release week. Same rationale as overdueStories() above. */
+export function lateThisWeekStories(s: Snapshot, nowMs: number): ScheduleStory[] {
+  const anchor = weekAnchorMs(s);
+  return overdueStories(s, nowMs).filter(
+    (story) => story.qaTs != null && isThisWeek(story.qaTs, nowMs, anchor),
+  );
+}
+
 export function bugPressure(s: Snapshot): {
   openHigh: number;
   newHigh: number;
@@ -72,7 +93,7 @@ export function thisWeekDeadlines(
   return {
     due: dueThisWeek.length,
     done: dueThisWeek.filter((story) => story.done).length,
-    late: dueThisWeek.filter((story) => isOverdue(story, nowMs)).length,
+    late: lateThisWeekStories(s, nowMs).length,
   };
 }
 
@@ -108,7 +129,7 @@ export function accountability(
 
   return {
     unowned: stories.filter((story) => isUnowned(story.assignee)).length,
-    overdue: stories.filter((story) => isOverdue(story, nowMs)).length,
+    overdue: overdueStories(s, nowMs).length,
     reopened: stories.filter((story) => (story.state ?? "").toLowerCase().includes("re-open"))
       .length,
     byPerson,

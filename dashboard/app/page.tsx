@@ -2,7 +2,9 @@ import { loadSnapshot } from "@/lib/data";
 import {
   accountability,
   bugPressure,
+  lateThisWeekStories,
   onTrackVerdict,
+  overdueStories,
   remainingEffort,
   thisWeekDeadlines,
 } from "@/lib/health";
@@ -40,6 +42,8 @@ export default async function Home() {
   const deadlines = thisWeekDeadlines(snapshot, nowMs);
   const bugs = bugPressure(snapshot);
   const acc = accountability(snapshot, nowMs);
+  const lateStories = lateThisWeekStories(snapshot, nowMs);
+  const overdueStoriesList = overdueStories(snapshot, nowMs);
 
   return (
     <div className="min-h-screen">
@@ -62,7 +66,12 @@ export default async function Home() {
             totalRed={insights.red_counts.total_red}
             overshoot={insights.red_counts.overshoot}
           />
-          <DeadlinesTile due={deadlines.due} done={deadlines.done} late={deadlines.late} />
+          <DeadlinesTile
+            due={deadlines.due}
+            done={deadlines.done}
+            late={deadlines.late}
+            lateStories={lateStories}
+          />
           <BugPressureTile
             openHigh={bugs.openHigh}
             newHigh={bugs.newHigh}
@@ -74,6 +83,7 @@ export default async function Home() {
         <AccountabilityStrip
           unownedEpics={insights.red_counts.unowned}
           overdue={acc.overdue}
+          overdueStoriesList={overdueStoriesList}
           reopened={acc.reopened}
           byPerson={acc.byPerson}
         />
