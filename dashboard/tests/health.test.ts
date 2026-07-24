@@ -5,10 +5,14 @@ import {
   lateThisWeekStories,
   onTrackVerdict,
   overdueStories,
+  overshootingEpics,
+  redEpics,
+  reopenedStories,
   remainingEffort,
   thisWeekDeadlines,
+  unownedEpicsList,
 } from "../lib/health";
-import type { ScheduleStory } from "../lib/types";
+import type { Epic, ScheduleStory } from "../lib/types";
 import { baseSnapshot } from "./fixtures";
 
 /**
@@ -156,6 +160,56 @@ function scheduleSnapshot() {
   return s;
 }
 
+function epic(overrides: Partial<Epic>): Epic {
+  return {
+    id: "PXB1-0",
+    summary: "(fixture) epic",
+    created: NOW_MS,
+    resolved: null,
+    assignee: "Someone",
+    epic_state: "OPEN",
+    stories: [],
+    rollup_all: { server: 0, ui: 0, testing: 0 },
+    epic_est: { server: 0, ui: 0, testing: 0 },
+    rollup: { server: 0, ui: 0, testing: 0 },
+    category: "PENDING",
+    missing_est: false,
+    total: 0,
+    spent: 100,
+    overshoot: false,
+    ...overrides,
+  };
+}
+
+/** Mirrors STORIES's style: one epic per RED reason, one clean epic, and one
+ *  (PXB1-202) flagged under TWO reasons — the case that makes redEpics()'s
+ *  length differ from insights.red_counts.total_red (a sum, not a distinct
+ *  count). stale_days: 30 matches scripts/snapshot.py's STALE_DAYS default. */
+const EPICS: Epic[] = [
+  epic({ id: "PXB1-100", assignee: "", needs_owner: true }), // Needs an owner
+  epic({
+    id: "PXB1-202",
+    assignee: "Aruna Saini",
+    missing_est: true,
+    overshoot: true,
+  }), // Missing estimate + Overshooting (2 reasons, 1 epic)
+  epic({ id: "PXB1-300", assignee: "Shafeek M", epic_state: "BLOCKED" }), // Blocked/On hold
+  epic({
+    id: "PXB1-400",
+    assignee: "Ajnas O",
+    created: NOW_MS - 40 * 86_400_000, // 40 days before NOW_MS, > 30-day stale_days
+    spent: 0,
+  }), // Stale
+  epic({ id: "PXB1-500", assignee: "Pramod Saini" }), // clean, not RED
+];
+
+function epicsSnapshot() {
+  const s = baseSnapshot();
+  s.effort.sections = { done: [], pending: EPICS, mixed: [], no_stories: [], p2_backlog: [] };
+  s.insights.red_counts.stale_days = 30;
+  return s;
+}
+
 describe("remainingEffort", () => {
   it("reads man-days straight from grand_total.total_md, and derives hours from total minutes", () => {
     const s = baseSnapshot();
@@ -298,6 +352,54 @@ describe("overdueStories", () => {
     const s = baseSnapshot();
     delete s.schedule;
     expect(overdueStories(s, NOW_MS)).toEqual([]);
+  });
+});
+
+describe("reopenedStories", () => {
+  it("returns exactly the stories behind accountability().reopened, not just the count", () => {
+    const ids = reopenedStories(scheduleSnapshot()).map((s) => s.storyId);
+    expect(ids.sort()).toEqual(["PXB1-6848", "PXB1-7206", "PXB1-7560"]);
+    expect(ids.length).toBe(accountability(scheduleSnapshot(), NOW_MS).reopened);
+  });
+});
+
+describe("unownedEpicsList", () => {
+  it("returns open epics needing a real owner (blank assignee or role placeholder)", () => {
+    const ids = unownedEpicsList(epicsSnapshot()).map((e) => e.id);
+    expect(ids).toEqual(["PXB1-100"]);
+  });
+
+  it("is empty when the effort block has no sections", () => {
+    expect(unownedEpicsList(baseSnapshot())).toEqual([]);
+  });
+});
+
+describe("overshootingEpics", () => {
+  it("returns open epics flagged overshoot", () => {
+    const ids = overshootingEpics(epicsSnapshot()).map((e) => e.id);
+    expect(ids).toEqual(["PXB1-202"]);
+  });
+});
+
+describe("redEpics", () => {
+  it("dedupes one row per epic even when it matches multiple RED reasons", () => {
+    const result = redEpics(epicsSnapshot(), NOW_MS);
+    const byId = Object.fromEntries(result.map((r) => [r.epic.id, r.reasons]));
+    expect(byId).toEqual({
+      "PXB1-100": ["Needs an owner"],
+      "PXB1-202": ["Missing estimate", "Overshooting"],
+      "PXB1-300": ["Blocked/On hold"],
+      "PXB1-400": ["Stale"],
+    });
+    // PXB1-500 (clean) is absent — never flagged for any reason.
+    expect(result.some((r) => r.epic.id === "PXB1-500")).toBe(false);
+  });
+
+  it("can list fewer distinct epics than total_red when an epic matches 2+ reasons", () => {
+    // total_red would be 5 here (1 reason each for 100/300/400 + 2 for 202),
+    // but only 4 DISTINCT epics are actually affected.
+    const result = redEpics(epicsSnapshot(), NOW_MS);
+    expect(result.length).toBe(4);
   });
 });
 
