@@ -67,8 +67,16 @@ export interface Epic {
   category: EpicCategory;
   missing_est: boolean;
   total: number;
+  /** Whole-epic lifetime spend (every story, done included) — for Done/
+   *  Pending/grand-total display. NOT what `overshoot` compares against;
+   *  see `overshoot_spent` below. */
   spent: number;
   overshoot: boolean;
+  /** The narrower spend figure `overshoot` actually compares against `total`:
+   *  Phase 1 stories that are either still pending or were closed after the
+   *  effort report's cutoff date (core/ytcore.py's `_overshoot_spend()`).
+   *  Optional — absent on snapshots that predate this field (2026-07-25). */
+  overshoot_spent?: number;
   changed_at?: number;
   /**
    * True when the epic has no *individual* owner: assignee is blank OR parked on
