@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   accountability,
   bugPressure,
+  lateThisWeekStories,
   onTrackVerdict,
+  overdueStories,
   remainingEffort,
   thisWeekDeadlines,
 } from "../lib/health";
@@ -237,6 +239,20 @@ describe("thisWeekDeadlines", () => {
   });
 });
 
+describe("lateThisWeekStories", () => {
+  it("returns exactly the story behind thisWeekDeadlines().late, not just the count", () => {
+    const ids = lateThisWeekStories(scheduleSnapshot(), NOW_MS).map((s) => s.storyId);
+    expect(ids).toEqual(["PXB1-7206"]);
+    expect(ids.length).toBe(thisWeekDeadlines(scheduleSnapshot(), NOW_MS).late);
+  });
+
+  it("is empty when the schedule block is absent", () => {
+    const s = baseSnapshot();
+    delete s.schedule;
+    expect(lateThisWeekStories(s, NOW_MS)).toEqual([]);
+  });
+});
+
 describe("accountability", () => {
   it("computes unowned/overdue/reopened counts and ranks people by overdue count", () => {
     const result = accountability(scheduleSnapshot(), NOW_MS);
@@ -268,6 +284,20 @@ describe("accountability", () => {
       reopened: 0,
       byPerson: [],
     });
+  });
+});
+
+describe("overdueStories", () => {
+  it("returns exactly the stories behind accountability().overdue, not just the count", () => {
+    const ids = overdueStories(scheduleSnapshot(), NOW_MS).map((s) => s.storyId);
+    expect(ids.sort()).toEqual(["PXB1-1634", "PXB1-6848", "PXB1-7206"]);
+    expect(ids.length).toBe(accountability(scheduleSnapshot(), NOW_MS).overdue);
+  });
+
+  it("is empty when the schedule block is absent", () => {
+    const s = baseSnapshot();
+    delete s.schedule;
+    expect(overdueStories(s, NOW_MS)).toEqual([]);
   });
 });
 
