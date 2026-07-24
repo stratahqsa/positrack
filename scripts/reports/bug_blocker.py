@@ -42,22 +42,34 @@ def classify_bugs(bugs):
     return blocking, low_priority
 
 
-def build_bug_blocker(ctx, yt, cfg):
+def build_bug_blocker(ctx, yt, cfg, chunk=40):
     """RE-OPEN dev tickets + their unresolved linked bugs. `yt` is the ytcore
-    module."""
+    module. Batched (2026-07-23 load cut): ONE query lists the tickets and ONE
+    chunked `issue ID:` bulk query fetches every linked bug — was a GET per
+    bug, the same N+1 shape drilldown.py used to have."""
     P = cfg.project
     LF = "id,idReadable,summary,links(direction,linkType(name),issues(id,idReadable))"
     BF = "id,idReadable,summary,customFields(name,value(name,text))"
 
     tickets_raw = yt.get_issues(ctx, "project: %s TaskType: Development State: RE-OPEN" % P, fields=LF)
 
-    seen_bug = {}
+    all_bug_ids, seen = [], set()
+    for t in tickets_raw:
+        for bid in linked_bug_ids(t):
+            if bid not in seen:
+                seen.add(bid)
+                all_bug_ids.append(bid)
+    bugs_by_id = {}
+    for start in range(0, len(all_bug_ids), chunk):
+        batch = all_bug_ids[start:start + chunk]
+        for it in yt.get_issues(ctx, "issue ID: " + ", ".join(batch),
+                                fields=BF, top=max(len(batch), 50)):
+            rid = it.get("idReadable")
+            if rid:
+                bugs_by_id[rid] = it
 
     def fetch_bug(bid):
-        if bid not in seen_bug:
-            res = yt.get_issues(ctx, "issue ID: %s" % bid, fields=BF, limit=1)
-            seen_bug[bid] = res[0] if res else {"idReadable": bid, "customFields": []}
-        return seen_bug[bid]
+        return bugs_by_id.get(bid) or {"idReadable": bid, "customFields": []}
 
     tickets = []
     for t in tickets_raw:

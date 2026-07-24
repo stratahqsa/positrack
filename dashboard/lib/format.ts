@@ -66,6 +66,62 @@ export function fmtDateTimeIst(ms: number | null): string {
 }
 
 /**
+ * Epoch ms -> "DD Mon YYYY, h:mm AM/PM" in an arbitrary IANA zone via Intl —
+ * the tz-aware generalization of fmtDateTimeIst (kept above: same output for
+ * tz="Asia/Kolkata", proven by tests). Falls back to the IST formatter if the
+ * zone string is somehow invalid at render time.
+ */
+export function fmtDateTime(ms: number | null, tz: string): string {
+  if (ms == null) return "—";
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz,
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).formatToParts(ms);
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    const period = get("dayPeriod").replace(/\./g, "").toUpperCase();
+    return `${get("day")} ${get("month")} ${get("year")}, ${get("hour")}:${get("minute")} ${period}`;
+  } catch {
+    return fmtDateTimeIst(ms);
+  }
+}
+
+/** Epoch ms -> "HH:mm" (24h) in an IANA zone; null/invalid -> "—". */
+export function fmtTimeShort(ms: number | null, tz: string): string {
+  if (ms == null) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(ms);
+  } catch {
+    return "—";
+  }
+}
+
+/** Short display label for a zone: the team zones get their familiar names. */
+export function tzLabel(tz: string): string {
+  if (tz === "Asia/Kolkata") return "IST";
+  if (tz === "Africa/Johannesburg") return "SAST";
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz,
+      timeZoneName: "short",
+    }).formatToParts(Date.now());
+    return parts.find((p) => p.type === "timeZoneName")?.value ?? tz;
+  } catch {
+    return tz;
+  }
+}
+
+/**
  * Compares a story's resolved timestamp against its QA deadline for the
  * Resolved-column verdict badge. `diff = round(|resolved - qaTs| / day)`.
  * Strictly `resolved > qaTs` is late (even same-day, sub-day differences

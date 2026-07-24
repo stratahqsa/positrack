@@ -296,3 +296,64 @@ def test_ctx_requires_token():
     c = yt.Ctx("perm-x", "https://example.com/")
     assert c.token == "perm-x"
     assert c.base == "https://example.com"  # trailing slash stripped
+
+
+# ---------- get_issues_by_ids (chunked bulk fetch) ----------
+def test_get_issues_by_ids_chunks_and_preserves_order(monkeypatch):
+    calls = []
+    def fake_get_issues(ctx, query, fields="", top=200, limit=None):
+        calls.append(query)
+        ids = [t.strip() for t in query.replace("issue ID:", "").split(",")]
+        return [{"idReadable": i} for i in reversed(ids)]  # scrambled on purpose
+    monkeypatch.setattr(yt, "get_issues", fake_get_issues)
+    ids = ["A-%d" % i for i in range(70)]
+    out = yt.get_issues_by_ids(None, ids, fields="idReadable", chunk=30)
+    assert [o["idReadable"] for o in out] == ids          # original order restored
+    assert len(calls) == 3                                 # 30+30+10 -> 3 chunks
+
+
+def test_get_issues_by_ids_skips_missing(monkeypatch):
+    monkeypatch.setattr(yt, "get_issues",
+                        lambda ctx, q, fields="", top=200, limit=None: [{"idReadable": "A-1"}])
+    out = yt.get_issues_by_ids(None, ["A-1", "A-2"], fields="idReadable")
+    assert [o["idReadable"] for o in out] == ["A-1"]
+
+
+# ---------- timespent_from_items (pure pool rebuild) ----------
+def _wi_fixture(issue, login, minutes, date=1, text=""):
+    return {"issue": issue, "project": "PXB1", "login": login, "author": login,
+            "minutes": minutes, "type": "(none)", "date": date, "text": text}
+
+
+def test_timespent_from_items_matches_time_spent_shape():
+    kept = [_wi_fixture("A-1", "amy", 60), _wi_fixture("A-2", "bob", 30)]
+    dropped = [_wi_fixture("A-1", "amy", 60, text="Propagated from Bug A-9")]
+    out = yt.timespent_from_items(kept, dropped, "project: PXB1")
+    assert out["group_by"] == "author" and out["count"] == 2
+    assert out["scope"] == "project: PXB1"
+    assert out["excluded"] == {"entries": 1, "minutes": 60, "total": yt.fmt_minutes(60)}
+    assert [g["key"] for g in out["groups"]] == ["amy", "bob"]
+
+
+def test_timespent_from_items_no_dropped_no_excluded_key():
+    out = yt.timespent_from_items([_wi_fixture("A-1", "amy", 10)], [], "s")
+    assert "excluded" not in out and "window" not in out
+
+
+def test_wi_scope_matches_private_builder():
+    assert yt.wi_scope(project="PXB1", sprint="beta1-19") == "project: PXB1 Sprints: {beta1-19}"
+
+
+def test_effort_report_accepts_injected_pool(monkeypatch):
+    """Regression: the spend disclosure block must build from the injected pool
+    (a live run caught `sweep` referenced-before-assignment when items were
+    injected but the disclosure still read the internal sweep dict)."""
+    monkeypatch.setattr(yt, "get_issues", lambda *a, **k: [])
+    pool = {"scope": "project: PXB1",
+            "items": [_wi_fixture("A-1", "amy", 60)],
+            "dropped": [_wi_fixture("A-1", "amy", 30, text="Propagated from Bug A-9")]}
+    rep = yt.effort_report(None, project="PXB1", scope="PHASE 1", pool=pool)
+    assert rep["spend"]["scope_query"] == "project: PXB1"
+    assert rep["spend"]["total_minutes"] == 60
+    assert rep["spend"]["excluded"] == {"entries": 1, "minutes": 30, "total": yt.fmt_minutes(30)}
+    assert rep["counts"]["epics_discovered"] == 0

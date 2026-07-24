@@ -30,13 +30,12 @@ class FakeYT:
         self.tickets = tickets
         self.bugs = {b["idReadable"]: b for b in bugs}
 
-    def get_issues(self, ctx, query, fields=None, limit=None):
+    def get_issues(self, ctx, query, fields=None, limit=None, top=None):
         if "TaskType: Development" in query:
             return self.tickets
-        for bid, raw in self.bugs.items():
-            if bid in query:
-                return [raw]
-        return []
+        # Bulk `issue ID: A, B, ...` queries return EVERY matching id (like the
+        # real API) — build_bug_blocker batches its bug fetches since 2026-07-23.
+        return [raw for bid, raw in self.bugs.items() if bid in query]
 
 
 def test_high_priority_unresolved_bug_blocks_ticket():

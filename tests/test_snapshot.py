@@ -198,3 +198,114 @@ def test_person_signal_keys_are_allowlisted():
     signals = {"stale_free": 0.9, "estimated": 0.8, "moving": 0.2, "on_time_logging": 1.0}
     assert set(signals) <= set(gam.HYGIENE_SIGNALS)
     assert 0 <= gam.hygiene_score(signals) <= 100
+
+
+# ---------- shared-pool + local-derivation helpers (YouTrack load cut) ----------
+def _wi(issue, login, minutes, date_ms=0, text=""):
+    return {"issue": issue, "project": "PXB1", "login": login, "author": login,
+            "minutes": minutes, "type": "(none)", "date": date_ms, "text": text}
+
+
+def test_sprint_block_filters_pool_by_issue_ids():
+    pool = {"scope": "project: PXB1",
+            "items": [_wi("A-1", "amy", 60), _wi("B-1", "bob", 30)],
+            "dropped": [_wi("A-1", "amy", 60, text="Propagated from Bug A-9")]}
+    out = snap._timespent_for_issue_ids(pool, {"A-1"}, "project: PXB1 Sprints: {s1}")
+    assert out["count"] == 1 and out["groups"][0]["key"] == "amy"
+    assert out["excluded"]["entries"] == 1          # dropped subset follows the filter
+    assert out["scope"] == "project: PXB1 Sprints: {s1}"
+
+
+def test_worklog_authors_from_pool_windows_by_date():
+    now_ms = 1_000_000_000_000
+    week = 7 * 86400000
+    pool = {"items": [_wi("A-1", "amy", 60, date_ms=now_ms - week + 60_000),
+                      _wi("B-1", "bob", 30, date_ms=now_ms - week - 60_000)],
+            "dropped": []}
+    logins, names = snap._worklog_authors_from_pool(pool, now_ms)
+    assert logins == {"amy"} and names == {"amy": "amy"}
+
+
+def _issue(iid, login=None, updated=None, est_minutes=None):
+    cfs = []
+    if login is not None:
+        cfs.append({"name": "Assignee", "value": {"login": login, "fullName": login.title()}})
+    cfs.append({"name": "Estimate",
+                "value": ({"minutes": est_minutes} if est_minutes is not None else None)})
+    return {"idReadable": iid, "updated": updated, "customFields": cfs}
+
+
+def test_signals_from_issues_counts():
+    now_ms = 100 * 86400000
+    fresh = now_ms - 5 * 86400000              # updated 5d ago: fresh + moving
+    very_old = now_ms - 40 * 86400000          # updated 40d ago: stale, not moving
+    issues = [_issue("A-1", "amy", fresh, est_minutes=60),
+              _issue("A-2", "amy", very_old, est_minutes=None),
+              _issue("A-3", "bob", very_old, est_minutes=120),
+              _issue("A-4", None, fresh)]      # unassigned -> no login bucket
+    per = snap._signals_from_issues(issues, now_ms)
+    assert per["amy"] == {"open": 2, "stale": 1, "unestimated": 1, "moved": 1}
+    assert per["bob"] == {"open": 1, "stale": 1, "unestimated": 0, "moved": 0}
+    assert None not in per and "A-4" not in per
+
+
+def test_hygiene_blocks_local_shape():
+    now_ms = 100 * 86400000
+    issues = [_issue("A-1", "amy", now_ms - 86400000, est_minutes=60),
+              _issue("A-2", None, now_ms - 40 * 86400000, est_minutes=None)]
+    blocks = snap._hygiene_blocks_local("PXB1", issues, now_ms)
+    assert [b["kind"] for b in blocks] == ["raw", "table", "raw"]
+    assert blocks[1]["headers"] == ["Proj", "Open", "Stale", "Unassigned", "No-est", "Hygiene", "▕"]
+    row = blocks[1]["rows"][0]
+    assert row[0] == "PXB1" and row[1] == 2 and row[2] == 1 and row[3] == 1 and row[4] == 1
+    assert row[5] == "50%"                     # 1 of 2 stale -> 50% hygiene
+    assert "3 item(s) need attention" in blocks[2]["s"]
+
+
+def test_owners_from_issues_excludes_role_accounts():
+    issues = [_issue("A-1", "amy"), _issue("A-2", "Devxleads")]
+    owners = snap._owners_from_issues(issues)
+    assert owners == {"amy": "Amy"}
+
+
+def test_build_gamification_is_network_free():
+    now_ms = 100 * 86400000
+    open_issues = [_issue("A-1", "amy", now_ms - 86400000, est_minutes=60)]
+    pool = {"items": [_wi("A-1", "amy", 60, date_ms=now_ms - 86400000)], "dropped": []}
+    g = snap.build_gamification("PXB1", _effort_fixture(), open_issues, pool, now_ms)
+    assert len(g["people"]) == 1
+    p = g["people"][0]
+    assert p["key"] == "amy" and p["logged_recently"] is True
+    assert p["signals"]["on_time_logging"] == 1.0
+    assert g["owner_gap"]["open_epics"] >= 1
+
+
+def test_attach_drilldown_batches_queries():
+    from reports import drilldown
+
+    class FakeYt:
+        def __init__(self):
+            self.queries = []
+        def get_issues(self, ctx, query, fields="", top=200, limit=None):
+            self.queries.append(query)
+            if query.startswith("issue ID: S-"):
+                return [{"idReadable": "S-1", "links": [
+                    {"linkType": {"name": "Subtask"}, "direction": "OUTWARD",
+                     "issues": [{"idReadable": "D-1", "links": [
+                         {"linkType": {"name": "Bugs Reported"}, "direction": "OUTWARD",
+                          "issues": [{"idReadable": "B-1"}]}]}]}]}]
+            return [{"idReadable": "B-1", "summary": "bug", "customFields": [
+                {"name": "State", "value": {"name": "Open"}},
+                {"name": "Assignee", "value": {"name": "Amy"}},
+                {"name": "Priority", "value": {"name": "High"}}]}]
+
+    fake = FakeYt()
+    stories = [{"storyId": "S-1", "state": "RE-OPEN"},
+               {"storyId": "S-2", "state": "RE-OPEN"},
+               {"storyId": "S-3", "state": "Done"}]
+    drilldown.attach_drilldown(None, fake, stories)
+    assert stories[2]["bugs"] == []
+    assert stories[0]["bugs"][0]["bugId"] == "B-1"
+    # ONE links query covering both re-open stories + ONE bug query
+    assert len(fake.queries) == 2
+    assert "S-1" in fake.queries[0] and "S-2" in fake.queries[0]

@@ -10,4 +10,6 @@ data/
 # typescript
 *.tsbuildinfo
 .vercel
+# env files (never commit secrets) — but DO commit the example template
 .env*
+!.env.example

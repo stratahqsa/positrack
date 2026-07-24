@@ -24,10 +24,18 @@ HTTP server):
 Projects, fields, states and allowed values are all discovered live, with
 non-admin fallbacks, so this adapts as the instance changes.
 """
-import json, re, time, urllib.request, urllib.parse, urllib.error, mimetypes, uuid, datetime
+import json, os, re, time, urllib.request, urllib.parse, urllib.error, mimetypes, uuid, datetime
 from collections import Counter
 
 DEFAULT_BASE = "https://support.posibolt.com"
+
+# Observability + gentleness knobs for bulk sweeps (snapshot producer):
+# REQUEST_COUNT counts every YouTrack HTTP call made by this process (pure
+# telemetry — never read by engine logic); YT_THROTTLE_MS (env, read once at
+# import like any config constant, default 0) sleeps briefly before each call
+# so a long sweep never bursts against the shared YouTrack server.
+REQUEST_COUNT = 0
+_THROTTLE_MS = float(os.environ.get("YT_THROTTLE_MS", "0") or 0)
 
 # ---------- error model + per-call context ----------
 _TOKEN_RE = re.compile(r"perm-[A-Za-z0-9._\-]+")
@@ -81,6 +89,10 @@ def _req(ctx, method, path, body=None, raw=None, content_type=None, soft=False):
         data = json.dumps(body).encode()
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(ctx.base + path, data=data, headers=headers, method=method)
+    global REQUEST_COUNT
+    REQUEST_COUNT += 1
+    if _THROTTLE_MS > 0:
+        time.sleep(_THROTTLE_MS / 1000.0)
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             txt = r.read().decode()
@@ -181,6 +193,22 @@ def count(ctx, query):
             return c
         time.sleep(0.3)
     return -1
+
+def get_issues_by_ids(ctx, ids, fields, chunk=30):
+    """Bulk-fetch issues by idReadable via chunked `issue ID:` queries, returned in
+    the SAME order as `ids`. Replaces per-issue GET loops (N+1) with ~N/chunk paged
+    queries; chunk stays small because `fields` is often a heavy nested set. Ids the
+    server doesn't return (deleted/inaccessible) are skipped rather than raising."""
+    by_id = {}
+    ids = [i for i in ids if i]
+    for start in range(0, len(ids), chunk):
+        batch = ids[start:start + chunk]
+        q = "issue ID: " + ", ".join(batch)
+        for it in get_issues(ctx, q, fields=fields, top=max(len(batch), 50)):
+            rid = it.get("idReadable")
+            if rid:
+                by_id[rid] = it
+    return [by_id[i] for i in ids if i in by_id]
 
 # ---------- pure helpers (no network) ----------
 def cf_map(it): return {c["name"]: c.get("value") for c in it.get("customFields", [])}
@@ -623,7 +651,8 @@ def _child_parent_map(ctx, parent_ids, chunk=80):
     return out
 
 def effort_report(ctx, project="PXB1", scope="PHASE 1",
-                  cutoff_iso=EFFORT_CUTOFF_DEFAULT, exclude_ids=("PXB1-3295",)):
+                  cutoff_iso=EFFORT_CUTOFF_DEFAULT, exclude_ids=("PXB1-3295",),
+                  pool=None):
     """Port of Suhail's PXB1 Phase-1 Effort Report onto the engine (stdlib only).
 
     Discovers every open in-scope epic PLUS epics resolved after `cutoff_iso`,
@@ -679,10 +708,9 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
                "customFields(name,value(name,minutes,presentation)),"
                "links(direction,linkType(name),issues(idReadable,summary,created,"
                "assignee(name),customFields(name,value(name,minutes))))")
-    cats = []
-    for iid in epic_ids:
-        raw = GET(ctx, "/api/issues/%s?fields=%s" % (iid, urllib.parse.quote(epic_sf)))
-        cats.append(categorize_epic(raw))
+    # Chunked bulk fetch (same order as epic_ids) — was one GET per epic (N+1).
+    cats = [categorize_epic(raw)
+            for raw in get_issues_by_ids(ctx, epic_ids, epic_sf)]
 
     # --- true spend: ONE phase-wide work-item sweep, joined story->epic (Rev #2) ---
     # The issue-level 'Spent time' rollup is NOT backed by work items on the epic
@@ -692,8 +720,12 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     # time would be dropped unless we resolve bug->story: one CHUNKED bulk link fetch
     # over the epics+stories builds that {bug -> parent} map (no N+1).
     story_epic_map = _build_story_epic_map(cats)
-    sweep = time_spent(ctx, project=project, group_by="issue", with_items=True, top=1000)
-    items = sweep.get("items", [])
+    # `pool` (work_item_pool shape) can be injected by the snapshot producer so
+    # ONE project-wide fetch serves this join AND every timespent block; when
+    # absent (CLI/MCP callers) we fetch it ourselves — same query either way.
+    if pool is None:
+        pool = work_item_pool(ctx, project=project, top=1000)
+    items = pool["items"]
     bug_parent_map = _child_parent_map(ctx, epic_ids + list(story_epic_map.keys()))
     spend_by_epic, unattributed = _attribute_spend(items, story_epic_map, epic_ids, bug_parent_map)
 
@@ -728,29 +760,34 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     # PHASE 3 reports "PHASE 3, on <the 2->3 date>", not the earlier 1->2 hop's
     # date — see _scope_arrived_at_after_cutoff's docstring.
     #
-    # `stories` (new, additive) carries the epic's PENDING stories only (done
-    # ones excluded — this section is about outstanding work), each phase-
-    # labeled on the dashboard the same way Watch List's drill-down is, per
-    # request. Needs the epic's links fetched too (_epic_stories' input shape).
+    # `stories` (additive) carries the epic's PENDING stories only (done ones
+    # excluded — this section is about outstanding work), each phase-labeled on
+    # the dashboard the same way Watch List's drill-down is, per request.
+    #
+    # LOAD CUT (2026-07-23): the candidates query itself now carries the full
+    # meta fieldset (summary/created/Scope/Estimations + links for the pending-
+    # story drill-down), so the old per-candidate meta GET is gone — one bulk
+    # query + one activities GET per candidate is all this section costs. The
+    # Scope re-check below is retained purely defensively (single fetch = no
+    # drift window, but a mis-matched row must still never slip through).
     #
     # Field/key names (`p2_backlog`, `p2_candidates`) are kept as-is (wire-
     # format stability) even though the set now also includes Phase 3 moves;
     # `phase`/`stories` are new, additive fields — older snapshots simply lack
     # them.
     p2_candidates = get_issues(ctx, "project: %s TaskType: EPIC Scope: {PHASE 2}, {PHASE 3} #Unresolved" % project,
-                               fields="idReadable", top=300)
+                               fields="idReadable,summary,created,"
+                                      "customFields(name,value(name,minutes)),"
+                                      "links(direction,linkType(name),issues(idReadable,summary,created,"
+                                      "customFields(name,value(name,minutes))))", top=300)
     p2_backlog = []
     for e in p2_candidates:
         pid = e.get("idReadable")
         if not pid or pid in exclude:
             continue
-        meta = GET(ctx, "/api/issues/%s?fields=idReadable,summary,created,"
-                        "customFields(name,value(name,minutes)),"
-                        "links(direction,linkType(name),issues(idReadable,summary,created,"
-                        "customFields(name,value(name,minutes))))" % pid)
-        current_phase = _cf_str(meta, "Scope")
+        current_phase = _cf_str(e, "Scope")
         if current_phase not in _DEFERRED_PHASES:
-            continue  # defensive: scope could've changed again between the two calls
+            continue  # defensive: the query matched, but never trust a stray row
         act = GET(ctx, "/api/issues/%s/activities?categories=CustomFieldCategory"
                        "&fields=timestamp,added(name),removed(name),field(name)" % pid)
         acts = act if isinstance(act, list) else []
@@ -758,10 +795,10 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
             continue
         changed_at = _scope_arrived_at_after_cutoff(acts, cutoff_ms, current_phase)
         if changed_at is not None:
-            pending_stories = [s for s in _epic_stories(meta) if not is_done_state(s.get("state"))]
-            p2_backlog.append({"id": pid, "summary": meta.get("summary") or "",
-                               "assignee": _cf_str(meta, "Assignee"),
-                               "created": meta.get("created"), "changed_at": changed_at,
+            pending_stories = [s for s in _epic_stories(e) if not is_done_state(s.get("state"))]
+            p2_backlog.append({"id": pid, "summary": e.get("summary") or "",
+                               "assignee": _cf_str(e, "Assignee"),
+                               "created": e.get("created"), "changed_at": changed_at,
                                "phase": current_phase, "stories": pending_stories})
 
     def _sum_section(recs):
@@ -793,8 +830,13 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
                      "no_stories": no_stories, "p2_backlog": p2_backlog},
         "totals": {"pending": t_pending, "mixed": t_mixed, "no_stories": t_ns,
                    "done": t_done, "grand_total": grand},
-        "spend": {"scope_query": sweep.get("scope"), "total_minutes": sweep.get("total_minutes", 0),
-                  "unattributed_minutes": unattributed, "excluded": sweep.get("excluded")},
+        "spend": {"scope_query": pool["scope"],
+                  "total_minutes": sum(it["minutes"] for it in items),
+                  "unattributed_minutes": unattributed,
+                  "excluded": ({"entries": len(pool["dropped"]),
+                                "minutes": sum(it["minutes"] for it in pool["dropped"]),
+                                "total": fmt_minutes(sum(it["minutes"] for it in pool["dropped"]))}
+                               if pool["dropped"] else None)},
     }
 
 def _effort_blocks(rep):
@@ -1216,6 +1258,35 @@ def time_spent(ctx, query="", project="", location="", sprint="", author="",
         out["window"] = {"start": start or None, "end": end or None}
     if with_items:
         out["items"] = items
+    return out
+
+def wi_scope(query="", project="", location="", sprint=""):
+    """Public alias of the work-item scope-query builder, so callers rebuilding
+    time_spent-shaped blocks from a shared pool label them identically."""
+    return _wi_query(query, project, location, sprint)
+
+def work_item_pool(ctx, project="", top=1000, limit=20000):
+    """ONE project-wide work-item fetch, normalized and split by the standard
+    propagated-time rule. The snapshot producer reuses this single pool for the
+    effort spend join, every per-sprint picker block, and the recent-worklog
+    window — replacing five separate full sweeps (the whole point: YouTrack is
+    hit once for work items per snapshot, not five times)."""
+    scoped = _wi_query(project=project)
+    raw = [_wi_norm(w) for w in work_items(ctx, query=scoped, limit=limit, top=top)]
+    kept, dropped = _split_by_type(raw, True, None)
+    return {"scope": scoped, "items": kept, "dropped": dropped}
+
+def timespent_from_items(kept, dropped, scope, group_by="author", window=None):
+    """Pure: rebuild a time_spent()-shaped block from pre-fetched pool items,
+    including the propagated-time exclusion disclosure. No network."""
+    out = aggregate_work(kept, group_by)
+    out["scope"] = scope
+    if dropped:
+        dmin = sum(it["minutes"] for it in dropped)
+        out["excluded"] = {"entries": len(dropped), "minutes": dmin,
+                           "total": fmt_minutes(dmin)}
+    if window:
+        out["window"] = window
     return out
 
 def reassign(ctx, from_user, to_user, project="", comment="", commit=False, instance_wide=False):

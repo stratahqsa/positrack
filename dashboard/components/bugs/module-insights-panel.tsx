@@ -81,9 +81,11 @@ function PriorityChip({
 export function ModuleInsightsPanel({
   sevenDayBugs,
   openBugs,
+  tz,
 }: {
   sevenDayBugs: Bug[];
   openBugs: Bug[];
+  tz: string;
 }) {
   const [tab, setTab] = React.useState<Tab>("7day");
   const options = React.useMemo(
@@ -137,6 +139,7 @@ export function ModuleInsightsPanel({
       <ModuleInsights
         modules={tab === "7day" ? sevenDayModules : openModules}
         bugsByModule={tab === "7day" ? sevenDayByModule : openByModule}
+        tz={tz}
       />
     </div>
   );

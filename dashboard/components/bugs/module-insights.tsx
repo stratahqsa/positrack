@@ -94,9 +94,11 @@ function Th({
 export function ModuleInsights({
   modules,
   bugsByModule,
+  tz,
 }: {
   modules: ModuleInsight[];
   bugsByModule?: Map<string, Bug[]>;
+  tz: string;
 }) {
   const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
   const [sorted, setSorted] = React.useState<ModuleInsight[]>(() => sortModules(modules, DEFAULT_SORT));
@@ -237,7 +239,7 @@ export function ModuleInsights({
                       </button>
                     </div>
                   ) : null}
-                  <BugTable rows={shownBugs ?? []} showPriority />
+                  <BugTable rows={shownBugs ?? []} showPriority tz={tz} />
                 </div>
               ) : null}
             </div>
