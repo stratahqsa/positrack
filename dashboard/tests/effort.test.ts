@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { hasP2Count, missingEstCount, readyToMoveCount, watchList } from "../lib/effort";
+import {
+  epicRemainingSpent,
+  hasP2Count,
+  isDoneState,
+  isPendingPhase1,
+  missingEstCount,
+  pendingP1Spent,
+  readyToMoveCount,
+  watchList,
+} from "../lib/effort";
 import { baseSnapshot } from "./fixtures";
-import type { Epic, Rollup } from "../lib/types";
+import type { Epic, Rollup, Story } from "../lib/types";
 
 /**
  * Effort Report watch-list + info-bar derivations (docs/reports-dashboard/
@@ -50,6 +59,106 @@ function makeEffort(
   effort.sections.no_stories = overrides.noStories ?? [];
   return effort;
 }
+
+function makeStory(overrides: Partial<Story> = {}): Story {
+  return {
+    id: "PXB1-S0",
+    summary: "Fixture story",
+    state: "OPEN",
+    scope: "PHASE 1",
+    assignee: "Fixture Assignee",
+    created: 0,
+    est: { ...EMPTY_ROLLUP },
+    spent: 0,
+    ...overrides,
+  };
+}
+
+describe("isDoneState", () => {
+  it.each(["Done", "FIXED", "Verified", "Closed", "Won't Fix", "Duplicate", "Obsolete"])(
+    "%s is a done state (case-insensitive substring)",
+    (state) => {
+      expect(isDoneState(state)).toBe(true);
+    },
+  );
+
+  it("OPEN/READY FOR TESTING/RE-OPEN are not done states", () => {
+    expect(isDoneState("OPEN")).toBe(false);
+    expect(isDoneState("READY FOR TESTING")).toBe(false);
+    expect(isDoneState("RE-OPEN")).toBe(false);
+  });
+
+  it("blank/null/undefined is not done", () => {
+    expect(isDoneState("")).toBe(false);
+    expect(isDoneState(null)).toBe(false);
+    expect(isDoneState(undefined)).toBe(false);
+  });
+});
+
+describe("isPendingPhase1", () => {
+  it("pending + no scope -> true (unscoped defaults to in-scope)", () => {
+    expect(isPendingPhase1(makeStory({ state: "OPEN", scope: "" }))).toBe(true);
+  });
+
+  it("pending + Phase 1 scope -> true", () => {
+    expect(isPendingPhase1(makeStory({ state: "OPEN", scope: "PHASE 1" }))).toBe(true);
+  });
+
+  it("done -> false regardless of scope", () => {
+    expect(isPendingPhase1(makeStory({ state: "DONE", scope: "PHASE 1" }))).toBe(false);
+  });
+
+  it("pending but deferred to Phase 2 -> false", () => {
+    expect(isPendingPhase1(makeStory({ state: "OPEN", scope: "PHASE 2" }))).toBe(false);
+  });
+});
+
+describe("pendingP1Spent", () => {
+  it("sums only pending-Phase-1 stories' own spent, excluding done and out-of-phase stories", () => {
+    const epic = makeEpic({
+      stories: [
+        makeStory({ id: "S1", state: "OPEN", scope: "PHASE 1", spent: 100 }),
+        makeStory({ id: "S2", state: "DONE", scope: "PHASE 1", spent: 9_999 }), // excluded: done
+        makeStory({ id: "S3", state: "OPEN", scope: "PHASE 2", spent: 500 }), // excluded: deferred
+        makeStory({ id: "S4", state: "OPEN", scope: "", spent: 50 }),
+      ],
+    });
+    expect(pendingP1Spent(epic)).toBe(150);
+  });
+
+  it("stories with spent omitted default to 0", () => {
+    const epic = makeEpic({ stories: [makeStory({ id: "S1", spent: undefined })] });
+    expect(pendingP1Spent(epic)).toBe(0);
+  });
+
+  it("no stories -> 0", () => {
+    expect(pendingP1Spent(makeEpic({ stories: [] }))).toBe(0);
+  });
+});
+
+describe("epicRemainingSpent", () => {
+  it("PENDING epic: uses epic.spent directly (no stories to inflate it)", () => {
+    const epic = makeEpic({ category: "PENDING", spent: 300, stories: [] });
+    expect(epicRemainingSpent(epic)).toBe(300);
+  });
+
+  it("NO_STORIES epic: uses epic.spent directly, same as PENDING", () => {
+    const epic = makeEpic({ category: "NO_STORIES", spent: 120, stories: [] });
+    expect(epicRemainingSpent(epic)).toBe(120);
+  });
+
+  it("MIXED epic: uses pendingP1Spent, NOT the whole-epic-lifetime epic.spent", () => {
+    const epic = makeEpic({
+      category: "MIXED",
+      spent: 50_000, // whole-epic lifetime, includes done stories -> must be ignored
+      stories: [
+        makeStory({ id: "S-done", state: "DONE", spent: 40_000 }),
+        makeStory({ id: "S-pending", state: "OPEN", spent: 200 }),
+      ],
+    });
+    expect(epicRemainingSpent(epic)).toBe(200);
+  });
+});
 
 describe("watchList (PRD_3 'Watch List (S5)' / Examples_3 §8)", () => {
   it("PXB1-3101-style row (from S2): p1_pending=2, p2_stories=1 -> source S2, NOT ready ('2 P1 remaining')", () => {

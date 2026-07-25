@@ -11,19 +11,24 @@ import type { RedEpic } from "@/lib/health";
 type Expanded = "red" | "overshoot" | null;
 
 /**
- * Remaining effort — man-days + hours open (remainingEffort()), with RED
- * context from insights.red_counts (total_red, overshoot) so the raw
- * man-days figure isn't read in isolation from the epics driving it. Both
- * "N total RED" and "N overshooting" are clickable when nonzero: expand to
- * the exact epics behind each (lib/health.ts's redEpics() /
- * overshootingEpics()) instead of leaving the number unexplained
- * (2026-07-24). `totalRed` can exceed redEpicsList.length when an epic
- * matches more than one RED reason — see redEpics()'s own doc comment; each
- * row there is tagged with every reason it matched, so that's still visible.
+ * Remaining effort — man-days + hours open, NET of time already spent on the
+ * still-pending work (remainingEffort(), 2026-07-25), with RED context from
+ * insights.red_counts (total_red, overshoot) so the raw man-days figure
+ * isn't read in isolation from the epics driving it. The Est/Spent line
+ * beneath makes the subtraction transparent rather than a silently-smaller
+ * number. Both "N total RED" and "N overshooting" are clickable when
+ * nonzero: expand to the exact epics behind each (lib/health.ts's
+ * redEpics() / overshootingEpics()) instead of leaving the number
+ * unexplained (2026-07-24). `totalRed` can exceed redEpicsList.length when
+ * an epic matches more than one RED reason — see redEpics()'s own doc
+ * comment; each row there is tagged with every reason it matched, so that's
+ * still visible.
  */
 export function EffortTile({
   manDays,
   hours,
+  estMd,
+  spentMd,
   totalRed,
   overshoot,
   redEpicsList,
@@ -31,6 +36,8 @@ export function EffortTile({
 }: {
   manDays: number;
   hours: number;
+  estMd: number;
+  spentMd: number;
   totalRed: number;
   overshoot: number;
   redEpicsList: RedEpic[];
@@ -47,6 +54,9 @@ export function EffortTile({
       </div>
       <p className="tabular mt-1 text-[11px] text-faint">
         {Math.round(hours).toLocaleString()}h open
+      </p>
+      <p className="tabular mt-0.5 text-[10.5px] text-faint">
+        Est {estMd.toFixed(1)}md · Spent {spentMd.toFixed(1)}md logged
       </p>
       {totalRed > 0 ? (
         <p className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-warn">

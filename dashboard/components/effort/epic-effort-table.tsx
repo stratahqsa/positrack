@@ -4,6 +4,7 @@ import * as React from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronRight, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtDate, fmtHours, fmtMd } from "@/lib/format";
+import { isDoneState, isPendingPhase1, pendingP1Spent } from "@/lib/effort";
 import type { Epic, Rollup, Story } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
@@ -73,17 +74,6 @@ const LABELS: Record<SortKey, string> = {
 
 const RIGHT_ALIGN = new Set<SortKey>(["dev", "ui", "qa", "total", "spent"]);
 
-/** PRD_3 §2 done-state list, case-insensitive substring (mirrors the
- *  original script's `isDone`) — used here only to split an epic's stories
- *  into done/pending for the S2 "N done / M pending" note and the S2
- *  pending-only sub-row filter (not exported: this is a rendering-support
- *  concern, distinct from lib/effort.ts's Task-1 pure derivations). */
-const DONE_STATE_WORDS = ["done", "fixed", "verified", "closed", "won't fix", "duplicate", "obsolete"];
-function isDoneState(state: string | null | undefined): boolean {
-  const s = (state ?? "").toLowerCase();
-  return DONE_STATE_WORDS.some((word) => s.includes(word));
-}
-
 /** Which of an epic's stories expand into sub-rows, per variant: "done" and
  *  "pending" show ALL stories (PENDING epics have zero done stories by the
  *  category rule itself — PRD_3 §4 "PENDING: has stories, none done"); only
@@ -95,21 +85,6 @@ function isDoneState(state: string | null | undefined): boolean {
 function subStories(epic: Epic, variant: EpicTableVariant): Story[] {
   if (variant === "mixed") return epic.stories.filter((s) => !isDoneState(s.state));
   return epic.stories;
-}
-
-/** Mirrors core/ytcore.py's `p1p` filter exactly: pending (not done) AND
- *  in-scope for Phase 1 (no scope set, or scope contains "PHASE 1"). Used to
- *  scope a MIXED epic's Spent figure to the same story set its Dev/UI/QA/
- *  Total already use — see `pendingP1Spent` and `rowEffort` below. */
-function isPendingPhase1(story: Story): boolean {
-  return !isDoneState(story.state) && (!story.scope || story.scope.toUpperCase().includes("PHASE 1"));
-}
-
-/** Sum of each pending-Phase-1 story's own `spent` (its "Spent time" field —
- *  see lib/types.ts's Story.spent doc) for a MIXED epic's Spent column.
- *  `spent` is optional (older snapshots predate it) and defaults to 0. */
-function pendingP1Spent(epic: Epic): number {
-  return epic.stories.filter(isPendingPhase1).reduce((total, s) => total + (s.spent ?? 0), 0);
 }
 
 interface RowEffort {

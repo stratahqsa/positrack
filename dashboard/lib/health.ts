@@ -3,7 +3,9 @@
  * here is a straight reduction over already-loaded snapshot blocks, which is
  * what makes them unit-testable against a fixture (see tests/health.test.ts).
  */
+import { epicRemainingSpent } from "./effort";
 import { DEFAULT_WEEK1_ANCHOR, isThisWeek, parseAnchor } from "./week";
+import { MAN_DAY_MINUTES } from "./types";
 import type { Epic, ScheduleStory, Snapshot } from "./types";
 
 /** Overdue systemic-count threshold that alone marks the project "behind" (see onTrackVerdict). */
@@ -149,11 +151,41 @@ export function bugPressure(s: Snapshot): {
   };
 }
 
-/** Remaining open effort. `manDays` is `grand_total.total_md` as-is; `hours` is
- *  derived from `grand_total.total` minutes (MAN_DAY_MINUTES-independent). */
-export function remainingEffort(s: Snapshot): { manDays: number; hours: number } {
-  const gt = s.effort.totals.grand_total;
-  return { manDays: gt.total_md, hours: gt.total / 60 };
+/**
+ * Remaining open effort, NET of time already spent on the still-pending work
+ * (2026-07-25) — not just the raw estimate ("Remaining effort to come from
+ * effort report": reuses lib/effort.ts's epicRemainingSpent(), the exact
+ * same pending-scoped spend figure the Effort Report's own epic tables show,
+ * so this can never quietly diverge from what /effort displays). For each
+ * open epic (pending/mixed/no_stories), `max(0, epic.total -
+ * epicRemainingSpent(epic))` is clamped at zero PER EPIC before summing, so
+ * an epic that's already over budget while still pending (e.g. an
+ * "overshooting" epic) can't go negative and silently cancel out real
+ * remaining work from other epics in the total. `estMd`/`spentMd` are the
+ * pre-subtraction components, for the tile's "Est X · Spent Y" line so the
+ * net number is never a mystery.
+ */
+export function remainingEffort(s: Snapshot): {
+  manDays: number;
+  hours: number;
+  estMd: number;
+  spentMd: number;
+} {
+  let totalMin = 0;
+  let spentMin = 0;
+  let netMin = 0;
+  for (const e of openEpics(s)) {
+    const spent = epicRemainingSpent(e);
+    totalMin += e.total;
+    spentMin += spent;
+    netMin += Math.max(0, e.total - spent);
+  }
+  return {
+    manDays: netMin / MAN_DAY_MINUTES,
+    hours: netMin / 60,
+    estMd: totalMin / MAN_DAY_MINUTES,
+    spentMd: spentMin / MAN_DAY_MINUTES,
+  };
 }
 
 /**
