@@ -86,10 +86,28 @@ def is_role_account(name="", login=""):
     return bool(name and _ROLE_NAME_RE.search(name))
 
 
+def _has_real_owner(name):
+    """True if `name` is a non-blank, non-role-placeholder individual owner."""
+    a = (name or "").strip()
+    return bool(a) and not is_role_account(name=a)
+
+
 def _needs_owner(epic):
-    """An open epic needs a real owner when its assignee is blank OR a role placeholder."""
-    a = (epic.get("assignee") or "").strip()
-    return (not a) or is_role_account(name=a)
+    """An open epic needs a real owner when NEITHER the epic's own assignee NOR any
+    of its pending stories' assignees is a real individual.
+
+    Epics are frequently bulk-assigned to a role placeholder (e.g. "Dev Lead") for
+    bookkeeping while the actual work is delegated to an individual at the story
+    level (example: PXB1-53's epic assignee is "Dev Lead", but its pending story
+    PXB1-368 is assigned to a real person) — so a pending story with a real
+    assignee means someone IS accountable, even when the epic-level field isn't.
+    Epics with no pending stories (NO_STORIES / all-done) have no story-level
+    signal to fall back on, so they're judged on the epic's own assignee alone,
+    same as before."""
+    if _has_real_owner(epic.get("assignee")):
+        return False
+    pending = [s for s in (epic.get("stories") or []) if not yt.is_done_state(s.get("state"))]
+    return not any(_has_real_owner(s.get("assignee")) for s in pending)
 
 
 # ---------------------------------------------------------------- helpers
@@ -162,7 +180,9 @@ def recent_sprints(ctx, project, n=4, fallback=FALLBACK_SPRINT):
 # ---------------------------------------------------------------- RED counts (insights)
 def _red_counts_from_effort(effort):
     """Absolute RED counts derived from the effort_report data (Consensus Rev #8):
-      * unowned      — open epics (pending/mixed/no_stories) with a blank assignee
+      * unowned      — open epics (pending/mixed/no_stories) where neither the epic's
+                       own assignee nor any pending story's assignee is a real
+                       individual (see _needs_owner)
       * unestimated  — open epics flagged missing_est (Dev=0 AND UI=0) OR QA=0
       * stale        — open epics not updated within STALE_DAYS (by 'created' proxy is
                        wrong; effort epics carry no 'updated', so we approximate stale
@@ -177,8 +197,8 @@ def _red_counts_from_effort(effort):
     epics = []
     for sec in open_secs:
         epics.extend(effort.get("sections", {}).get(sec, []))
-    # "unowned" = needs a REAL owner: blank assignee OR a role/system placeholder
-    # (an epic parked on "Dev Lead"/"UIX Lead" has no individual accountable).
+    # "unowned" = needs a REAL owner: epic assignee blank/role-placeholder AND no
+    # pending story has a real individual assignee either (see _needs_owner).
     unowned = sum(1 for e in epics if _needs_owner(e))
     role_owned = sum(1 for e in epics
                      if (e.get("assignee") or "").strip() and is_role_account(name=e["assignee"]))
@@ -493,7 +513,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
         for e in effort.get("sections", {}).get(_sec, []):
             _a = (e.get("assignee") or "").strip()
             e["role_owner"] = bool(_a) and is_role_account(name=_a)
-            e["needs_owner"] = (not _a) or e["role_owner"]
+            e["needs_owner"] = _needs_owner(e)
 
     # 2) timespent — latest active sprint (fallback beta1-19), rebuilt from the
     #    pool; the only network cost per sprint is an id-only membership query.
