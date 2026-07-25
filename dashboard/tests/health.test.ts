@@ -12,7 +12,7 @@ import {
   thisWeekDeadlines,
   unownedEpicsList,
 } from "../lib/health";
-import type { Epic, ScheduleStory } from "../lib/types";
+import type { Epic, ScheduleStory, Story } from "../lib/types";
 import { baseSnapshot } from "./fixtures";
 
 /**
@@ -216,27 +216,60 @@ function epicsSnapshot() {
   return s;
 }
 
+function story(overrides: Partial<Story> = {}): Story {
+  return {
+    id: "S-0",
+    summary: "(fixture) story",
+    state: "OPEN",
+    scope: "PHASE 1",
+    assignee: "Someone",
+    created: NOW_MS,
+    est: { server: 0, ui: 0, testing: 0 },
+    spent: 0,
+    ...overrides,
+  };
+}
+
 describe("remainingEffort", () => {
-  it("reads man-days straight from grand_total.total_md, and derives hours from total minutes", () => {
+  it("nets Est - pending-scoped Spent per epic, ignoring a MIXED epic's inflated lifetime Epic.spent", () => {
     const s = baseSnapshot();
-    // Real grand_total from dashboard/data/latest.json (PXB1, 2026-07-14).
-    s.effort.totals.grand_total = {
-      server: 68700,
-      ui: 35520,
-      testing: 32400,
-      total: 136620,
-      spent: 165255,
-      server_md: 143.1,
-      ui_md: 74.0,
-      testing_md: 67.5,
-      total_md: 284.6,
-      spent_md: 344.3,
+    s.effort.sections = {
+      done: [],
+      // PENDING: no stories to scope by -> epic.spent used directly (10md est, 4md spent -> 6md net).
+      pending: [epic({ id: "PXB1-1", category: "PENDING", total: 4800, spent: 1920 })],
+      // MIXED: epic.spent is a huge whole-epic-lifetime figure that must be
+      // ignored; only the pending-P1 story's own `spent` (2md) counts
+      // (5md est - 2md pending-spent -> 3md net).
+      mixed: [
+        epic({
+          id: "PXB1-2",
+          category: "MIXED",
+          total: 2400,
+          spent: 48_000,
+          stories: [
+            story({ id: "S-done", state: "DONE", spent: 999_999 }),
+            story({ id: "S-pending", state: "OPEN", spent: 960 }),
+          ],
+        }),
+        // Already over budget while pending (2md est, 6md pending-spent) ->
+        // clamps to 0 instead of going negative and cancelling other epics.
+        epic({
+          id: "PXB1-3",
+          category: "MIXED",
+          total: 960,
+          spent: 0,
+          stories: [story({ id: "S-over", state: "OPEN", spent: 2880 })],
+        }),
+      ],
+      // NO_STORIES: same rule as PENDING -> epic.spent used directly (1md est, 0 spent -> 1md net).
+      no_stories: [epic({ id: "PXB1-4", category: "NO_STORIES", total: 480, spent: 0 })],
+      p2_backlog: [],
     };
-    expect(remainingEffort(s)).toEqual({ manDays: 284.6, hours: 2277 });
+    expect(remainingEffort(s)).toEqual({ manDays: 10.0, hours: 80, estMd: 18.0, spentMd: 12.0 });
   });
 
   it("is all-zero on an empty snapshot", () => {
-    expect(remainingEffort(baseSnapshot())).toEqual({ manDays: 0, hours: 0 });
+    expect(remainingEffort(baseSnapshot())).toEqual({ manDays: 0, hours: 0, estMd: 0, spentMd: 0 });
   });
 });
 

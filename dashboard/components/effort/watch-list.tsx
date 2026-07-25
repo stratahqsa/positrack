@@ -5,18 +5,12 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtHours } from "@/lib/format";
 import type { Story } from "@/lib/types";
-import type { WatchListItem } from "@/lib/effort";
+import { isDoneState, type WatchListItem } from "@/lib/effort";
 import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
 import { scopeLabel, stateVariant } from "@/components/weekly/badge-tone";
 
 const COLUMN_COUNT = 6;
-
-const DONE_STATE_WORDS = ["done", "fixed", "verified", "closed", "won't fix", "duplicate", "obsolete"];
-function isDoneState(state: string | null | undefined): boolean {
-  const s = (state ?? "").toLowerCase();
-  return DONE_STATE_WORDS.some((word) => s.includes(word));
-}
 
 /** One PENDING story under an expanded watch-list epic (done stories are
  *  filtered out by the caller — this section is about what's still

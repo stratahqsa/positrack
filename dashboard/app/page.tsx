@@ -71,6 +71,8 @@ export default async function Home() {
           <EffortTile
             manDays={effort.manDays}
             hours={effort.hours}
+            estMd={effort.estMd}
+            spentMd={effort.spentMd}
             totalRed={insights.red_counts.total_red}
             overshoot={insights.red_counts.overshoot}
             redEpicsList={redEpicsList}
