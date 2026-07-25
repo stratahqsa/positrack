@@ -29,6 +29,10 @@ def _epic(eid, assignee="", state="OPEN", missing_est=False, overshoot=False,
             "stories": []}
 
 
+def _story(sid, assignee="", state="Open"):
+    return {"id": sid, "assignee": assignee, "state": state}
+
+
 def _effort_fixture():
     old = 1  # ms epoch ~ 1970 -> very stale by created age
     return {
@@ -62,6 +66,35 @@ def test_red_counts_from_effort_fixture():
     assert red["total_red"] == (red["unowned"] + red["unestimated"] + red["stale"]
                                 + red["blocked"] + red["overshoot"])
     assert red["stale_days"] == snap.STALE_DAYS
+
+
+# ---------- needs_owner: pending-story fallback (PXB1-53 case) ----------
+def test_needs_owner_pending_story_with_real_assignee_overrides_role_epic():
+    # epic parked on "Dev Lead" (role placeholder), but its pending story is
+    # assigned to a real person -> someone IS accountable, not "needs an owner".
+    e = _epic("E-53", assignee="Dev Lead")
+    e["stories"] = [_story("S-368", assignee="Pramod Saini", state="In Progress")]
+    assert snap._needs_owner(e) is False
+
+
+def test_needs_owner_true_when_epic_and_pending_stories_all_unowned():
+    e = _epic("E-53b", assignee="Dev Lead")
+    e["stories"] = [_story("S-1", assignee="", state="In Progress")]
+    assert snap._needs_owner(e) is True
+
+
+def test_needs_owner_ignores_done_stories_and_falls_back_to_epic_assignee():
+    # the only story with a real owner is already DONE, so it's not "pending" ->
+    # no story-level signal, judged on the epic's own (role) assignee alone.
+    e = _epic("E-53c", assignee="Dev Lead")
+    e["stories"] = [_story("S-2", assignee="Real Person", state="Done")]
+    assert snap._needs_owner(e) is True
+
+
+def test_needs_owner_false_when_epic_itself_has_a_real_owner():
+    e = _epic("E-6", assignee="Real Person")
+    e["stories"] = [_story("S-3", assignee="", state="In Progress")]
+    assert snap._needs_owner(e) is False
 
 
 # ---------- day-over-day delta against a prior snapshot on disk ----------
