@@ -60,10 +60,12 @@ function openEpics(s: Snapshot): Epic[] {
   return [...sections.pending, ...sections.mixed, ...sections.no_stories];
 }
 
-/** Needs a REAL owner: blank assignee OR a role/system placeholder. Prefers
+/** Needs a REAL owner: epic assignee blank/role-placeholder AND no pending
+ *  story has a real individual assignee either (an epic parked on "Dev Lead"
+ *  with a pending story assigned to a real person is NOT unowned). Prefers
  *  the precomputed `needs_owner` flag (matches _needs_owner in
- *  scripts/snapshot.py exactly, incl. role-account detection); falls back to
- *  a blank-assignee check on snapshots that predate that field. */
+ *  scripts/snapshot.py exactly); falls back to a blank-assignee check on
+ *  snapshots that predate that field. */
 function epicNeedsOwner(e: Epic): boolean {
   return e.needs_owner ?? isUnowned(e.assignee);
 }
