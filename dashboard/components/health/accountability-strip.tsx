@@ -165,16 +165,25 @@ export function AccountabilityStrip({
         </div>
         {expanded.has("unowned") && unownedEpics > 0 ? (
           <div className="mt-4 border-t border-border/60 pt-3">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">
+              Needs an owner
+            </p>
             <EpicMiniList epics={unownedEpicsList} />
           </div>
         ) : null}
         {expanded.has("overdue") && overdue > 0 ? (
           <div className="mt-4 border-t border-border/60 pt-3">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">
+              Overdue
+            </p>
             <StoryMiniList stories={overdueStoriesList} />
           </div>
         ) : null}
         {expanded.has("reopened") && reopened > 0 ? (
           <div className="mt-4 border-t border-border/60 pt-3">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">
+              Re-opened
+            </p>
             <StoryMiniList stories={reopenedStoriesList} />
           </div>
         ) : null}

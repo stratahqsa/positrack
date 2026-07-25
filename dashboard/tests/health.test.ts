@@ -90,6 +90,9 @@ const STORIES: ScheduleStory[] = [
     bugs: [],
   },
   {
+    // Real ticket, real shape: genuinely unlinked (no epic, no parent story).
+    // Every lib/health.ts computation below must exclude it via
+    // linkedStories() — see the dedicated "excludes unlinked stories" tests.
     storyId: "PXB1-6848",
     summary: "Stock Valuation Report-Alpha Report",
     state: "RE-OPEN",
@@ -103,7 +106,7 @@ const STORIES: ScheduleStory[] = [
     qaEst: 0,
     spent: 1260,
     ddTs: 1783339200000, // 06 Jul 2026
-    qaTs: 1783684800000, // 10 Jul 2026 -> NOT due this week (week 2), but globally overdue
+    qaTs: 1783684800000, // 10 Jul 2026 -> would be globally overdue if linked
     sprint: "beta1-21",
     parentId: null,
     epicId: null,
@@ -132,7 +135,10 @@ const STORIES: ScheduleStory[] = [
   {
     // Synthetic: real snapshot has no blank-assignee stories today, so this row
     // is hand-built to exercise the `unowned` branch. Deadline is far in the
-    // future -> not due this week, not overdue.
+    // future -> not due this week, not overdue. Given a real parentId
+    // (unlike PXB1-6848) since blank-assignee and unlinked-story are
+    // orthogonal concerns — this row should still count once linkedStories()
+    // is applied.
     storyId: "PXB1-9999",
     summary: "(fixture) unowned placeholder story",
     state: "OPEN",
@@ -148,8 +154,8 @@ const STORIES: ScheduleStory[] = [
     ddTs: Date.UTC(2026, 7, 1),
     qaTs: Date.UTC(2026, 7, 10), // 10 Aug 2026
     sprint: "beta1-21",
-    parentId: null,
-    epicId: null,
+    parentId: "PXB1-52",
+    epicId: "PXB1-52",
     bugs: [],
   },
 ];
@@ -311,15 +317,17 @@ describe("accountability", () => {
   it("computes unowned/overdue/reopened counts and ranks people by overdue count", () => {
     const result = accountability(scheduleSnapshot(), NOW_MS);
     // unowned: PXB1-9999 (blank assignee).
-    // overdue (not done, qaTs < NOW_MS, any week): 7206, 6848, 1634.
-    // reopened (state contains "re-open"): 7206, 7560, 6848.
+    // overdue (not done, qaTs < NOW_MS, any week, linked): 7206, 1634. 6848 is
+    // excluded by linkedStories() (no parent link) despite otherwise qualifying.
+    // reopened (state contains "re-open", linked): 7206, 7560. 6848 excluded, same reason.
     expect(result.unowned).toBe(1);
-    expect(result.overdue).toBe(3);
-    expect(result.reopened).toBe(3);
+    expect(result.overdue).toBe(2);
+    expect(result.reopened).toBe(2);
     expect(result.byPerson).toEqual([
       { name: "Shafeek M", overdue: 1, open: 2 }, // 7206 (overdue) + 7560 (not yet)
-      { name: "Pramod Saini", overdue: 1, open: 1 }, // tie-break vs Sarika: name asc
-      { name: "Sarika Agrawal", overdue: 1, open: 1 },
+      { name: "Pramod Saini", overdue: 1, open: 1 },
+      // Sarika Agrawal's only story is PXB1-6848, excluded entirely by
+      // linkedStories() -> she doesn't appear in byPerson at all.
     ]);
   });
 
@@ -344,8 +352,13 @@ describe("accountability", () => {
 describe("overdueStories", () => {
   it("returns exactly the stories behind accountability().overdue, not just the count", () => {
     const ids = overdueStories(scheduleSnapshot(), NOW_MS).map((s) => s.storyId);
-    expect(ids.sort()).toEqual(["PXB1-1634", "PXB1-6848", "PXB1-7206"]);
+    expect(ids.sort()).toEqual(["PXB1-1634", "PXB1-7206"]);
     expect(ids.length).toBe(accountability(scheduleSnapshot(), NOW_MS).overdue);
+  });
+
+  it("excludes a story with no parent link even if otherwise overdue (PXB1-6848)", () => {
+    const ids = overdueStories(scheduleSnapshot(), NOW_MS).map((s) => s.storyId);
+    expect(ids).not.toContain("PXB1-6848");
   });
 
   it("is empty when the schedule block is absent", () => {
@@ -358,8 +371,13 @@ describe("overdueStories", () => {
 describe("reopenedStories", () => {
   it("returns exactly the stories behind accountability().reopened, not just the count", () => {
     const ids = reopenedStories(scheduleSnapshot()).map((s) => s.storyId);
-    expect(ids.sort()).toEqual(["PXB1-6848", "PXB1-7206", "PXB1-7560"]);
+    expect(ids.sort()).toEqual(["PXB1-7206", "PXB1-7560"]);
     expect(ids.length).toBe(accountability(scheduleSnapshot(), NOW_MS).reopened);
+  });
+
+  it("excludes a re-opened story with no parent link (PXB1-6848)", () => {
+    const ids = reopenedStories(scheduleSnapshot()).map((s) => s.storyId);
+    expect(ids).not.toContain("PXB1-6848");
   });
 });
 
@@ -411,7 +429,7 @@ describe("onTrackVerdict", () => {
     expect(verdict.status).toBe("behind");
     expect(verdict.reasons).toEqual([
       "1 deadline late this week",
-      "3 stories overdue past QA deadline",
+      "2 stories overdue past QA deadline",
       "4 open High-priority bugs",
     ]);
   });
@@ -434,8 +452,8 @@ describe("onTrackVerdict", () => {
       ddTs: Date.UTC(2026, 6, 1),
       qaTs: Date.UTC(2026, 6, 1), // 01 Jul 2026 -> week index 0, not this week (index 2)
       sprint: "beta1-21",
-      parentId: null,
-      epicId: null,
+      parentId: "PXB1-9", // linked (this test is about overdue pile-up, not orphan exclusion)
+      epicId: "PXB1-9",
       bugs: [],
     }));
     s.schedule = { epics: [], stories: overdueStories, orphan_count: 0 };

@@ -24,6 +24,16 @@ function isOverdue(story: ScheduleStory, nowMs: number): boolean {
   return !story.done && story.qaTs != null && story.qaTs < nowMs;
 }
 
+/** schedule.stories with a genuinely unlinked ticket excluded (parentId
+ *  null — no epic AND no parent story, e.g. PXB1-6847/6848). Weekly Deadline
+ *  / Release Schedule read schedule.stories directly and are unaffected;
+ *  this is Health-only, applied at the one point every Health computation
+ *  below reads from, so it can't be forgotten on any individual list
+ *  (2026-07-25). */
+function linkedStories(s: Snapshot): ScheduleStory[] {
+  return (s.schedule?.stories ?? []).filter((story) => story.parentId != null);
+}
+
 /**
  * The actual stories behind accountability().overdue's count — same
  * `isOverdue` filter, project-wide (not week-scoped). Exists so the "Overdue"
@@ -33,7 +43,7 @@ function isOverdue(story: ScheduleStory, nowMs: number): boolean {
  * project-wide list, so they can under-report vs. this count) (2026-07-24).
  */
 export function overdueStories(s: Snapshot, nowMs: number): ScheduleStory[] {
-  return (s.schedule?.stories ?? []).filter((story) => isOverdue(story, nowMs));
+  return linkedStories(s).filter((story) => isOverdue(story, nowMs));
 }
 
 /** The actual stories behind thisWeekDeadlines().late's count: overdue AND
@@ -47,7 +57,7 @@ export function lateThisWeekStories(s: Snapshot, nowMs: number): ScheduleStory[]
 
 /** The actual stories behind accountability().reopened's count. */
 export function reopenedStories(s: Snapshot): ScheduleStory[] {
-  return (s.schedule?.stories ?? []).filter((story) =>
+  return linkedStories(s).filter((story) =>
     (story.state ?? "").toLowerCase().includes("re-open"),
   );
 }
@@ -154,7 +164,7 @@ export function thisWeekDeadlines(
   s: Snapshot,
   nowMs: number,
 ): { due: number; done: number; late: number } {
-  const stories = s.schedule?.stories ?? [];
+  const stories = linkedStories(s);
   const anchor = weekAnchorMs(s);
   const dueThisWeek = stories.filter(
     (story) => story.qaTs != null && isThisWeek(story.qaTs, nowMs, anchor),
@@ -182,7 +192,7 @@ export function accountability(
   reopened: number;
   byPerson: { name: string; overdue: number; open: number }[];
 } {
-  const stories = s.schedule?.stories ?? [];
+  const stories = linkedStories(s);
 
   const byPersonMap = new Map<string, { overdue: number; open: number }>();
   for (const story of stories) {

@@ -85,7 +85,7 @@ export function EffortTile({
       ) : null}
       {expanded === "overshoot" ? (
         <div className="mt-2">
-          <EpicMiniList epics={overshootingEpicsList} />
+          <EpicMiniList epics={overshootingEpicsList} showOvershoot />
         </div>
       ) : null}
     </StatTile>
