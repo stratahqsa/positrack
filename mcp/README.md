@@ -98,6 +98,40 @@ With these unset the server runs exactly as before (no OAuth surface). Full
 walk-through: [`docs/INSTALL_CHATGPT.md`](../docs/INSTALL_CHATGPT.md). The
 ChatGPT connect URL is then `https://<app>.up.railway.app/cmcp`.
 
+### Session longevity (why users had to reconnect daily)
+
+Two things independently forced a full browser re-auth, both now addressed:
+
+1. **The issued token mirrored Hub's expiry.** FastMCP defaults the token it hands
+   the connector to Hub's own `expires_in`, so a ~1-day Hub token = a daily
+   re-login. `OAUTH_ACCESS_TOKEN_TTL_SECONDS` (default **30 days**) decouples them;
+   the FastMCP JWT becomes a reference token that re-validates and transparently
+   refreshes the Hub token on every call. It cannot outlive real access — a revoked
+   Hub session still fails, and with no upstream refresh token FastMCP caps the
+   lifetime at Hub's `expires_in` regardless. So Hub must actually issue refresh
+   tokens (`offline_access` in `HUB_SCOPES` + `access_type=offline`, both already
+   sent) — if it doesn't, raise the **access-token TTL on the Hub service itself**,
+   because no server-side setting can beat that cap.
+2. **The token store was ephemeral.** `client_storage` holds DCR registrations *and*
+   the upstream Hub tokens. Without a writable volume, FastMCP keeps it in the
+   container filesystem, so every redeploy/restart logs everyone out. Mount a
+   Railway volume at `/data` (see `OAUTH_CLIENT_STORE_DIR`) — the boot log says
+   which mode is active.
+
+| Env | Default | What it does |
+|---|---|---|
+| `OAUTH_ACCESS_TOKEN_TTL_SECONDS` | `2592000` (30d) | Lifetime of the token issued to the connector, decoupled from Hub's |
+| `OAUTH_TOKEN_REFRESH_LEEWAY_SECONDS` | `60` | Refresh a Hub token this many seconds *before* expiry, so a call can't race it |
+| `OAUTH_CLIENT_STORE_DIR` | `/data/oauth-clients` | Volume-backed store for DCR clients + upstream tokens |
+| `OAUTH_STORE_ENCRYPTION_KEY` | *(unset)* | Fernet key encrypting that store at rest. **Set it whenever the volume is mounted** — unset means tokens sit in plaintext on the volume. Generate: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+
+Rotating `OAUTH_STORE_ENCRYPTION_KEY` (or `FASTMCP_JWT_SIGNING_KEY`) invalidates
+existing sessions — everyone reconnects once, deliberately.
+
+**Prefer never re-authenticating at all?** Use the raw-bearer `/mcp` endpoint with
+a permanent YouTrack token instead of OAuth (see `docs/INSTALL_CLAUDE.md` Path B).
+It is per-device, has no expiry, and never touches this OAuth surface.
+
 ## Transport note
 
 All three current target clients (Claude custom connector, ChatGPT Developer Mode,
