@@ -238,6 +238,28 @@ def _install_log_redaction():
     for name in ("uvicorn", "uvicorn.access", "uvicorn.error", "fastmcp", "mcp"):
         logging.getLogger(name).addFilter(f)
 
+    # Our own INFO lines must actually reach the platform log. They are how a deploy is
+    # verified — "OAuth storage: persistent + encrypted at …" is the only confirmation
+    # that tokens are encrypted at rest, and a security control you cannot see confirmed
+    # is not much of a control. Without this the "positrack" logger inherits the root
+    # threshold of WARNING and every log.info() here is silently dropped, so a healthy
+    # boot printed NOTHING and looked identical to the module never running at all.
+    #
+    # Scoped to this logger rather than logging.basicConfig(level=INFO): a global switch
+    # would also turn on INFO for httpx and friends, which log request URLs and are NOT
+    # in the redaction list above — more log, more exposure, for no diagnostic gain.
+    # Note the filter must be attached HERE too: a filter on the root logger only sees
+    # records logged directly to root, not ones propagated up from a child.
+    plog = logging.getLogger("positrack")
+    plog.addFilter(f)
+    plog.setLevel(logging.INFO)
+    if not plog.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+        handler.addFilter(f)
+        plog.addHandler(handler)
+    plog.propagate = False   # we own the handler; don't double-print via root
+
 
 # ---------- read tools ----------
 @mcp.tool
