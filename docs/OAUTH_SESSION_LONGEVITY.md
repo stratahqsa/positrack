@@ -148,10 +148,18 @@ A 30-day session means a lost or compromised laptop keeps working access for lon
 than a one-day session would. Two things bound that risk, and they are the reason
 30 days is a defensible default rather than a shortcut:
 
-- **Revocation stays immediate.** The session token is a reference, not a bearer of
-  standing rights: every single call re-validates against Hub. Disabling a user in
-  Hub kills their Positrack access on their next request, regardless of remaining
-  session time.
+- **Revocation is bounded by Hub's own token lifetime, not by the 30 days.** The
+  session token is a reference, not a bearer of standing rights — but the per-call
+  check is a *local* signature-and-expiry validation of the Hub token against Hub's
+  public keys (`JWTVerifier` over the JWKS endpoint), **not** a live "is this user
+  still active?" call to Hub. So disabling a user in Hub does not cut them off on
+  their very next request. It cuts them off when the Hub access token Positrack holds
+  reaches expiry and the silent renewal is refused — i.e. **within one Hub
+  access-token lifetime** (~24 hours if Hub's TTL is about a day). Lengthening the
+  session to 30 days does **not** lengthen that window; it is set entirely by Hub.
+  If a tighter revocation window is required, the levers are lowering Hub's own
+  access-token TTL, or switching Positrack to an introspection-based verifier that
+  asks Hub on every call (a code change, not a setting).
 - **Permissions are unchanged.** A user acts with their own YouTrack permissions and
   nothing more; a longer session grants no additional reach.
 

@@ -619,6 +619,12 @@ def _build_oauth_provider():
     # access — a revoked or unrefreshable Hub session still fails validation, and if Hub
     # issues no refresh token at all FastMCP caps the lifetime at Hub's expires_in anyway,
     # so a long value here is safe: the worst case is no change, never phantom access.
+    # Caveat on revocation TIMING: OIDCProxy's default verifier is a JWTVerifier over Hub's
+    # JWKS, so each call checks the Hub token's signature/expiry LOCALLY — it does not ask
+    # Hub whether the user is still active. A user disabled in Hub therefore keeps working
+    # until the held Hub token expires and the silent refresh is refused: bounded by Hub's
+    # access-token TTL (not by this value, which does not widen it). For revocation on the
+    # very next call, pass an introspection-based token_verifier instead.
     access_ttl = _env_int("OAUTH_ACCESS_TOKEN_TTL_SECONDS", 30 * 24 * 3600)   # 30 days
     from fastmcp.server.auth import OIDCProxy
     provider = OIDCProxy(

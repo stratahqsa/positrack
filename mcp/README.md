@@ -107,7 +107,11 @@ Two things independently forced a full browser re-auth, both now addressed:
    re-login. `OAUTH_ACCESS_TOKEN_TTL_SECONDS` (default **30 days**) decouples them;
    the FastMCP JWT becomes a reference token that re-validates and transparently
    refreshes the Hub token on every call. It cannot outlive real access — a revoked
-   Hub session still fails, and with no upstream refresh token FastMCP caps the
+   Hub session stops working once the held Hub token lapses and its renewal is
+   refused (per-call validation is a local JWKS signature check, not a live call to
+   Hub, so revocation lands **within one Hub access-token lifetime**, not on the next
+   request — a window Hub sets, which this 30-day setting does not widen). With no
+   upstream refresh token FastMCP caps the
    lifetime at Hub's `expires_in` regardless. So Hub must actually issue refresh
    tokens (`offline_access` in `HUB_SCOPES` + `access_type=offline`, both already
    sent) — if it doesn't, raise the **access-token TTL on the Hub service itself**,
