@@ -116,10 +116,20 @@ OAuth needs a client registered in Hub. This is done **once** for everyone.
    OAUTH_PUBLIC_URL=https://positrack.up.railway.app
    HUB_SCOPES=openid offline_access <youtrack-service-uuid> 0-0-0-0-0
    FASTMCP_JWT_SIGNING_KEY=<a long random string>   # keeps sessions valid across redeploys
+   OAUTH_STORE_ENCRYPTION_KEY=<a Fernet key>        # encrypts stored tokens on the volume
    ```
 
    With those unset, the server simply runs without OAuth (Option 1 / Claude /
    Gemini are unaffected). `0-0-0-0-0` is Hub's own service id; keep it in scope.
+
+6. **Mount a Railway volume at `/data`** (Service → Settings → Volumes). The OAuth
+   store keeps both client registrations and the upstream Hub tokens; without a
+   volume it lives in the container filesystem and **every redeploy forces all
+   connected users to sign in again**. Sessions otherwise last
+   `OAUTH_ACCESS_TOKEN_TTL_SECONDS` (default 30 days) — see
+   [`mcp/README.md`](../mcp/README.md#session-longevity-why-users-had-to-reconnect-daily)
+   for the full picture, including the Hub-side access-token TTL that caps
+   everything when Hub issues no refresh token.
 
 **Managed seats:** on a managed **Business/Enterprise** workspace, an admin may
 have **Developer Mode disabled** — then Option 2 won't appear. An individual
