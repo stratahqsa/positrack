@@ -2,11 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   accountability,
   bugPressure,
+  lateThisWeekStories,
   onTrackVerdict,
+  overdueStories,
+  overshootingEpics,
+  redEpics,
+  reopenedStories,
   remainingEffort,
   thisWeekDeadlines,
+  unownedEpicsList,
 } from "../lib/health";
-import type { ScheduleStory } from "../lib/types";
+import type { Epic, ScheduleStory, Story } from "../lib/types";
 import { baseSnapshot } from "./fixtures";
 
 /**
@@ -84,6 +90,9 @@ const STORIES: ScheduleStory[] = [
     bugs: [],
   },
   {
+    // Real ticket, real shape: genuinely unlinked (no epic, no parent story).
+    // Every lib/health.ts computation below must exclude it via
+    // linkedStories() — see the dedicated "excludes unlinked stories" tests.
     storyId: "PXB1-6848",
     summary: "Stock Valuation Report-Alpha Report",
     state: "RE-OPEN",
@@ -97,7 +106,7 @@ const STORIES: ScheduleStory[] = [
     qaEst: 0,
     spent: 1260,
     ddTs: 1783339200000, // 06 Jul 2026
-    qaTs: 1783684800000, // 10 Jul 2026 -> NOT due this week (week 2), but globally overdue
+    qaTs: 1783684800000, // 10 Jul 2026 -> would be globally overdue if linked
     sprint: "beta1-21",
     parentId: null,
     epicId: null,
@@ -126,7 +135,10 @@ const STORIES: ScheduleStory[] = [
   {
     // Synthetic: real snapshot has no blank-assignee stories today, so this row
     // is hand-built to exercise the `unowned` branch. Deadline is far in the
-    // future -> not due this week, not overdue.
+    // future -> not due this week, not overdue. Given a real parentId
+    // (unlike PXB1-6848) since blank-assignee and unlinked-story are
+    // orthogonal concerns — this row should still count once linkedStories()
+    // is applied.
     storyId: "PXB1-9999",
     summary: "(fixture) unowned placeholder story",
     state: "OPEN",
@@ -142,8 +154,8 @@ const STORIES: ScheduleStory[] = [
     ddTs: Date.UTC(2026, 7, 1),
     qaTs: Date.UTC(2026, 7, 10), // 10 Aug 2026
     sprint: "beta1-21",
-    parentId: null,
-    epicId: null,
+    parentId: "PXB1-52",
+    epicId: "PXB1-52",
     bugs: [],
   },
 ];
@@ -154,27 +166,110 @@ function scheduleSnapshot() {
   return s;
 }
 
+function epic(overrides: Partial<Epic>): Epic {
+  return {
+    id: "PXB1-0",
+    summary: "(fixture) epic",
+    created: NOW_MS,
+    resolved: null,
+    assignee: "Someone",
+    epic_state: "OPEN",
+    stories: [],
+    rollup_all: { server: 0, ui: 0, testing: 0 },
+    epic_est: { server: 0, ui: 0, testing: 0 },
+    rollup: { server: 0, ui: 0, testing: 0 },
+    category: "PENDING",
+    missing_est: false,
+    total: 0,
+    spent: 100,
+    overshoot: false,
+    ...overrides,
+  };
+}
+
+/** Mirrors STORIES's style: one epic per RED reason, one clean epic, and one
+ *  (PXB1-202) flagged under TWO reasons — the case that makes redEpics()'s
+ *  length differ from insights.red_counts.total_red (a sum, not a distinct
+ *  count). stale_days: 30 matches scripts/snapshot.py's STALE_DAYS default. */
+const EPICS: Epic[] = [
+  epic({ id: "PXB1-100", assignee: "", needs_owner: true }), // Needs an owner
+  epic({
+    id: "PXB1-202",
+    assignee: "Aruna Saini",
+    missing_est: true,
+    overshoot: true,
+  }), // Missing estimate + Overshooting (2 reasons, 1 epic)
+  epic({ id: "PXB1-300", assignee: "Shafeek M", epic_state: "BLOCKED" }), // Blocked/On hold
+  epic({
+    id: "PXB1-400",
+    assignee: "Ajnas O",
+    created: NOW_MS - 40 * 86_400_000, // 40 days before NOW_MS, > 30-day stale_days
+    spent: 0,
+  }), // Stale
+  epic({ id: "PXB1-500", assignee: "Pramod Saini" }), // clean, not RED
+];
+
+function epicsSnapshot() {
+  const s = baseSnapshot();
+  s.effort.sections = { done: [], pending: EPICS, mixed: [], no_stories: [], p2_backlog: [] };
+  s.insights.red_counts.stale_days = 30;
+  return s;
+}
+
+function story(overrides: Partial<Story> = {}): Story {
+  return {
+    id: "S-0",
+    summary: "(fixture) story",
+    state: "OPEN",
+    scope: "PHASE 1",
+    assignee: "Someone",
+    created: NOW_MS,
+    est: { server: 0, ui: 0, testing: 0 },
+    spent: 0,
+    ...overrides,
+  };
+}
+
 describe("remainingEffort", () => {
-  it("reads man-days straight from grand_total.total_md, and derives hours from total minutes", () => {
+  it("nets Est - pending-scoped Spent per epic, ignoring a MIXED epic's inflated lifetime Epic.spent", () => {
     const s = baseSnapshot();
-    // Real grand_total from dashboard/data/latest.json (PXB1, 2026-07-14).
-    s.effort.totals.grand_total = {
-      server: 68700,
-      ui: 35520,
-      testing: 32400,
-      total: 136620,
-      spent: 165255,
-      server_md: 143.1,
-      ui_md: 74.0,
-      testing_md: 67.5,
-      total_md: 284.6,
-      spent_md: 344.3,
+    s.effort.sections = {
+      done: [],
+      // PENDING: no stories to scope by -> epic.spent used directly (10md est, 4md spent -> 6md net).
+      pending: [epic({ id: "PXB1-1", category: "PENDING", total: 4800, spent: 1920 })],
+      // MIXED: epic.spent is a huge whole-epic-lifetime figure that must be
+      // ignored; only the pending-P1 story's own `spent` (2md) counts
+      // (5md est - 2md pending-spent -> 3md net).
+      mixed: [
+        epic({
+          id: "PXB1-2",
+          category: "MIXED",
+          total: 2400,
+          spent: 48_000,
+          stories: [
+            story({ id: "S-done", state: "DONE", spent: 999_999 }),
+            story({ id: "S-pending", state: "OPEN", spent: 960 }),
+          ],
+        }),
+        // Already over budget while pending (2md est, 6md pending-spent) ->
+        // clamps to 0 instead of going negative and cancelling other epics.
+        epic({
+          id: "PXB1-3",
+          category: "MIXED",
+          total: 960,
+          spent: 0,
+          stories: [story({ id: "S-over", state: "OPEN", spent: 2880 })],
+        }),
+      ],
+      // NO_STORIES: same rule as PENDING -> epic.spent used directly (1md est, 0 spent -> 1md net).
+      no_stories: [epic({ id: "PXB1-4", category: "NO_STORIES", total: 480, spent: 0 })],
+      p2_backlog: [],
     };
-    expect(remainingEffort(s)).toEqual({ manDays: 284.6, hours: 2277 });
+    expect(remainingEffort(s)).toEqual({ manDays: 10.0, hours: 80, estMd: 18.0, spentMd: 12.0 });
   });
 
   it("is all-zero on an empty snapshot", () => {
-    expect(remainingEffort(baseSnapshot())).toEqual({ manDays: 0, hours: 0 });
+    expect(remainingEffort(baseSnapshot())).toEqual({ manDays: 0, hours: 0, estMd: 0, spentMd: 0 });
   });
 });
 
@@ -237,19 +332,35 @@ describe("thisWeekDeadlines", () => {
   });
 });
 
+describe("lateThisWeekStories", () => {
+  it("returns exactly the story behind thisWeekDeadlines().late, not just the count", () => {
+    const ids = lateThisWeekStories(scheduleSnapshot(), NOW_MS).map((s) => s.storyId);
+    expect(ids).toEqual(["PXB1-7206"]);
+    expect(ids.length).toBe(thisWeekDeadlines(scheduleSnapshot(), NOW_MS).late);
+  });
+
+  it("is empty when the schedule block is absent", () => {
+    const s = baseSnapshot();
+    delete s.schedule;
+    expect(lateThisWeekStories(s, NOW_MS)).toEqual([]);
+  });
+});
+
 describe("accountability", () => {
   it("computes unowned/overdue/reopened counts and ranks people by overdue count", () => {
     const result = accountability(scheduleSnapshot(), NOW_MS);
     // unowned: PXB1-9999 (blank assignee).
-    // overdue (not done, qaTs < NOW_MS, any week): 7206, 6848, 1634.
-    // reopened (state contains "re-open"): 7206, 7560, 6848.
+    // overdue (not done, qaTs < NOW_MS, any week, linked): 7206, 1634. 6848 is
+    // excluded by linkedStories() (no parent link) despite otherwise qualifying.
+    // reopened (state contains "re-open", linked): 7206, 7560. 6848 excluded, same reason.
     expect(result.unowned).toBe(1);
-    expect(result.overdue).toBe(3);
-    expect(result.reopened).toBe(3);
+    expect(result.overdue).toBe(2);
+    expect(result.reopened).toBe(2);
     expect(result.byPerson).toEqual([
       { name: "Shafeek M", overdue: 1, open: 2 }, // 7206 (overdue) + 7560 (not yet)
-      { name: "Pramod Saini", overdue: 1, open: 1 }, // tie-break vs Sarika: name asc
-      { name: "Sarika Agrawal", overdue: 1, open: 1 },
+      { name: "Pramod Saini", overdue: 1, open: 1 },
+      // Sarika Agrawal's only story is PXB1-6848, excluded entirely by
+      // linkedStories() -> she doesn't appear in byPerson at all.
     ]);
   });
 
@@ -271,6 +382,78 @@ describe("accountability", () => {
   });
 });
 
+describe("overdueStories", () => {
+  it("returns exactly the stories behind accountability().overdue, not just the count", () => {
+    const ids = overdueStories(scheduleSnapshot(), NOW_MS).map((s) => s.storyId);
+    expect(ids.sort()).toEqual(["PXB1-1634", "PXB1-7206"]);
+    expect(ids.length).toBe(accountability(scheduleSnapshot(), NOW_MS).overdue);
+  });
+
+  it("excludes a story with no parent link even if otherwise overdue (PXB1-6848)", () => {
+    const ids = overdueStories(scheduleSnapshot(), NOW_MS).map((s) => s.storyId);
+    expect(ids).not.toContain("PXB1-6848");
+  });
+
+  it("is empty when the schedule block is absent", () => {
+    const s = baseSnapshot();
+    delete s.schedule;
+    expect(overdueStories(s, NOW_MS)).toEqual([]);
+  });
+});
+
+describe("reopenedStories", () => {
+  it("returns exactly the stories behind accountability().reopened, not just the count", () => {
+    const ids = reopenedStories(scheduleSnapshot()).map((s) => s.storyId);
+    expect(ids.sort()).toEqual(["PXB1-7206", "PXB1-7560"]);
+    expect(ids.length).toBe(accountability(scheduleSnapshot(), NOW_MS).reopened);
+  });
+
+  it("excludes a re-opened story with no parent link (PXB1-6848)", () => {
+    const ids = reopenedStories(scheduleSnapshot()).map((s) => s.storyId);
+    expect(ids).not.toContain("PXB1-6848");
+  });
+});
+
+describe("unownedEpicsList", () => {
+  it("returns open epics needing a real owner (blank assignee or role placeholder)", () => {
+    const ids = unownedEpicsList(epicsSnapshot()).map((e) => e.id);
+    expect(ids).toEqual(["PXB1-100"]);
+  });
+
+  it("is empty when the effort block has no sections", () => {
+    expect(unownedEpicsList(baseSnapshot())).toEqual([]);
+  });
+});
+
+describe("overshootingEpics", () => {
+  it("returns open epics flagged overshoot", () => {
+    const ids = overshootingEpics(epicsSnapshot()).map((e) => e.id);
+    expect(ids).toEqual(["PXB1-202"]);
+  });
+});
+
+describe("redEpics", () => {
+  it("dedupes one row per epic even when it matches multiple RED reasons", () => {
+    const result = redEpics(epicsSnapshot(), NOW_MS);
+    const byId = Object.fromEntries(result.map((r) => [r.epic.id, r.reasons]));
+    expect(byId).toEqual({
+      "PXB1-100": ["Needs an owner"],
+      "PXB1-202": ["Missing estimate", "Overshooting"],
+      "PXB1-300": ["Blocked/On hold"],
+      "PXB1-400": ["Stale"],
+    });
+    // PXB1-500 (clean) is absent — never flagged for any reason.
+    expect(result.some((r) => r.epic.id === "PXB1-500")).toBe(false);
+  });
+
+  it("can list fewer distinct epics than total_red when an epic matches 2+ reasons", () => {
+    // total_red would be 5 here (1 reason each for 100/300/400 + 2 for 202),
+    // but only 4 DISTINCT epics are actually affected.
+    const result = redEpics(epicsSnapshot(), NOW_MS);
+    expect(result.length).toBe(4);
+  });
+});
+
 describe("onTrackVerdict", () => {
   it("is behind when a this-week deadline is late AND there are open High bugs", () => {
     const s = scheduleSnapshot();
@@ -279,7 +462,7 @@ describe("onTrackVerdict", () => {
     expect(verdict.status).toBe("behind");
     expect(verdict.reasons).toEqual([
       "1 deadline late this week",
-      "3 stories overdue past QA deadline",
+      "2 stories overdue past QA deadline",
       "4 open High-priority bugs",
     ]);
   });
@@ -302,8 +485,8 @@ describe("onTrackVerdict", () => {
       ddTs: Date.UTC(2026, 6, 1),
       qaTs: Date.UTC(2026, 6, 1), // 01 Jul 2026 -> week index 0, not this week (index 2)
       sprint: "beta1-21",
-      parentId: null,
-      epicId: null,
+      parentId: "PXB1-9", // linked (this test is about overdue pile-up, not orphan exclusion)
+      epicId: "PXB1-9",
       bugs: [],
     }));
     s.schedule = { epics: [], stories: overdueStories, orphan_count: 0 };

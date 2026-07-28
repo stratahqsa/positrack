@@ -2,9 +2,15 @@ import { loadSnapshot } from "@/lib/data";
 import {
   accountability,
   bugPressure,
+  lateThisWeekStories,
   onTrackVerdict,
+  overdueStories,
+  overshootingEpics,
+  redEpics,
   remainingEffort,
+  reopenedStories,
   thisWeekDeadlines,
+  unownedEpicsList,
 } from "@/lib/health";
 import { getBrief, rehydrateBrief } from "@/lib/brief";
 import { Header } from "@/components/shell/header";
@@ -40,6 +46,12 @@ export default async function Home() {
   const deadlines = thisWeekDeadlines(snapshot, nowMs);
   const bugs = bugPressure(snapshot);
   const acc = accountability(snapshot, nowMs);
+  const lateStories = lateThisWeekStories(snapshot, nowMs);
+  const overdueStoriesList = overdueStories(snapshot, nowMs);
+  const reopenedStoriesList = reopenedStories(snapshot);
+  const unownedEpicsListVal = unownedEpicsList(snapshot);
+  const overshootingEpicsList = overshootingEpics(snapshot);
+  const redEpicsList = redEpics(snapshot, nowMs);
 
   return (
     <div className="min-h-screen">
@@ -59,10 +71,19 @@ export default async function Home() {
           <EffortTile
             manDays={effort.manDays}
             hours={effort.hours}
+            estMd={effort.estMd}
+            spentMd={effort.spentMd}
             totalRed={insights.red_counts.total_red}
             overshoot={insights.red_counts.overshoot}
+            redEpicsList={redEpicsList}
+            overshootingEpicsList={overshootingEpicsList}
           />
-          <DeadlinesTile due={deadlines.due} done={deadlines.done} late={deadlines.late} />
+          <DeadlinesTile
+            due={deadlines.due}
+            done={deadlines.done}
+            late={deadlines.late}
+            lateStories={lateStories}
+          />
           <BugPressureTile
             openHigh={bugs.openHigh}
             newHigh={bugs.newHigh}
@@ -73,8 +94,11 @@ export default async function Home() {
 
         <AccountabilityStrip
           unownedEpics={insights.red_counts.unowned}
+          unownedEpicsList={unownedEpicsListVal}
           overdue={acc.overdue}
+          overdueStoriesList={overdueStoriesList}
           reopened={acc.reopened}
+          reopenedStoriesList={reopenedStoriesList}
           byPerson={acc.byPerson}
         />
 

@@ -3,8 +3,10 @@
  * here is a straight reduction over already-loaded snapshot blocks, which is
  * what makes them unit-testable against a fixture (see tests/health.test.ts).
  */
+import { epicRemainingSpent } from "./effort";
 import { DEFAULT_WEEK1_ANCHOR, isThisWeek, parseAnchor } from "./week";
-import type { ScheduleStory, Snapshot } from "./types";
+import { MAN_DAY_MINUTES } from "./types";
+import type { Epic, ScheduleStory, Snapshot } from "./types";
 
 /** Overdue systemic-count threshold that alone marks the project "behind" (see onTrackVerdict). */
 const BEHIND_OVERDUE_THRESHOLD = 5;
@@ -22,6 +24,108 @@ function isUnowned(assignee: string | undefined | null): boolean {
  *  onTrackVerdict, so the three tiles never disagree about what "late" means. */
 function isOverdue(story: ScheduleStory, nowMs: number): boolean {
   return !story.done && story.qaTs != null && story.qaTs < nowMs;
+}
+
+/** schedule.stories with a genuinely unlinked ticket excluded (parentId
+ *  null — no epic AND no parent story, e.g. PXB1-6847/6848). Weekly Deadline
+ *  / Release Schedule read schedule.stories directly and are unaffected;
+ *  this is Health-only, applied at the one point every Health computation
+ *  below reads from, so it can't be forgotten on any individual list
+ *  (2026-07-25). */
+function linkedStories(s: Snapshot): ScheduleStory[] {
+  return (s.schedule?.stories ?? []).filter((story) => story.parentId != null);
+}
+
+/**
+ * The actual stories behind accountability().overdue's count — same
+ * `isOverdue` filter, project-wide (not week-scoped). Exists so the "Overdue"
+ * tile can drill down to exactly the tickets it's counting, rather than
+ * someone having to reverse-engineer the number from Weekly Deadline /
+ * Release Schedule (both apply narrower display filters than this raw
+ * project-wide list, so they can under-report vs. this count) (2026-07-24).
+ */
+export function overdueStories(s: Snapshot, nowMs: number): ScheduleStory[] {
+  return linkedStories(s).filter((story) => isOverdue(story, nowMs));
+}
+
+/** The actual stories behind thisWeekDeadlines().late's count: overdue AND
+ *  due this release week. Same rationale as overdueStories() above. */
+export function lateThisWeekStories(s: Snapshot, nowMs: number): ScheduleStory[] {
+  const anchor = weekAnchorMs(s);
+  return overdueStories(s, nowMs).filter(
+    (story) => story.qaTs != null && isThisWeek(story.qaTs, nowMs, anchor),
+  );
+}
+
+/** The actual stories behind accountability().reopened's count. */
+export function reopenedStories(s: Snapshot): ScheduleStory[] {
+  return linkedStories(s).filter((story) =>
+    (story.state ?? "").toLowerCase().includes("re-open"),
+  );
+}
+
+/** Open epics (pending/mixed/no_stories sections — the same 3 sections
+ *  scripts/snapshot.py::_red_counts_from_effort sums over). */
+function openEpics(s: Snapshot): Epic[] {
+  const sections = s.effort?.sections;
+  if (!sections) return [];
+  return [...sections.pending, ...sections.mixed, ...sections.no_stories];
+}
+
+/** Needs a REAL owner: epic assignee blank/role-placeholder AND no pending
+ *  story has a real individual assignee either (an epic parked on "Dev Lead"
+ *  with a pending story assigned to a real person is NOT unowned). Prefers
+ *  the precomputed `needs_owner` flag (matches _needs_owner in
+ *  scripts/snapshot.py exactly); falls back to a blank-assignee check on
+ *  snapshots that predate that field. */
+function epicNeedsOwner(e: Epic): boolean {
+  return e.needs_owner ?? isUnowned(e.assignee);
+}
+
+/** The actual epics behind insights.red_counts.unowned's count — the "Needs
+ *  an owner" stat on the Accountability strip (NOT accountability().unowned,
+ *  which is story-level and near-zero in real data) (2026-07-24). */
+export function unownedEpicsList(s: Snapshot): Epic[] {
+  return openEpics(s).filter(epicNeedsOwner);
+}
+
+/** The actual epics behind insights.red_counts.overshoot's count — the
+ *  "N overshooting" stat on the Effort tile. */
+export function overshootingEpics(s: Snapshot): Epic[] {
+  return openEpics(s).filter((e) => e.overshoot);
+}
+
+export interface RedEpic {
+  epic: Epic;
+  /** Every RED category this epic matches — an epic can carry more than one
+   *  (e.g. unowned AND overshooting), which is exactly why this list's
+   *  length can be LESS than insights.red_counts.total_red: that number is
+   *  an arithmetic SUM of 5 independent category counts (mirrors
+   *  scripts/snapshot.py::_red_counts_from_effort), so an epic flagged under
+   *  two categories contributes 2 to total_red but appears once here. */
+  reasons: string[];
+}
+
+/** Every open epic flagged RED for at least one reason, deduplicated by
+ *  epic — the "N total RED" drill-down on the Effort tile. Mirrors
+ *  _red_counts_from_effort's 5 conditions exactly, reading `stale_days` from
+ *  the snapshot itself (insights.red_counts.stale_days) rather than
+ *  hardcoding it, so this can never drift from what Python actually used. */
+export function redEpics(s: Snapshot, nowMs: number): RedEpic[] {
+  const staleDays = s.insights?.red_counts?.stale_days ?? 30;
+  const out: RedEpic[] = [];
+  for (const e of openEpics(s)) {
+    const reasons: string[] = [];
+    if (epicNeedsOwner(e)) reasons.push("Needs an owner");
+    if (e.missing_est) reasons.push("Missing estimate");
+    if (e.created && (nowMs - e.created) / 86_400_000 > staleDays && (e.spent || 0) === 0) {
+      reasons.push("Stale");
+    }
+    if (/block|hold/i.test(e.epic_state || "")) reasons.push("Blocked/On hold");
+    if (e.overshoot) reasons.push("Overshooting");
+    if (reasons.length > 0) out.push({ epic: e, reasons });
+  }
+  return out;
 }
 
 export function bugPressure(s: Snapshot): {
@@ -47,11 +151,41 @@ export function bugPressure(s: Snapshot): {
   };
 }
 
-/** Remaining open effort. `manDays` is `grand_total.total_md` as-is; `hours` is
- *  derived from `grand_total.total` minutes (MAN_DAY_MINUTES-independent). */
-export function remainingEffort(s: Snapshot): { manDays: number; hours: number } {
-  const gt = s.effort.totals.grand_total;
-  return { manDays: gt.total_md, hours: gt.total / 60 };
+/**
+ * Remaining open effort, NET of time already spent on the still-pending work
+ * (2026-07-25) — not just the raw estimate ("Remaining effort to come from
+ * effort report": reuses lib/effort.ts's epicRemainingSpent(), the exact
+ * same pending-scoped spend figure the Effort Report's own epic tables show,
+ * so this can never quietly diverge from what /effort displays). For each
+ * open epic (pending/mixed/no_stories), `max(0, epic.total -
+ * epicRemainingSpent(epic))` is clamped at zero PER EPIC before summing, so
+ * an epic that's already over budget while still pending (e.g. an
+ * "overshooting" epic) can't go negative and silently cancel out real
+ * remaining work from other epics in the total. `estMd`/`spentMd` are the
+ * pre-subtraction components, for the tile's "Est X · Spent Y" line so the
+ * net number is never a mystery.
+ */
+export function remainingEffort(s: Snapshot): {
+  manDays: number;
+  hours: number;
+  estMd: number;
+  spentMd: number;
+} {
+  let totalMin = 0;
+  let spentMin = 0;
+  let netMin = 0;
+  for (const e of openEpics(s)) {
+    const spent = epicRemainingSpent(e);
+    totalMin += e.total;
+    spentMin += spent;
+    netMin += Math.max(0, e.total - spent);
+  }
+  return {
+    manDays: netMin / MAN_DAY_MINUTES,
+    hours: netMin / 60,
+    estMd: totalMin / MAN_DAY_MINUTES,
+    spentMd: spentMin / MAN_DAY_MINUTES,
+  };
 }
 
 /**
@@ -64,7 +198,7 @@ export function thisWeekDeadlines(
   s: Snapshot,
   nowMs: number,
 ): { due: number; done: number; late: number } {
-  const stories = s.schedule?.stories ?? [];
+  const stories = linkedStories(s);
   const anchor = weekAnchorMs(s);
   const dueThisWeek = stories.filter(
     (story) => story.qaTs != null && isThisWeek(story.qaTs, nowMs, anchor),
@@ -72,7 +206,7 @@ export function thisWeekDeadlines(
   return {
     due: dueThisWeek.length,
     done: dueThisWeek.filter((story) => story.done).length,
-    late: dueThisWeek.filter((story) => isOverdue(story, nowMs)).length,
+    late: lateThisWeekStories(s, nowMs).length,
   };
 }
 
@@ -92,7 +226,7 @@ export function accountability(
   reopened: number;
   byPerson: { name: string; overdue: number; open: number }[];
 } {
-  const stories = s.schedule?.stories ?? [];
+  const stories = linkedStories(s);
 
   const byPersonMap = new Map<string, { overdue: number; open: number }>();
   for (const story of stories) {
@@ -108,9 +242,8 @@ export function accountability(
 
   return {
     unowned: stories.filter((story) => isUnowned(story.assignee)).length,
-    overdue: stories.filter((story) => isOverdue(story, nowMs)).length,
-    reopened: stories.filter((story) => (story.state ?? "").toLowerCase().includes("re-open"))
-      .length,
+    overdue: overdueStories(s, nowMs).length,
+    reopened: reopenedStories(s).length,
     byPerson,
   };
 }

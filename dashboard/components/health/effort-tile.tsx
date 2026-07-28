@@ -1,22 +1,51 @@
-import { Timer, AlertTriangle } from "lucide-react";
+"use client";
+
+import * as React from "react";
+import { Timer, AlertTriangle, ChevronRight } from "lucide-react";
 import { StatTile } from "@/components/health/stat-tile";
+import { EpicMiniList } from "@/components/health/epic-mini-list";
+import { cn } from "@/lib/utils";
+import type { Epic } from "@/lib/types";
+import type { RedEpic } from "@/lib/health";
+
+type Expanded = "red" | "overshoot" | null;
 
 /**
- * Remaining effort — man-days + hours open (remainingEffort()), with RED
- * context from insights.red_counts (total_red, overshoot) so the raw
- * man-days figure isn't read in isolation from the epics driving it.
+ * Remaining effort — man-days + hours open, NET of time already spent on the
+ * still-pending work (remainingEffort(), 2026-07-25), with RED context from
+ * insights.red_counts (total_red, overshoot) so the raw man-days figure
+ * isn't read in isolation from the epics driving it. The Est/Spent line
+ * beneath makes the subtraction transparent rather than a silently-smaller
+ * number. Both "N total RED" and "N overshooting" are clickable when
+ * nonzero: expand to the exact epics behind each (lib/health.ts's
+ * redEpics() / overshootingEpics()) instead of leaving the number
+ * unexplained (2026-07-24). `totalRed` can exceed redEpicsList.length when
+ * an epic matches more than one RED reason — see redEpics()'s own doc
+ * comment; each row there is tagged with every reason it matched, so that's
+ * still visible.
  */
 export function EffortTile({
   manDays,
   hours,
+  estMd,
+  spentMd,
   totalRed,
   overshoot,
+  redEpicsList,
+  overshootingEpicsList,
 }: {
   manDays: number;
   hours: number;
+  estMd: number;
+  spentMd: number;
   totalRed: number;
   overshoot: number;
+  redEpicsList: RedEpic[];
+  overshootingEpicsList: Epic[];
 }) {
+  const [expanded, setExpanded] = React.useState<Expanded>(null);
+  const reasonsById = new Map(redEpicsList.map((r) => [r.epic.id, r.reasons]));
+
   return (
     <StatTile label="Remaining effort" icon={Timer} tone="violet" href="/effort" linkLabel="View Effort">
       <div className="tabular text-2xl font-bold leading-none text-fg">
@@ -26,12 +55,48 @@ export function EffortTile({
       <p className="tabular mt-1 text-[11px] text-faint">
         {Math.round(hours).toLocaleString()}h open
       </p>
+      <p className="tabular mt-0.5 text-[10.5px] text-faint">
+        Est {estMd.toFixed(1)}md · Spent {spentMd.toFixed(1)}md logged
+      </p>
       {totalRed > 0 ? (
-        <p className="mt-2 flex items-center gap-1 text-[11px] text-warn">
+        <p className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-warn">
           <AlertTriangle className="size-3 shrink-0" />
-          {totalRed} total RED
-          {overshoot > 0 ? ` · ${overshoot} overshooting` : ""}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => (v === "red" ? null : "red"))}
+            aria-expanded={expanded === "red"}
+            className="inline-flex items-center gap-0.5 hover:text-warn/80"
+          >
+            {totalRed} total RED
+            <ChevronRight className={cn("size-3 transition-transform", expanded === "red" && "rotate-90")} />
+          </button>
+          {overshoot > 0 ? (
+            <>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => (v === "overshoot" ? null : "overshoot"))}
+                aria-expanded={expanded === "overshoot"}
+                className="inline-flex items-center gap-0.5 hover:text-warn/80"
+              >
+                {overshoot} overshooting
+                <ChevronRight
+                  className={cn("size-3 transition-transform", expanded === "overshoot" && "rotate-90")}
+                />
+              </button>
+            </>
+          ) : null}
         </p>
+      ) : null}
+      {expanded === "red" ? (
+        <div className="mt-2">
+          <EpicMiniList epics={redEpicsList.map((r) => r.epic)} reasonsById={reasonsById} />
+        </div>
+      ) : null}
+      {expanded === "overshoot" ? (
+        <div className="mt-2">
+          <EpicMiniList epics={overshootingEpicsList} showOvershoot />
+        </div>
       ) : null}
     </StatTile>
   );

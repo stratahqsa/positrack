@@ -41,6 +41,28 @@ def test_ist_window_non_monday_still_uses_yesterday():
     w = parse.ist_window(now_ms)
     assert w["window_start_str"] == "2026-07-13"
 
+
+def test_ist_window_sunday_starts_friday_not_saturday():
+    # 2026-07-12 is a Sunday. Run Sun 12 Jul 2026 09:00 IST == 2026-07-12T03:30:00Z.
+    # No report runs Saturday, so Sunday's window must bridge back to the
+    # preceding Friday (10 Jul) 00:00 IST, not just "yesterday" (Saturday 11 Jul)
+    # — a plain 1-day-back window would silently drop Saturday's bugs.
+    now_ms = parse.iso_to_ms("2026-07-12T03:30:00Z")
+    w = parse.ist_window(now_ms)
+    assert w["start_ms"] == parse.iso_to_ms("2026-07-09T18:30:00Z")  # Fri 10 Jul 00:00 IST
+    assert w["window_start_str"] == "2026-07-10"
+
+
+def test_ist_window_monday_still_bridges_to_friday_even_though_sunday_now_covers_it():
+    # Deliberate: Monday keeps its full 3-day bridge to Friday even though
+    # Sunday's own run now already covers Fri/Sat/Sun — Friday/Saturday's
+    # bugs intentionally appear in BOTH the Sunday and Monday reports as a
+    # cross-check, confirmed with the PM (2026-07-25), not merged into a
+    # shorter Monday window.
+    now_ms = parse.iso_to_ms("2026-07-13T03:30:00Z")
+    w = parse.ist_window(now_ms)
+    assert w["window_start_str"] == "2026-07-10"  # still Friday, not Sunday
+
 def test_submodule_folds_casing_duplicates():
     assert parse.submodule("Product: Product category - x") == "Product Category"
     assert parse.submodule("Product: Product Category - x") == "Product Category"

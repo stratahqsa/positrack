@@ -7,7 +7,45 @@
  * Implementation_Guide.md §8 (worked watch-list examples) per
  * docs/reports-dashboard/plans/06-effort.md Task 1.
  */
-import type { Effort, Epic } from "./types";
+import type { Effort, Epic, Story } from "./types";
+
+const DONE_STATE_WORDS = ["done", "fixed", "verified", "closed", "won't fix", "duplicate", "obsolete"];
+
+/** Case-insensitive substring match against DONE_STATE_WORDS — the shared
+ *  done-state check for effort computations (mirrors core/ytcore.py's
+ *  is_done_state). Single source of truth for epic-effort-table.tsx and
+ *  watch-list.tsx, which both used to carry their own copy. */
+export function isDoneState(state: string | null | undefined): boolean {
+  const s = (state ?? "").toLowerCase();
+  return DONE_STATE_WORDS.some((word) => s.includes(word));
+}
+
+/** Mirrors core/ytcore.py's `p1p` filter exactly: pending (not done) AND
+ *  in-scope for Phase 1 (no scope set, or scope contains "PHASE 1"). */
+export function isPendingPhase1(story: Story): boolean {
+  return !isDoneState(story.state) && (!story.scope || story.scope.toUpperCase().includes("PHASE 1"));
+}
+
+/** Sum of each pending-Phase-1 story's own `spent` (its "Spent time" field —
+ *  see lib/types.ts's Story.spent doc) — the same figure epic-effort-
+ *  table.tsx uses to scope a MIXED epic's Spent column to just its pending
+ *  stories. `spent` is optional (older snapshots predate it) and defaults
+ *  to 0. */
+export function pendingP1Spent(epic: Epic): number {
+  return epic.stories.filter(isPendingPhase1).reduce((total, s) => total + (s.spent ?? 0), 0);
+}
+
+/**
+ * Spend figure scoped to match `epic.total` (the pending-Phase-1 estimate
+ * rollup), for computing remaining/net effort. `epic.spent` (the whole-epic
+ * lifetime work-item-sweep total) already equals pending-only spend for
+ * PENDING/NO_STORIES epics — they have no done stories to inflate it — but
+ * a MIXED epic's `epic.spent` includes its done stories too, so that case
+ * needs `pendingP1Spent()` instead (2026-07-25).
+ */
+export function epicRemainingSpent(epic: Epic): number {
+  return epic.category === "MIXED" ? pendingP1Spent(epic) : epic.spent;
+}
 
 export type WatchSource = "S1" | "S2";
 

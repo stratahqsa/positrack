@@ -31,8 +31,8 @@ def _cf(name, value):
     return {"name": name, "value": value}
 
 
-def _story(sid, state, scope="PHASE 1", server=0, ui=0, testing=0, assignee="", spent=0):
-    return {"idReadable": sid, "summary": sid, "created": 1,
+def _story(sid, state, scope="PHASE 1", server=0, ui=0, testing=0, assignee="", spent=0, resolved=None):
+    return {"idReadable": sid, "summary": sid, "created": 1, "resolved": resolved,
             "assignee": ({"name": assignee} if assignee else None),
             "customFields": [_cf("State", {"name": state}), _cf("Scope", {"name": scope}),
                              _cf("Server Estimation", {"minutes": server}),
@@ -135,6 +135,73 @@ def test_epic_stories_carry_own_spent_time_field():
     rec = yt.categorize_epic(ep)
     spent_by_id = {s["id"]: s["spent"] for s in rec["stories"]}
     assert spent_by_id == {"S-a": 120, "S-b": 600}
+
+
+# ---------- overshoot: Phase-1 pending-or-closed-after-cutoff spend (2026-07-25) ----------
+# Verified live: PXB1-604 (RBAC) had a small Phase-1 pending estimate (36.0h) but a
+# large WHOLE-EPIC-LIFETIME spend (83.5h) from 4 stories closed months before the
+# cutoff — the old rule (total vs. whole-epic `spent`) flagged it as overshooting even
+# though its actual remaining work (the 1 pending story) was nowhere near its estimate.
+#
+# _overshoot_spend() takes NORMALIZED story dicts (as _epic_stories() produces —
+# plain "scope"/"state"/"spent"/"resolved" keys), not raw recipe-shaped issue JSON
+# (which is what the _story() fixture builder above produces for _epic()/
+# categorize_epic() — see test_overshoot_flag_flips_false_when_old_spend_excluded
+# below for that end-to-end path instead).
+CUT = 1782729000000  # 2026-06-29T10:30:00Z
+
+
+def _norm_story(sid, state, scope="PHASE 1", spent=0, resolved=None):
+    return {"id": sid, "summary": sid, "state": state, "scope": scope, "spent": spent,
+            "resolved": resolved}
+
+
+def test_overshoot_spend_excludes_stories_closed_before_cutoff():
+    # PXB1-604 shape: 1 pending story + 4 DONE stories resolved long before the
+    # cutoff. Only the pending story's spend counts.
+    stories = [
+        _norm_story("S-pending", "READY FOR TESTING", spent=41, resolved=None),
+        _norm_story("S-old1", "DONE", spent=4090, resolved=CUT - 100 * 86400000),
+        _norm_story("S-old2", "DONE", spent=485, resolved=CUT - 60 * 86400000),
+    ]
+    assert yt._overshoot_spend(stories, CUT) == 41
+
+
+def test_overshoot_spend_includes_stories_closed_after_cutoff():
+    # a story resolved AFTER the cutoff still counts, even though it's DONE —
+    # closing recently is exactly the "still-relevant" case the new rule keeps.
+    stories = [
+        _norm_story("S-pending", "OPEN", spent=10, resolved=None),
+        _norm_story("S-recent-done", "DONE", spent=25, resolved=CUT + 86400000),
+        _norm_story("S-old-done", "DONE", spent=999, resolved=CUT - 86400000),
+    ]
+    assert yt._overshoot_spend(stories, CUT) == 35
+
+
+def test_overshoot_spend_excludes_non_phase1_scope():
+    stories = [
+        _norm_story("S-p1", "OPEN", scope="PHASE 1", spent=10),
+        _norm_story("S-p2", "OPEN", scope="PHASE 2", spent=999),
+    ]
+    assert yt._overshoot_spend(stories, CUT) == 10
+
+
+def test_overshoot_flag_flips_false_when_old_spend_excluded():
+    # End-to-end: the PXB1-604 shape no longer overshoots once done-before-cutoff
+    # spend is excluded, even though its whole-epic `spent` (unrelated field, still
+    # correct for Done/grand-total display) remains large.
+    ep = _epic("E-604", "OPEN", stories=[
+        _story("S-pending", "READY FOR TESTING", server=16 * 60, ui=8 * 60, testing=12 * 60, spent=41),
+        _story("S-old1", "DONE", spent=4090, resolved=CUT - 100 * 86400000),
+        _story("S-old2", "DONE", spent=485, resolved=CUT - 60 * 86400000),
+    ])
+    rec = yt.categorize_epic(ep)
+    rec["total"] = rec["rollup"]["server"] + rec["rollup"]["ui"] + rec["rollup"]["testing"]
+    rec["overshoot_spent"] = yt._overshoot_spend(rec["stories"], CUT)
+    rec["overshoot"] = rec["total"] > 0 and rec["overshoot_spent"] > rec["total"]
+    assert rec["total"] == 36 * 60          # 36.0h Phase-1 pending estimate
+    assert rec["overshoot_spent"] == 41     # only the pending story's own spend
+    assert rec["overshoot"] is False        # was True under the old whole-epic-spend rule
 
 
 # ---------- epic-level estimate fallback (recipe trap, corrected scope) ----------

@@ -417,7 +417,8 @@ def _is_deferred_scope(scope):
 
 def _epic_stories(epic):
     """Extract the Subtask/OUTWARD child stories of a recipe-shaped epic dict as a
-    list of normalized story dicts (id, summary, state, scope, assignee, est, spent).
+    list of normalized story dicts (id, summary, state, scope, assignee, created,
+    resolved, est, spent).
 
     `spent` is the story's own "Spent time" field — simpler than (and a deliberate
     departure from) the epic-level work-item sweep below: per Consensus with the
@@ -440,6 +441,7 @@ def _epic_stories(epic):
                     "priority": _cf_str(s, "Priority"),
                     "assignee": _cf_str(s, "Assignee"),
                     "created": s.get("created"),
+                    "resolved": s.get("resolved"),
                     "est": {"server": _cf_minutes(s, "Server Estimation"),
                             "ui": _cf_minutes(s, "UI Estimation"),
                             "testing": _cf_minutes(s, "Testing Estimation")},
@@ -522,6 +524,26 @@ def categorize_epic(epic):
     # missing-estimate flag: (Dev=0 AND UI=0) OR QA=0 — only meaningful for open work
     rec["missing_est"] = (rollup["server"] == 0 and rollup["ui"] == 0) or (rollup["testing"] == 0)
     return rec
+
+def _overshoot_spend(stories, cutoff_ms):
+    """Spend figure the `overshoot` flag compares against `total` (the Phase-1
+    PENDING estimate rollup, see categorize_epic above) — Phase 1 stories that
+    are either still pending OR were closed AFTER `cutoff_ms`. Deliberately
+    narrower than the epic-level `spent` field (whole-epic lifetime, used for
+    Done/Pending/grand-total display, and must stay that way): comparing the
+    pending estimate against the WHOLE lifetime spend flagged epics whose
+    remaining work was nowhere near its estimate, just because they'd already
+    logged a lot of now-irrelevant time on stories finished long before the
+    cutoff (verified live against PXB1-604/148/53/2724, 2026-07-25). Uses each
+    story's own "Spent time" field (story["spent"], from _epic_stories()) —
+    the same per-story field this module already trusts for the pending-P1
+    MIXED-epic Spent figure."""
+    relevant = [
+        s for s in stories
+        if (not s["scope"] or "PHASE 1" in s["scope"].upper())
+        and (not is_done_state(s["state"]) or (s.get("resolved") and s["resolved"] > cutoff_ms))
+    ]
+    return sum(s["spent"] for s in relevant)
 
 def _scope_at_or_before(activities, cutoff_ms):
     """Reconstructs the Scope value effective AT cutoff_ms from activity
@@ -682,9 +704,12 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
         "spend": {"scope_query", "total_minutes", "unattributed_minutes", "excluded"},
       }
     Each epic record carries: id, summary, assignee, created, resolved, category,
-    rollup {server,ui,testing} (minutes), total (minutes), spent (minutes),
-    overshoot (bool), missing_est (bool), stories [...]. Grand Total counts PENDING +
-    MIXED + NO_STORIES only (Done and P2 are separate, excluded from the grand total)."""
+    rollup {server,ui,testing} (minutes), total (minutes), spent (minutes,
+    whole-epic lifetime — for Done/Pending/grand-total display), overshoot_spent
+    (minutes, Phase-1 pending-or-closed-after-cutoff — what `overshoot` actually
+    compares against `total`), overshoot (bool), missing_est (bool), stories [...].
+    Grand Total counts PENDING + MIXED + NO_STORIES only (Done and P2 are
+    separate, excluded from the grand total)."""
     exclude = set(exclude_ids or ())
     cutoff_ms = iso_to_ms(cutoff_iso)
     br = "{%s}" % scope if " " in scope else scope   # Scope: {PHASE 1}
@@ -706,7 +731,7 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     # --- fetch full epic data (recipe Step 3 field set) ---
     epic_sf = ("idReadable,summary,created,resolved,assignee(name),"
                "customFields(name,value(name,minutes,presentation)),"
-               "links(direction,linkType(name),issues(idReadable,summary,created,"
+               "links(direction,linkType(name),issues(idReadable,summary,created,resolved,"
                "assignee(name),customFields(name,value(name,minutes))))")
     # Chunked bulk fetch (same order as epic_ids) — was one GET per epic (N+1).
     cats = [categorize_epic(raw)
@@ -734,7 +759,8 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
         r = rec["rollup"]
         rec["total"] = r["server"] + r["ui"] + r["testing"]
         rec["spent"] = spend_by_epic.get(rec["id"], 0)
-        rec["overshoot"] = rec["total"] > 0 and rec["spent"] > rec["total"]
+        rec["overshoot_spent"] = _overshoot_spend(rec["stories"], cutoff_ms)
+        rec["overshoot"] = rec["total"] > 0 and rec["overshoot_spent"] > rec["total"]
 
     done = [r for r in cats if r["category"] == "DONE"]
     pending = [r for r in cats if r["category"] == "PENDING"]

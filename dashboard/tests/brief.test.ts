@@ -163,9 +163,21 @@ describe("rehydrateBrief", () => {
       epics: [],
       orphan_count: 0,
       stories: [
-        baseStory({ storyId: "S1", assignee: "Alice", done: false, qaTs: GENERATED_AT - 60_000 }),
-        baseStory({ storyId: "S2", assignee: "Alice", done: false, qaTs: GENERATED_AT - 60_000 }),
-        baseStory({ storyId: "S3", assignee: "Bob", done: false, qaTs: GENERATED_AT + 60_000 }),
+        // parentId set (unlike baseStory()'s default null) — accountability()
+        // now excludes unlinked stories (lib/health.ts's linkedStories()),
+        // and this fixture is about ranking, not orphan exclusion.
+        baseStory({
+          storyId: "S1", assignee: "Alice", done: false, qaTs: GENERATED_AT - 60_000,
+          parentId: "PXB1-1", epicId: "PXB1-1",
+        }),
+        baseStory({
+          storyId: "S2", assignee: "Alice", done: false, qaTs: GENERATED_AT - 60_000,
+          parentId: "PXB1-1", epicId: "PXB1-1",
+        }),
+        baseStory({
+          storyId: "S3", assignee: "Bob", done: false, qaTs: GENERATED_AT + 60_000,
+          parentId: "PXB1-1", epicId: "PXB1-1",
+        }),
       ],
     };
     return s;
