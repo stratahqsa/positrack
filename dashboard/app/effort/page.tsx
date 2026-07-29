@@ -18,9 +18,13 @@ import { IssueLink } from "@/components/ui/issue-link";
 // so like app/bugs this page needs no searchParams/Suspense/FilterBar wiring.
 export const dynamic = "force-dynamic";
 
+// Mirrors app/weekly/page.tsx and app/schedule/page.tsx's DEFAULT_JUN29_CUTOFF_ISO convention.
+const DEFAULT_JUN29_CUTOFF_ISO = "2026-06-29T10:30:00Z";
+
 export default async function EffortPage() {
   const snap = await loadSnapshot();
-  const { meta, effort } = snap;
+  const { meta, effort, config } = snap;
+  const jun29Ms = Date.parse(config?.jun29_cutoff_iso ?? DEFAULT_JUN29_CUTOFF_ISO);
 
   // `effort` is a required field on Snapshot's type, but this guard stays
   // defensive against a stale/malformed snapshot on disk predating it —
@@ -86,7 +90,7 @@ export default async function EffortPage() {
 
             <div className="space-y-4">
               <Section title="✓ Completed since 29 Jun" tone="good" count={effort.counts.done}>
-                <EpicEffortTable epics={effort.sections.done} variant="done" />
+                <EpicEffortTable epics={effort.sections.done} variant="done" cutoffMs={jun29Ms} />
               </Section>
 
               <Section title="📋 Has Stories · All Pending" tone="warn" count={effort.counts.pending}>
