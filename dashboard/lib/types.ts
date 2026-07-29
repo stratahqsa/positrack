@@ -31,6 +31,13 @@ export interface Story {
   created: number;
   est: Rollup;
   /**
+   * When this story itself was resolved (epoch ms), or null/absent if still
+   * open. core/ytcore.py's `_epic_stories()` has always written this into
+   * the snapshot JSON; only added to the type here (2026-07-26) once a
+   * consumer (the DONE table's post-cutoff sub-row filter) needed it.
+   */
+  resolved?: number | null;
+  /**
    * Child issue type — "STORY" | "BUG" | "UI" | "DEVELOPMENT" | "QA & AUTOMATION".
    * Optional: absent on older snapshots. Used by the Type filter.
    */
