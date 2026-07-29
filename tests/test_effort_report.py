@@ -367,6 +367,51 @@ def test_attribute_spend_epic_story_bug_and_unattributed():
     assert un == 7                                      # never silently dropped
 
 
+def test_extract_children_walks_bugs_reported_not_just_subtask():
+    # PXB1-7601-style case: a story's linked bug via "Bugs Reported" (NOT
+    # "Subtask" -- the link type _child_parent_map used to check exclusively,
+    # silently dropping every bug linked this way from spend attribution).
+    issues = [
+        {"idReadable": "PXB1-7601", "links": [
+            {"direction": "OUTWARD", "linkType": {"name": "Bugs Reported"},
+             "issues": [{"idReadable": "PXB1-8455"}, {"idReadable": "PXB1-8457"}]},
+        ]},
+        {"idReadable": "PXB1-6156", "links": [
+            {"direction": "OUTWARD", "linkType": {"name": "Subtask"},
+             "issues": [{"idReadable": "PXB1-7601"}]},
+        ]},
+    ]
+    out = yt._extract_children(issues)
+    assert out == {"PXB1-8455": "PXB1-7601", "PXB1-8457": "PXB1-7601", "PXB1-7601": "PXB1-6156"}
+
+
+def test_extract_children_link_type_match_is_case_insensitive():
+    issues = [{"idReadable": "P", "links": [
+        {"direction": "OUTWARD", "linkType": {"name": "BUGS REPORTED"}, "issues": [{"idReadable": "C"}]},
+    ]}]
+    assert yt._extract_children(issues) == {"C": "P"}
+
+
+def test_extract_children_ignores_inward_and_unrelated_link_types():
+    issues = [{"idReadable": "P", "links": [
+        {"direction": "INWARD", "linkType": {"name": "Bugs Reported"}, "issues": [{"idReadable": "C1"}]},
+        {"direction": "OUTWARD", "linkType": {"name": "Relates"}, "issues": [{"idReadable": "C2"}]},
+    ]}]
+    assert yt._extract_children(issues) == {}
+
+
+def test_extract_children_first_writer_wins():
+    issues = [
+        {"idReadable": "P1", "links": [
+            {"direction": "OUTWARD", "linkType": {"name": "Subtask"}, "issues": [{"idReadable": "C"}]},
+        ]},
+        {"idReadable": "P2", "links": [
+            {"direction": "OUTWARD", "linkType": {"name": "Bugs Reported"}, "issues": [{"idReadable": "C"}]},
+        ]},
+    ]
+    assert yt._extract_children(issues) == {"C": "P1"}
+
+
 def test_attribute_spend_does_not_use_issue_rollup():
     # Attribution is purely from work items; an epic with no work-item entries gets 0
     # spend even if (in reality) it carries a Spent-time rollup. Guards against
