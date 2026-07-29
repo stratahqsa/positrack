@@ -238,6 +238,28 @@ def _install_log_redaction():
     for name in ("uvicorn", "uvicorn.access", "uvicorn.error", "fastmcp", "mcp"):
         logging.getLogger(name).addFilter(f)
 
+    # Our own INFO lines must actually reach the platform log. They are how a deploy is
+    # verified — "OAuth storage: persistent + encrypted at …" is the only confirmation
+    # that tokens are encrypted at rest, and a security control you cannot see confirmed
+    # is not much of a control. Without this the "positrack" logger inherits the root
+    # threshold of WARNING and every log.info() here is silently dropped, so a healthy
+    # boot printed NOTHING and looked identical to the module never running at all.
+    #
+    # Scoped to this logger rather than logging.basicConfig(level=INFO): a global switch
+    # would also turn on INFO for httpx and friends, which log request URLs and are NOT
+    # in the redaction list above — more log, more exposure, for no diagnostic gain.
+    # Note the filter must be attached HERE too: a filter on the root logger only sees
+    # records logged directly to root, not ones propagated up from a child.
+    plog = logging.getLogger("positrack")
+    plog.addFilter(f)
+    plog.setLevel(logging.INFO)
+    if not plog.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+        handler.addFilter(f)
+        plog.addHandler(handler)
+    plog.propagate = False   # we own the handler; don't double-print via root
+
 
 # ---------- read tools ----------
 @mcp.tool
@@ -512,29 +534,74 @@ async def health(_request):
     return JSONResponse({"status": "ok", "service": "positrack-mcp"})
 
 
+def _env_int(name, default):
+    """Read a positive-integer env var, falling back to `default` when unset or
+    unparseable. Never raises — a typo in a Railway variable must not break boot."""
+    raw = os.environ.get(name)
+    if not raw or not raw.strip():
+        return default
+    try:
+        value = int(raw.strip())
+    except ValueError:
+        logging.getLogger("positrack").warning(
+            "%s=%r is not an integer; using default %d", name, raw, default)
+        return default
+    if value <= 0:
+        logging.getLogger("positrack").warning(
+            "%s=%d must be positive; using default %d", name, value, default)
+        return default
+    return value
+
+
 def _make_client_storage():
-    """Persistent storage for OAuth Dynamic-Client-Registration records, so client
-    registrations SURVIVE redeploys/restarts. Without this, FastMCP keeps DCR clients
-    in memory only, so every Railway redeploy wipes them and EVERY connected ChatGPT/
-    Claude user breaks with "Client Not Registered" until they recreate the connector —
-    unacceptable for a many-user rollout. Backed by a Railway volume (mount a volume at
-    the parent of OAUTH_CLIENT_STORE_DIR, default /data/oauth-clients). Falls back to
-    in-memory (returns None) when no writable volume is present, so local/dev is unchanged."""
+    """Persistent storage for the OAuth state FastMCP keeps: Dynamic-Client-Registration
+    records AND the upstream Hub access/refresh tokens behind each issued session. Both
+    must SURVIVE redeploys/restarts. When this returns None, FastMCP falls back to its
+    own encrypted file store in the container's ephemeral filesystem, so every Railway
+    redeploy wipes it and EVERY connected ChatGPT/Claude user is forced through a full
+    browser re-auth (or breaks with "Client Not Registered") — the single biggest cause
+    of "I have to reconnect every morning". Backed by a Railway volume (mount a volume at
+    the parent of OAUTH_CLIENT_STORE_DIR, default /data/oauth-clients).
+
+    Tokens on the volume are encrypted at rest ONLY when OAUTH_STORE_ENCRYPTION_KEY is
+    set (a urlsafe-base64 32-byte Fernet key: `python -c "from cryptography.fernet import
+    Fernet; print(Fernet.generate_key().decode())"`). Without it the store is plaintext
+    on disk, which is a real downgrade from FastMCP's encrypted default — set the key
+    whenever you mount the volume."""
     store_dir = os.environ.get("OAUTH_CLIENT_STORE_DIR", "/data/oauth-clients")
     parent = os.path.dirname(store_dir.rstrip("/")) or "/"
     log = logging.getLogger("positrack")
     if not (os.path.isdir(parent) and os.access(parent, os.W_OK)):
-        log.warning("OAuth client storage: %s is not a writable mount; using in-memory "
-                    "(DCR clients will NOT survive restarts — mount a volume to persist).", parent)
+        log.warning("OAuth storage: %s is not a writable mount; falling back to FastMCP's "
+                    "ephemeral store — DCR clients AND upstream tokens will NOT survive "
+                    "restarts, so every user re-authenticates after each redeploy. "
+                    "Mount a Railway volume to persist.", parent)
         return None
     try:
         os.makedirs(store_dir, exist_ok=True)
         from key_value.aio.stores.disk import DiskStore
-        log.info("OAuth client storage: persistent at %s (survives redeploys)", store_dir)
-        return DiskStore(directory=store_dir)
+        store = DiskStore(directory=store_dir)
     except Exception as e:  # pragma: no cover - defensive: never let storage break boot
-        log.warning("OAuth client storage: disk init failed (%r); in-memory fallback", e)
+        log.warning("OAuth storage: disk init failed (%r); ephemeral fallback", e)
         return None
+
+    fernet_key = os.environ.get("OAUTH_STORE_ENCRYPTION_KEY")
+    if not fernet_key:
+        log.warning("OAuth storage: persistent at %s but UNENCRYPTED (tokens in plaintext "
+                    "on the volume) — set OAUTH_STORE_ENCRYPTION_KEY to encrypt at rest.",
+                    store_dir)
+        return store
+    try:
+        from cryptography.fernet import Fernet
+        from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
+        wrapped = FernetEncryptionWrapper(key_value=store, fernet=Fernet(fernet_key.strip()))
+    except Exception as e:  # pragma: no cover - bad key must not cost us persistence
+        log.warning("OAuth storage: encryption wrapper failed (%r); persisting UNENCRYPTED "
+                    "at %s. Check OAUTH_STORE_ENCRYPTION_KEY is a valid Fernet key.",
+                    e, store_dir)
+        return store
+    log.info("OAuth storage: persistent + encrypted at %s (survives redeploys)", store_dir)
+    return wrapped
 
 
 def _build_oauth_provider():
@@ -564,6 +631,23 @@ def _build_oauth_provider():
     # Services page); include the Hub service id 0-0-0-0-0 and openid/offline_access.
     # e.g. HUB_SCOPES="openid offline_access <youtrack-service-uuid> 0-0-0-0-0"
     scopes = (os.environ.get("HUB_SCOPES") or "openid offline_access").split()
+
+    # Session longevity. By DEFAULT FastMCP mirrors Hub's own `expires_in` in the token it
+    # issues to the connector, so a Hub access token that lives ~a day drags every user
+    # through a full browser re-auth about once a day ("I have to reconnect every morning").
+    # Decoupling the two makes the FastMCP JWT a long-lived REFERENCE token: it re-validates
+    # the Hub token on every call and transparently refreshes it upstream (that is what the
+    # offline_access scope + access_type=offline below are for). It cannot outlive real
+    # access — a revoked or unrefreshable Hub session still fails validation, and if Hub
+    # issues no refresh token at all FastMCP caps the lifetime at Hub's expires_in anyway,
+    # so a long value here is safe: the worst case is no change, never phantom access.
+    # Caveat on revocation TIMING: OIDCProxy's default verifier is a JWTVerifier over Hub's
+    # JWKS, so each call checks the Hub token's signature/expiry LOCALLY — it does not ask
+    # Hub whether the user is still active. A user disabled in Hub therefore keeps working
+    # until the held Hub token expires and the silent refresh is refused: bounded by Hub's
+    # access-token TTL (not by this value, which does not widen it). For revocation on the
+    # very next call, pass an introspection-based token_verifier instead.
+    access_ttl = _env_int("OAUTH_ACCESS_TOKEN_TTL_SECONDS", 30 * 24 * 3600)   # 30 days
     from fastmcp.server.auth import OIDCProxy
     provider = OIDCProxy(
         config_url=config_url,
@@ -574,7 +658,11 @@ def _build_oauth_provider():
         required_scopes=scopes,
         extra_authorize_params={"access_type": "offline"},   # Hub: ask for a refresh token
         jwt_signing_key=os.environ.get("FASTMCP_JWT_SIGNING_KEY") or None,
-        client_storage=_make_client_storage(),               # persist DCR clients across redeploys
+        client_storage=_make_client_storage(),               # persist DCR clients + upstream tokens
+        fastmcp_access_token_expiry_seconds=access_ttl,      # don't mirror Hub's short expiry
+        # Refresh a token that is about to lapse rather than letting a call race its expiry
+        # (FastMCP's default of 0 lets a token 1s from death pass the check, then 401 upstream).
+        token_expiry_threshold_seconds=_env_int("OAUTH_TOKEN_REFRESH_LEEWAY_SECONDS", 60),
     )
     # required_scopes does double duty in OIDCProxy: it both (a) advertises the scopes
     # the client must request UPSTREAM — so Hub mints a token YouTrack REST accepts, which
