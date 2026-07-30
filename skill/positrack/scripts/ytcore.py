@@ -649,19 +649,11 @@ def _md(minutes):
     """Minutes -> man-days rounded to one decimal (for report totals)."""
     return round((minutes or 0) / float(MAN_DAY), 1)
 
-_CHILD_LINK_TYPES = {"subtask", "bugs reported"}
-
-def _extract_children(issues, link_type_names=_CHILD_LINK_TYPES):
+def _extract_children(issues, link_type_names):
     """PURE: {child_id -> parent_id} for the OUTWARD children of `issues` (each
     carrying a `links` payload) whose link type case-insensitively matches one of
-    `link_type_names`. Two link types both mean 'child of' here: "Subtask" (generic
-    sub-tasks) AND "Bugs Reported" (a story's linked bugs — the actual link type
-    this project uses for that, per scripts/reports/drilldown.py/bug_blocker.py;
-    "Subtask" alone silently missed every bug-linked-via-"Bugs Reported", which
-    meant that bug's logged time fell into _attribute_spend()'s `unattributed`
-    bucket instead of reaching its story's epic — verified live against
-    PXB1-6156/PXB1-7601, 2026-07-30). First writer wins if a child is (unusually)
-    linked from two parents."""
+    `link_type_names`. First writer wins if a child is (unusually) linked from
+    two parents."""
     out = {}
     for it in issues:
         pid = it.get("idReadable")
@@ -674,24 +666,53 @@ def _extract_children(issues, link_type_names=_CHILD_LINK_TYPES):
                         out[cid] = pid
     return out
 
+def _resolve_bug_parents(subtask_children, bug_children):
+    """PURE: {bug_id -> story_id}, given `subtask_children` ({child_id: parent_id}
+    from a "Subtask" walk off epics+stories — includes story->dev-ticket) and
+    `bug_children` ({bug_id: dev_ticket_id} from a "Bugs Reported" walk off THOSE
+    same dev-ticket ids). A bug's own parent is the dev ticket, but a dev-ticket id
+    is neither an epic nor a tracked story, so _attribute_spend can't resolve it —
+    this walks one more hop through `subtask_children` to the dev ticket's OWN
+    parent (the story) instead. Falls back to the dev-ticket id itself if it isn't
+    a known Subtask child of anything (defensive; shouldn't happen)."""
+    return {bid: subtask_children.get(dev_id, dev_id) for bid, dev_id in bug_children.items()}
+
 def _child_parent_map(ctx, parent_ids, chunk=80):
-    """{child_id -> parent_id} for the OUTWARD Subtask/Bugs-Reported children
-    (sub-tasks and linked bugs — see _extract_children) of `parent_ids` (the
-    epics + their stories), via a CHUNKED `issue ID:` bulk query so one paged
-    fetch resolves every bug's parent instead of one GET per bug. Chunked to
-    stay under the request-URI length limit. This is the Rev #2 'one more link
-    level': a bug's time is placed on its story's epic without dropping it or
-    an N+1 sweep."""
-    out = {}
-    ids = [i for i in parent_ids if i]
-    for start in range(0, len(ids), chunk):
-        batch = ids[start:start + chunk]
-        q = "issue ID: " + ", ".join(batch)
-        issues = get_issues(ctx, q, fields="idReadable,links(direction,linkType(name),issues(idReadable))",
-                            top=300)
-        for cid, pid in _extract_children(issues).items():
-            if cid not in out:
-                out[cid] = pid
+    """{child_id -> parent_id}, two hops (Rev #3): a bug's real position in this
+    project's hierarchy is Epic -> Story -[Subtask]-> Dev Ticket -[Bugs Reported]->
+    Bug — the "Bugs Reported" link lives on the DEV TICKET, one level below the
+    story (see scripts/reports/drilldown.py's bug_candidates(), which walks the
+    exact same two hops for the RE-OPEN drill-down). A single-hop walk off
+    epics+stories only ever finds "Subtask" children (dev tickets among them);
+    it never sees a dev ticket's own "Bugs Reported" children, so every bug's
+    logged time fell into _attribute_spend()'s `unattributed` bucket instead of
+    reaching its story's epic — verified live against PXB1-6156 -> PXB1-7601 ->
+    PXB1-7962 (dev ticket) -> PXB1-8455/PXB1-8457 (bugs), 2026-07-30.
+
+    Pass 1: `parent_ids` (epics + their stories) -> "Subtask" children (dev
+    tickets, plain sub-tasks). Pass 2: those children -> "Bugs Reported" children
+    (bugs), each resolved back through pass 1 to the STORY (see
+    _resolve_bug_parents). Chunked `issue ID:` bulk queries throughout so one
+    paged fetch per pass resolves everything instead of one GET per issue."""
+    def _walk(ids, link_types):
+        found = {}
+        for start in range(0, len(ids), chunk):
+            batch = ids[start:start + chunk]
+            q = "issue ID: " + ", ".join(batch)
+            issues = get_issues(ctx, q, fields="idReadable,links(direction,linkType(name),issues(idReadable))",
+                                top=300)
+            for cid, pid in _extract_children(issues, link_types).items():
+                if cid not in found:
+                    found[cid] = pid
+        return found
+
+    subtask_children = _walk([i for i in parent_ids if i], {"subtask"})
+    bug_children = _walk(list(subtask_children.keys()), {"bugs reported"})
+
+    out = dict(subtask_children)
+    for bid, sid in _resolve_bug_parents(subtask_children, bug_children).items():
+        if bid not in out:
+            out[bid] = sid
     return out
 
 def effort_report(ctx, project="PXB1", scope="PHASE 1",
