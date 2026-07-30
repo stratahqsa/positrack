@@ -31,12 +31,18 @@ import { scopeLabel, stateVariant } from "@/components/weekly/badge-tone";
  *    summing the same per-row accessor used for the cells above it, so rows
  *    and their total can never visually disagree.
  *
- *    Spent is the exception for "mixed": `Epic.spent` is a whole-epic,
- *    all-stories-ever total (a work-item sweep — see core/ytcore.py), which
- *    would mismatch a Total that's already pending-P1-only. So "mixed" scopes
- *    Spent down to `pendingP1Spent()` — summing each pending-P1 story's own
- *    `spent` field — matching the PM's already-validated scheduled-report
- *    recipe. "pending"/"done" keep the whole-epic `Epic.spent` unchanged.
+ *    Spent is `pendingP1Spent()` for BOTH variants — summing each pending-P1
+ *    story's own `spent` field, not `Epic.spent` (a whole-epic, all-stories-
+ *    ever work-item sweep — see core/ytcore.py's `_attribute_spend`). Used to
+ *    be `Epic.spent` for "pending" on the assumption that a PENDING epic (no
+ *    done stories) would make the sweep equal pending-only spend anyway —
+ *    true in principle, but the sweep has to independently re-derive a total
+ *    YouTrack already maintains correctly on the story itself, and real
+ *    chances to drift turned up live (PXB1-6156, 2026-07-25 through
+ *    2026-07-30). Reading the story's own field sidesteps re-implementing
+ *    YouTrack's own propagation logic. See lib/effort.ts's
+ *    `epicRemainingSpent()` for the same reasoning applied to Health's
+ *    Remaining Effort tile.
  */
 export type EpicTableVariant = "done" | "pending" | "mixed";
 
@@ -117,8 +123,7 @@ function rowEffort(epic: Epic, variant: EpicTableVariant, cutoffMs?: number): Ro
     return { dev, ui, qa, total: dev + ui + qa, spent };
   }
   const r = rollupEffort(epic.rollup);
-  const spent = variant === "mixed" ? pendingP1Spent(epic) : epic.spent;
-  return { ...r, total: epic.total, spent };
+  return { ...r, total: epic.total, spent: pendingP1Spent(epic) };
 }
 
 function sortValue(

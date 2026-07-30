@@ -37,14 +37,29 @@ export function pendingP1Spent(epic: Epic): number {
 
 /**
  * Spend figure scoped to match `epic.total` (the pending-Phase-1 estimate
- * rollup), for computing remaining/net effort. `epic.spent` (the whole-epic
- * lifetime work-item-sweep total) already equals pending-only spend for
- * PENDING/NO_STORIES epics — they have no done stories to inflate it — but
- * a MIXED epic's `epic.spent` includes its done stories too, so that case
- * needs `pendingP1Spent()` instead (2026-07-25).
+ * rollup), for computing remaining/net effort. Sums each pending story's own
+ * `spent` (`pendingP1Spent`) whenever the epic HAS stories — the story's own
+ * "Spent time" field is a YouTrack-maintained rollup that already correctly
+ * includes propagated time from every descendant sub-ticket (bugs, test
+ * cases, automation scripts, ...), so this is more reliable than re-deriving
+ * the same total independently. `epic.spent` (the whole-epic-lifetime
+ * work-item sweep — core/ytcore.py's `_attribute_spend`) is used only as a
+ * fallback for NO_STORIES epics, where there's nothing to sum from.
+ *
+ * This replaces an earlier version that used `epic.spent` directly for any
+ * non-MIXED epic, on the assumption that a PENDING epic (no done stories to
+ * inflate the lifetime total) would make `epic.spent` equal pending-only
+ * spend. True in principle, but `_attribute_spend`'s own link-walk had to
+ * re-derive the same total YouTrack was already maintaining on the story
+ * itself, one hop at a time — real chances to drift verified live against
+ * PXB1-6156 (2026-07-25 through 2026-07-30): a bug linked via "Bugs
+ * Reported" three levels down (Epic -> Story -> Dev Ticket -> Bug) was
+ * dropped entirely at first, then even after teaching the sweep that link
+ * type, a small residual gap remained. Reading the story's own field
+ * sidesteps re-implementing YouTrack's propagation logic at all.
  */
 export function epicRemainingSpent(epic: Epic): number {
-  return epic.category === "MIXED" ? pendingP1Spent(epic) : epic.spent;
+  return epic.stories.length > 0 ? pendingP1Spent(epic) : epic.spent;
 }
 
 export type WatchSource = "S1" | "S2";
