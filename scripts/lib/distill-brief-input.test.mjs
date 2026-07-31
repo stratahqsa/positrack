@@ -23,6 +23,10 @@
  *    bugs.aging_medium) for citation in "Top issues now" -- folded into the
  *    existing narrative rather than a separate deterministic section, per
  *    the PM's explicit instruction.
+ *  - new urgent_bug evidence kind surfaces every open Urgent bug as its own
+ *    standalone citation (id, module, state, age_days), so it can never get
+ *    reduced to just a number inside a module_hotspot/bug_kpi sentence (PM
+ *    ask: "isn't it better to mention urgent bugs separately?").
  *
  * Run: node scripts/lib/distill-brief-input.test.mjs
  */
@@ -335,4 +339,57 @@ test("allGreen stays true when the only aging bugs are in the fresh 'none' bucke
   });
   const { distilled } = distillBriefInput(snapshot, {});
   assert.equal(distilled.allGreen, true);
+});
+
+function urgentBugEvidence(snapshot) {
+  const { distilled } = distillBriefInput(snapshot, {});
+  return distilled.evidence.filter((e) => e.kind === "urgent_bug");
+}
+
+test("urgent_bug evidence: one entry per open Urgent bug, computed age_days from meta.generated_at_ms", () => {
+  const DAY = 86400000;
+  const now = 1782729000000;
+  const snapshot = baseSnapshot({
+    meta: { generated_at_ms: now, project: "PXB1", scope: "PHASE 1", sprint: "beta1-23" },
+    bugs: {
+      module_insights: [], new_in_window: {}, open_high_older: [], kpi: null,
+      open_bugs: [
+        { id: "PXB1-8498", priority: "Urgent", state: "OPEN", module: "Product", created: now - 3 * DAY },
+        { id: "PXB1-9001", priority: "High", state: "OPEN", module: "Sale", created: now - 30 * DAY },
+      ],
+    },
+  });
+  const evidence = urgentBugEvidence(snapshot);
+  assert.equal(evidence.length, 1); // the High-priority bug must NOT be included
+  assert.equal(evidence[0].id, "PXB1-8498");
+  assert.equal(evidence[0].module, "Product");
+  assert.equal(evidence[0].state, "OPEN");
+  assert.equal(evidence[0].age_days, 3);
+});
+
+test("urgent_bug evidence: empty when there are no open Urgent bugs", () => {
+  const snapshot = baseSnapshot({
+    bugs: {
+      module_insights: [], new_in_window: {}, open_high_older: [], kpi: null,
+      open_bugs: [{ id: "PXB1-9001", priority: "High", state: "OPEN", module: "Sale", created: 1 }],
+    },
+  });
+  assert.deepEqual(urgentBugEvidence(snapshot), []);
+});
+
+test("urgent_bug evidence: capped at 5 defensively", () => {
+  const snapshot = baseSnapshot({
+    bugs: {
+      module_insights: [], new_in_window: {}, open_high_older: [], kpi: null,
+      open_bugs: Array.from({ length: 8 }, (_, i) => (
+        { id: `PXB1-${9000 + i}`, priority: "Urgent", state: "OPEN", module: "Sale", created: 1 }
+      )),
+    },
+  });
+  assert.equal(urgentBugEvidence(snapshot).length, 5);
+});
+
+test("severityForEvidence: urgent_bug is always 'high', regardless of age", () => {
+  assert.equal(severityForEvidence({ kind: "urgent_bug", age_days: 0.1 }), "high");
+  assert.equal(severityForEvidence({ kind: "urgent_bug", age_days: 90 }), "high");
 });

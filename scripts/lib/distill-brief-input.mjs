@@ -35,6 +35,7 @@ const BUGS_PER_MODULE_N = 2;
 const TOP_PEOPLE_N = 3;
 const TOP_EPIC_OUTLIERS_N = 3;
 const TOP_AGING_N = 3;
+const TOP_URGENT_N = 5;
 
 // Mirrors scripts/reports/bugs.py's AGING_BUCKETS_HIGH_URGENT/_MEDIUM
 // (PM-confirmed, 2026-07-31) -- kept as a matching literal here rather than
@@ -98,6 +99,11 @@ export function severityForEvidence(e) {
       return agingSeverity(e.age_days, AGING_BOUNDS_HIGH_URGENT);
     case "aging_bug_medium":
       return agingSeverity(e.age_days, AGING_BOUNDS_MEDIUM);
+    case "urgent_bug":
+      // Urgent is the top severity in this instance regardless of age --
+      // unlike aging_bug/aging_bug_medium, there's no "too fresh to flag"
+      // threshold: an open Urgent bug is inherently high-severity news.
+      return "high";
     case "red_delta":
       return redDeltaTotal(e.red_delta) > 0 ? "high" : "low";
     default:
@@ -123,6 +129,7 @@ export function sourceForEvidence(e) {
       return { label: "High-priority bugs", href: "/bugs" };
     case "aging_bug":
     case "aging_bug_medium":
+    case "urgent_bug":
       return { label: e.id, issueId: e.id };
     case "most_behind_person":
       return { label: e.person, href: "/weekly" };
@@ -290,6 +297,34 @@ function buildAgingBugEvidence(snapshot) {
   return evidence;
 }
 
+/**
+ * Every open Urgent bug (this instance's top severity, above High),
+ * surfaced as its OWN evidence kind so it can never get buried inside a
+ * module-hotspot or bug_kpi sentence about the combined High/Urgent count
+ * (PM ask, 2026-07-31: "isn't it better to mention urgent bugs
+ * separately?"). Complements, rather than replaces, the `urgent_count`
+ * annotation already threaded onto module_hotspot/bug_kpi evidence --
+ * this is a person-readable, standalone callout, not just a number.
+ * Typically 0-1 tickets in this instance, so it rarely costs more than a
+ * sentence of the word budget; capped at TOP_URGENT_N defensively in case a
+ * future instance has more. `age_days` is included for context (an Urgent
+ * bug open 30 minutes reads differently from one open 3 weeks) but does NOT
+ * drive severity -- see severityForEvidence.
+ */
+function buildUrgentBugEvidence(snapshot) {
+  const openBugs = snapshot.bugs?.open_bugs ?? [];
+  const nowMs = snapshot.meta?.generated_at_ms;
+  const urgentBugs = openBugs.filter((b) => b.priority === "Urgent").slice(0, TOP_URGENT_N);
+  return urgentBugs.map((b, i) => ({
+    ref: `urgent-${i + 1}`,
+    kind: "urgent_bug",
+    id: b.id,
+    module: b.module ?? null,
+    state: b.state,
+    age_days: nowMs && b.created ? Math.round(((nowMs - b.created) / 86400000) * 10) / 10 : null,
+  }));
+}
+
 /** Top-N most-behind people (overdue.mjs::mostBehind, i.e. health.ts's own
  *  accountability ranking), pseudonymized unless sendRealNames is set. */
 function buildPeopleEvidence(snapshot, sendRealNames) {
@@ -417,6 +452,7 @@ export function distillBriefInput(snapshot, env = process.env) {
   const { evidence: peopleEvidence, pseudonymMap } = buildPeopleEvidence(snapshot, sendRealNames);
   const effortEvidence = buildEffortOutlierEvidence(snapshot, sendSummaries);
   const agingEvidence = buildAgingBugEvidence(snapshot);
+  const urgentEvidence = buildUrgentBugEvidence(snapshot);
   const deltaEvidence = buildDeltaEvidence(snapshot);
 
   const allGreen = computeAllGreen({ snapshot, peopleEvidence, effortEvidence, agingEvidence, deltaEvidence });
@@ -429,7 +465,7 @@ export function distillBriefInput(snapshot, env = process.env) {
       sprint: snapshot.meta?.sprint ?? null,
     },
     allGreen,
-    evidence: [...bugEvidence, ...peopleEvidence, ...effortEvidence, ...agingEvidence, deltaEvidence],
+    evidence: [...bugEvidence, ...peopleEvidence, ...effortEvidence, ...agingEvidence, ...urgentEvidence, deltaEvidence],
   };
 
   return { distilled, pseudonymMap };
