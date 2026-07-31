@@ -34,6 +34,22 @@ const TOP_MODULES_N = 3;
 const BUGS_PER_MODULE_N = 2;
 const TOP_PEOPLE_N = 3;
 const TOP_EPIC_OUTLIERS_N = 3;
+const TOP_AGING_N = 3;
+
+// Mirrors scripts/reports/bugs.py's AGING_THRESHOLDS_HIGH_URGENT/_MEDIUM
+// (PM-confirmed, 2026-07-31) -- kept as a matching literal here rather than
+// shared across the Python/Node boundary, same as other cross-language
+// constants in this codebase. [citable, medium-severity, high-severity] day
+// cutoffs; Medium's are exactly double High/Urgent's.
+const AGING_THRESHOLDS_HIGH_URGENT = [7, 14, 30];
+const AGING_THRESHOLDS_MEDIUM = [14, 28, 60];
+
+function agingSeverity(ageDays, thresholds) {
+  const [, mid, hi] = thresholds;
+  if (ageDays >= hi) return "high";
+  if (ageDays >= mid) return "medium";
+  return "low";
+}
 
 function isTruthy(v) {
   if (v == null) return false;
@@ -74,6 +90,10 @@ export function severityForEvidence(e) {
     case "effort_outlier":
       if (e.overshoot && e.total_hours > 0 && e.spent_hours >= 2 * e.total_hours) return "high";
       return e.overshoot || e.missing_est ? "medium" : "low";
+    case "aging_bug":
+      return agingSeverity(e.age_days, AGING_THRESHOLDS_HIGH_URGENT);
+    case "aging_bug_medium":
+      return agingSeverity(e.age_days, AGING_THRESHOLDS_MEDIUM);
     case "red_delta":
       return redDeltaTotal(e.red_delta) > 0 ? "high" : "low";
     default:
@@ -97,6 +117,9 @@ export function sourceForEvidence(e) {
       return { label: e.id, issueId: e.id };
     case "bug_kpi":
       return { label: "High-priority bugs", href: "/bugs" };
+    case "aging_bug":
+    case "aging_bug_medium":
+      return { label: e.id, issueId: e.id };
     case "most_behind_person":
       return { label: e.person, href: "/weekly" };
     case "effort_outlier":
@@ -116,23 +139,30 @@ export function sourceForEvidence(e) {
  * bug (+ summary iff sendSummaries) -- never assignee/reporter (see file
  * header).
  *
- * Prefers `bugs.module_insights_open` (same shape as `module_insights`, but
- * counted over ALL currently open bugs, not the rolling 7-day window) and
- * `bugs.open_bugs` as the sample pool -- a 7-day count can cite a bug
- * already closed by the time someone reads the briefing (real case, module
- * hotspot text said "51 open bugs" for a count that included several
- * already-resolved ones, 2026-07-31). Falls back to the old 7-day-scoped
- * fields on a snapshot that predates `module_insights_open`/`open_bugs`.
+ * Prefers `bugs.module_insights_high_urgent` (same shape as
+ * `module_insights`, but counted over currently-open High+Urgent bugs only)
+ * so a module doesn't rank as "hot" purely on the back of low-stakes
+ * Medium/Low tickets (PM correction, 2026-07-31) -- falls back to
+ * `module_insights_open` (all priorities, current-state) then the original
+ * 7-day `module_insights` for snapshots that predate the newer fields. The
+ * sample bug pool is filtered to High/Urgent to match: citing a Medium
+ * sample under a High/Urgent-ranked hotspot would misrepresent why the
+ * module was flagged.
  */
 function buildBugEvidence(snapshot, sendSummaries) {
-  const moduleInsights = snapshot.bugs?.module_insights_open ?? snapshot.bugs?.module_insights ?? [];
+  const moduleInsights = snapshot.bugs?.module_insights_high_urgent
+    ?? snapshot.bugs?.module_insights_open
+    ?? snapshot.bugs?.module_insights
+    ?? [];
   const topModules = moduleInsights.slice(0, TOP_MODULES_N);
 
-  const bugPool = snapshot.bugs?.open_bugs ?? [
-    ...(snapshot.bugs?.new_in_window?.High ?? []),
-    ...(snapshot.bugs?.open_high_older ?? []),
-    ...(snapshot.bugs?.new_in_window?.Medium ?? []),
-  ];
+  const isHighUrgent = (b) => b.priority === "High" || b.priority === "Urgent";
+  const bugPool = snapshot.bugs?.open_bugs
+    ? snapshot.bugs.open_bugs.filter(isHighUrgent)
+    : [
+        ...(snapshot.bugs?.new_in_window?.High ?? []),
+        ...(snapshot.bugs?.open_high_older ?? []),
+      ];
 
   const evidence = [];
   let bugRefCounter = 0;
@@ -179,6 +209,62 @@ function buildBugEvidence(snapshot, sendSummaries) {
     });
   }
 
+  return evidence;
+}
+
+function flattenAgingBuckets(buckets) {
+  return (buckets ?? []).flatMap((b) => b.bugs ?? []);
+}
+
+/**
+ * The oldest few High/Urgent and Medium bugs, from `bugs.aging_high_urgent`/
+ * `bugs.aging_medium` (scripts/reports/bugs.py's `aging_buckets()` -- 3
+ * severity buckets, oldest-first within each, already excluding anything
+ * younger than the citable threshold). Flattened across buckets and
+ * re-sorted by age so the single oldest bug surfaces first regardless of
+ * which bucket it landed in, then capped at a few each.
+ *
+ * Two separate evidence kinds (not one, shared) so severityForEvidence can
+ * apply each priority group's own thresholds -- a 20-day-old Medium bug
+ * ("still under its 28-day medium bar") isn't the same severity as a
+ * 20-day-old High/Urgent one ("already past its 14-day bar"). Folded
+ * directly into the existing "Top issues now" narrative rather than a
+ * separate deterministic section, per the PM's explicit instruction
+ * (2026-07-31): "its okay to mention the aged open/urgent tickets in top
+ * issues itself, no need to show a separate section" -- "follow same
+ * treatment for medium bugs".
+ */
+function buildAgingBugEvidence(snapshot) {
+  const highUrgent = flattenAgingBuckets(snapshot.bugs?.aging_high_urgent)
+    .sort((a, b) => b.age_days - a.age_days)
+    .slice(0, TOP_AGING_N);
+  const medium = flattenAgingBuckets(snapshot.bugs?.aging_medium)
+    .sort((a, b) => b.age_days - a.age_days)
+    .slice(0, TOP_AGING_N);
+
+  const evidence = [];
+  highUrgent.forEach((b, i) => {
+    evidence.push({
+      ref: `aging-hu-${i + 1}`,
+      kind: "aging_bug",
+      id: b.id,
+      module: b.module ?? null,
+      priority: b.priority,
+      state: b.state,
+      age_days: b.age_days,
+    });
+  });
+  medium.forEach((b, i) => {
+    evidence.push({
+      ref: `aging-med-${i + 1}`,
+      kind: "aging_bug_medium",
+      id: b.id,
+      module: b.module ?? null,
+      priority: b.priority,
+      state: b.state,
+      age_days: b.age_days,
+    });
+  });
   return evidence;
 }
 
@@ -284,15 +370,16 @@ function buildDeltaEvidence(snapshot) {
  * the RED delta (if any) didn't worsen in any category. Used so the prompt
  * renders an honest empty-state brief instead of inventing issues.
  */
-function computeAllGreen({ snapshot, peopleEvidence, effortEvidence, deltaEvidence }) {
+function computeAllGreen({ snapshot, peopleEvidence, effortEvidence, agingEvidence, deltaEvidence }) {
   const anyOverdue = peopleEvidence.some((p) => p.overdue > 0);
   const anyEffortOutliers = effortEvidence.length > 0;
   const openHigh = snapshot.bugs?.kpi?.open_high ?? 0;
   const newHigh = snapshot.bugs?.kpi?.new_high ?? 0;
   const anyHighBugs = openHigh > 0 || newHigh > 0;
+  const anyAgingBugs = agingEvidence.length > 0;
   const delta = deltaEvidence.red_delta;
   const deltaWorsened = delta != null && Object.values(delta).some((v) => (v ?? 0) > 0);
-  return !anyOverdue && !anyEffortOutliers && !anyHighBugs && !deltaWorsened;
+  return !anyOverdue && !anyEffortOutliers && !anyHighBugs && !anyAgingBugs && !deltaWorsened;
 }
 
 /**
@@ -307,9 +394,10 @@ export function distillBriefInput(snapshot, env = process.env) {
   const bugEvidence = buildBugEvidence(snapshot, sendSummaries);
   const { evidence: peopleEvidence, pseudonymMap } = buildPeopleEvidence(snapshot, sendRealNames);
   const effortEvidence = buildEffortOutlierEvidence(snapshot, sendSummaries);
+  const agingEvidence = buildAgingBugEvidence(snapshot);
   const deltaEvidence = buildDeltaEvidence(snapshot);
 
-  const allGreen = computeAllGreen({ snapshot, peopleEvidence, effortEvidence, deltaEvidence });
+  const allGreen = computeAllGreen({ snapshot, peopleEvidence, effortEvidence, agingEvidence, deltaEvidence });
 
   const distilled = {
     meta: {
@@ -319,7 +407,7 @@ export function distillBriefInput(snapshot, env = process.env) {
       sprint: snapshot.meta?.sprint ?? null,
     },
     allGreen,
-    evidence: [...bugEvidence, ...peopleEvidence, ...effortEvidence, deltaEvidence],
+    evidence: [...bugEvidence, ...peopleEvidence, ...effortEvidence, ...agingEvidence, deltaEvidence],
   };
 
   return { distilled, pseudonymMap };

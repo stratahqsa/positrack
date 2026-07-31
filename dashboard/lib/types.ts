@@ -475,6 +475,21 @@ export interface ModuleInsight {
   submodules: { submodule: string; count: number }[];
 }
 
+/** A bug annotated with its age, as returned inside an AgingBucket. */
+export interface AgingBug extends Bug {
+  age_days: number;
+}
+
+/** One age bucket from scripts/reports/bugs.py::aging_buckets() — e.g.
+ *  "7-13d"/low, "14-29d"/medium, "30+d"/high for High/Urgent bugs (Medium's
+ *  thresholds are exactly double). Bugs within a bucket are oldest-first. */
+export interface AgingBucket {
+  range: string;
+  severity: "low" | "medium" | "high";
+  count: number;
+  bugs: AgingBug[];
+}
+
 export interface BugsBlock {
   window: { start_ms: number; end_ms: number; label: string };
   new_in_window: { High: Bug[]; Medium: Bug[]; Low: Bug[] };
@@ -494,6 +509,18 @@ export interface BugsBlock {
    *  includes bugs already closed by the time someone reads it (2026-07-31).
    *  Optional: absent on older snapshots. */
   module_insights_open?: ModuleInsight[];
+  /** Same shape again, but ranked/counted by High+Urgent bugs only — a
+   *  module can look "hot" mostly from low-stakes Medium/Low tickets on the
+   *  all-priority view; this is what the AI Insights briefing's
+   *  module-hotspot evidence uses instead (2026-07-31). Optional: absent on
+   *  older snapshots. */
+  module_insights_high_urgent?: ModuleInsight[];
+  /** 3 age buckets (low/medium/high severity) over all open High+Urgent
+   *  bugs — thresholds 7/14/30 days. Optional: absent on older snapshots. */
+  aging_high_urgent?: AgingBucket[];
+  /** Same shape, over all open Medium bugs — thresholds exactly double
+   *  (14/28/60 days). Optional: absent on older snapshots. */
+  aging_medium?: AgingBucket[];
   kpi: {
     new_high: number;
     new_medium: number;

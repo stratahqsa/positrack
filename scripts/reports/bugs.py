@@ -70,6 +70,53 @@ def _dedupe(raw_list):
             seen.add(k); out.append(r)
     return out
 
+# [citable, medium-severity, high-severity] day cutoffs (PM-confirmed, 2026-07-31).
+# Medium is exactly double High/Urgent's, by the PM's own stated rule — Low
+# priority is deliberately excluded: aging is expected there by design (that's
+# what "low priority" means), so per-ticket flagging wouldn't be actionable.
+AGING_THRESHOLDS_HIGH_URGENT = (7, 14, 30)
+AGING_THRESHOLDS_MEDIUM = (14, 28, 60)
+
+def _age_days(bug, now_ms):
+    """Age in days (float) since `bug["created"]`, or None if it has no created
+    timestamp (defensive; every bug from a real YouTrack fetch has one)."""
+    created = bug.get("created")
+    if not created:
+        return None
+    return (now_ms - created) / 86400000.0
+
+def aging_buckets(bugs, thresholds, now_ms):
+    """Buckets `bugs` (already priority-filtered by the caller, e.g. all open
+    High+Urgent, or all open Medium) by age against `thresholds` =
+    (citable_days, medium_days, high_days), ascending. Returns exactly 3
+    buckets in citable order — "citable-(medium-1)" (severity low),
+    "medium-(high-1)" (severity medium), "high+" (severity high) — each with
+    its full bug list (oldest first, each bug annotated with `age_days`), so
+    nothing is silently sampled once a bug clears the citable bar. Bugs
+    younger than `thresholds[0]` are excluded entirely (not yet worth
+    flagging) — the same "citable" framing the AI-brief evidence uses."""
+    lo, mid, hi = thresholds
+    ranges = [
+        ("%d-%dd" % (lo, mid - 1), "low", lo, mid),
+        ("%d-%dd" % (mid, hi - 1), "medium", mid, hi),
+        ("%d+d" % hi, "high", hi, None),
+    ]
+    out = []
+    for label, severity, lo_b, hi_b in ranges:
+        items = []
+        for b in bugs:
+            age = _age_days(b, now_ms)
+            if age is None or age < lo_b:
+                continue
+            if hi_b is not None and age >= hi_b:
+                continue
+            entry = dict(b)
+            entry["age_days"] = round(age, 1)
+            items.append(entry)
+        items.sort(key=lambda x: -x["age_days"])
+        out.append({"range": label, "severity": severity, "count": len(items), "bugs": items})
+    return out
+
 def build_bugs(ctx, yt, cfg, now_ms):
     """Run the underlying queries and shape the block. `yt` is the ytcore module."""
     w = parse.ist_window(now_ms)
@@ -108,6 +155,15 @@ def build_bugs(ctx, yt, cfg, now_ms):
     # module" deliberately wants the stable 7-day recency signal, not the
     # full backlog — see dashboard/lib/health.ts's bugPressure() comment).
     modules_open = module_insights(q6)
+    # Ranked/counted by High+Urgent bugs only, NOT total open count: a module
+    # can look "hot" mostly from low-stakes Medium/Low tickets while a module
+    # with fewer-but-nastier bugs ranks lower on the all-priority view. This
+    # is what the AI-brief's module-hotspot evidence switched to (2026-07-31)
+    # — `module_insights_open` (all priorities) stays for anything else that
+    # wants the broader view.
+    modules_high_urgent = module_insights([b for b in q6 if b["priority"] in ("High", "Urgent")])
+    aging_high_urgent = aging_buckets(q2, AGING_THRESHOLDS_HIGH_URGENT, now_ms)
+    aging_medium = aging_buckets(q3, AGING_THRESHOLDS_MEDIUM, now_ms)
     return {
         "window": {"start_ms": w["start_ms"], "end_ms": w["end_ms"], "label": w["label"]},
         "new_in_window": by_prio,
@@ -116,6 +172,9 @@ def build_bugs(ctx, yt, cfg, now_ms):
         "low_by_state": state_breakdown(q4),
         "module_insights": modules,
         "module_insights_open": modules_open,   # same shape, but over ALL currently open bugs
+        "module_insights_high_urgent": modules_high_urgent,   # same shape again, High+Urgent only
+        "aging_high_urgent": aging_high_urgent,   # 3 age buckets over all open High+Urgent bugs
+        "aging_medium": aging_medium,              # same, over all open Medium bugs (doubled thresholds)
         "seven_day_bugs": q5,   # full 7-day bug list, so the dashboard can expand a Module
                                  # Insights row to show the underlying tickets
         "open_bugs": q6,   # full open-bug list (module/submodule/priority per bug), for the
