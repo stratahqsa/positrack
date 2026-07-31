@@ -604,6 +604,165 @@ def _make_client_storage():
     return wrapped
 
 
+def _env_flag(name, default):
+    """Read a boolean env var; `0/false/no/off` are False, anything else True.
+    Never raises — a typo in a Railway variable must not break boot."""
+    raw = os.environ.get(name)
+    if not raw or not raw.strip():
+        return default
+    return raw.strip().lower() not in ("0", "false", "no", "off")
+
+
+def _discover_userinfo_url(config_url):
+    """Return Hub's `userinfo_endpoint` from its OIDC discovery document, or None.
+
+    Deliberately does NOT guess a conventional path when discovery is silent: a
+    URL that is not a working userinfo endpoint would answer every verification
+    with a 4xx, which the verifier below cannot distinguish from "this user is
+    gone" — so a wrong guess would lock every user out. No endpoint means we keep
+    the previous id_token verifier instead (bug, but a known one)."""
+    log = logging.getLogger("positrack")
+    override = os.environ.get("HUB_USERINFO_URL")
+    if override and override.strip():
+        return override.strip()
+    try:
+        import httpx
+        response = httpx.get(str(config_url), timeout=10)
+        response.raise_for_status()
+        url = response.json().get("userinfo_endpoint")
+    except Exception as e:  # pragma: no cover - network/parse defensive
+        log.warning("OAuth verify: could not read %s (%r); keeping id_token "
+                    "verification. Set HUB_USERINFO_URL to override.", config_url, e)
+        return None
+    if not url:
+        log.warning("OAuth verify: %s advertises no userinfo_endpoint; keeping "
+                    "id_token verification. Set HUB_USERINFO_URL to override.", config_url)
+        return None
+    return str(url)
+
+
+def _make_hub_token_verifier(config_url, client_id, scopes):
+    """Verify the caller by asking Hub about the *access* token, not the id_token.
+
+    WHY THIS EXISTS — the connector used to drop mid-session ("your connection was
+    invalidated, reconnect"), with calls succeeding for a while and then failing
+    with no user action. Cause: with `verify_id_token=True`, FastMCP validates the
+    **id_token** on every call, but decides whether to refresh from the **access
+    token's** expiry (`OAuthProxy.load_access_token`: `needs_refresh` reads
+    `upstream_token_set.expires_at`). Those are two different clocks. Once the
+    id_token's own `exp` passes, verification fails while the access token still
+    looks fresh, so no refresh is attempted and the call 401s — permanently, until
+    the user re-authenticates by hand. It is worse if Hub omits `id_token` from its
+    refresh response (many IdPs do): the stored id_token is then never replaced, so
+    the session cannot outlive that first id_token no matter how often the access
+    token is renewed. Either way the session's real ceiling was Hub's id_token
+    lifetime, which is why the 30-day session token did not help.
+
+    THE FIX — verify the opaque Hub access token against Hub's OIDC userinfo
+    endpoint. That is the same token the tools forward to YouTrack and the same
+    token FastMCP refreshes, so verification and refresh finally read one clock:
+    when it expires, userinfo says 401, `needs_refresh` is simultaneously true, and
+    the transparent refresh runs as designed. Hub publishes no introspection
+    endpoint, so userinfo is the available live check.
+
+    SIDE BENEFIT — revocation is now bounded by the cache TTL below (5 min by
+    default) instead of by Hub's whole access-token lifetime: a disabled Hub user
+    stops working within minutes rather than on the next token expiry.
+
+    Returns None when unavailable or disabled, and the caller keeps the old
+    id_token path."""
+    log = logging.getLogger("positrack")
+    if not _env_flag("OAUTH_VERIFY_VIA_USERINFO", True):
+        log.warning("OAuth verify: disabled via OAUTH_VERIFY_VIA_USERINFO — reverting to "
+                    "id_token verification, which caps every session at Hub's id_token "
+                    "lifetime and drops connectors mid-session. See "
+                    "docs/OAUTH_SESSION_LONGEVITY.md.")
+        return None
+    userinfo_url = _discover_userinfo_url(config_url)
+    if not userinfo_url:
+        return None
+
+    # A verification per MCP call would put an HTTP round trip in front of every
+    # tool call, so successful results are cached briefly. The TTL is exactly the
+    # revocation window; the grace window is how long an already-verified session
+    # survives Hub being unreachable, so a Hub blip does not log everyone out.
+    cache_ttl = _env_int("OAUTH_USERINFO_CACHE_SECONDS", 300)          # 5 minutes
+    grace = _env_int("OAUTH_USERINFO_GRACE_SECONDS", 3600)            # 1 hour
+    timeout = _env_int("OAUTH_USERINFO_TIMEOUT_SECONDS", 10)
+    max_entries = _env_int("OAUTH_USERINFO_CACHE_MAX_ENTRIES", 2048)
+
+    from fastmcp.server.auth import AccessToken, TokenVerifier
+
+    class HubUserinfoVerifier(TokenVerifier):
+        """Validate an opaque Hub access token by calling Hub's userinfo endpoint."""
+
+        def __init__(self):
+            # required_scopes drives BOTH what OAuthProxy advertises and what it
+            # requests upstream (`_default_scope_str`), so the YouTrack service UUID
+            # must be here or Hub mints a token YouTrack REST rejects. The caller
+            # relaxes the *downstream* gate afterwards (`provider.required_scopes = []`).
+            super().__init__(required_scopes=list(scopes))
+            self._cache = {}      # sha256(token) -> (AccessToken, verified_at)
+
+        def _remember(self, key, token_obj, now):
+            if len(self._cache) >= max_entries:
+                # Cheap bound: drop the least-recently-verified entry.
+                oldest = min(self._cache, key=lambda k: self._cache[k][1])
+                self._cache.pop(oldest, None)
+            self._cache[key] = (token_obj, now)
+
+        async def verify_token(self, token):
+            key = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            now = time.time()
+            cached = self._cache.get(key)
+            if cached and now - cached[1] < cache_ttl:
+                return cached[0]
+            try:
+                import httpx
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    response = await client.get(
+                        userinfo_url, headers={"Authorization": f"Bearer {token}"})
+            except Exception as e:
+                # Hub unreachable: inconclusive, NOT a rejection. Ride out the blip
+                # on a recent success rather than forcing a browser re-auth.
+                if cached and now - cached[1] < grace:
+                    log.warning("OAuth verify: userinfo unreachable (%r); serving a "
+                                "verification cached %ds ago.", e, int(now - cached[1]))
+                    return cached[0]
+                log.warning("OAuth verify: userinfo unreachable (%r) and no recent "
+                            "verification to fall back on; rejecting this call.", e)
+                return None
+            if response.status_code in (401, 403):
+                # The only definitive rejection: Hub says this token is dead. Drop the
+                # cache entry so a refreshed token is re-verified from scratch.
+                self._cache.pop(key, None)
+                return None
+            if response.status_code >= 400:
+                # 404/405/5xx describe the ENDPOINT, not the user — treat as a blip.
+                if cached and now - cached[1] < grace:
+                    return cached[0]
+                log.warning("OAuth verify: userinfo returned HTTP %d; rejecting this "
+                            "call. Check HUB_USERINFO_URL.", response.status_code)
+                return None
+            try:
+                claims = response.json()
+            except Exception:
+                claims = {}
+            verified = AccessToken(
+                token=token,                      # what _resolve_ctx forwards to YouTrack
+                client_id=client_id,
+                scopes=list(scopes),
+                subject=claims.get("sub"),
+                claims=claims,
+            )
+            self._remember(key, verified, now)
+            return verified
+
+    log.info("OAuth verify: access tokens verified live against %s "
+             "(cache %ds, outage grace %ds)", userinfo_url, cache_ttl, grace)
+    return HubUserinfoVerifier()
+
+
 def _build_oauth_provider():
     """Build the OIDCProxy that lets ChatGPT log in via Posibolt Hub, or return
     None when not configured (then the server runs exactly as before: raw-bearer
@@ -614,10 +773,13 @@ def _build_oauth_provider():
     Hub does NOT offer. The OIDCProxy bridges that: it speaks DCR + discovery
     metadata to ChatGPT, logs the user in against Hub upstream (one pre-registered
     Hub client), and forwards Hub's access token onward. Hub access tokens are
-    opaque (not JWTs), so we authenticate via the id_token (verify_id_token=True);
-    FastMCP still exposes the upstream Hub access token to the tools, and the
-    YouTrack REST API accepts that token as a bearer (provided the YouTrack
-    service id is in the requested scope — see HUB_SCOPES below)."""
+    opaque (not JWTs), so they cannot be verified by signature; we verify them
+    live against Hub's userinfo endpoint instead (see _make_hub_token_verifier —
+    verifying the id_token instead, as this used to, silently capped every session
+    at the id_token's lifetime and dropped connectors mid-session). FastMCP still
+    exposes the upstream Hub access token to the tools, and the YouTrack REST API
+    accepts that token as a bearer (provided the YouTrack service id is in the
+    requested scope — see HUB_SCOPES below)."""
     client_id = os.environ.get("HUB_CLIENT_ID")
     client_secret = os.environ.get("HUB_CLIENT_SECRET")
     public_url = os.environ.get("OAUTH_PUBLIC_URL")  # root origin, e.g. https://positrack.up.railway.app
@@ -641,21 +803,30 @@ def _build_oauth_provider():
     # access — a revoked or unrefreshable Hub session still fails validation, and if Hub
     # issues no refresh token at all FastMCP caps the lifetime at Hub's expires_in anyway,
     # so a long value here is safe: the worst case is no change, never phantom access.
-    # Caveat on revocation TIMING: OIDCProxy's default verifier is a JWTVerifier over Hub's
-    # JWKS, so each call checks the Hub token's signature/expiry LOCALLY — it does not ask
-    # Hub whether the user is still active. A user disabled in Hub therefore keeps working
-    # until the held Hub token expires and the silent refresh is refused: bounded by Hub's
-    # access-token TTL (not by this value, which does not widen it). For revocation on the
-    # very next call, pass an introspection-based token_verifier instead.
+    # Revocation TIMING is now bounded by the userinfo cache TTL (default 5 min), because
+    # every call re-checks the access token against Hub rather than validating a JWT
+    # locally — see _make_hub_token_verifier. When that verifier is unavailable we fall
+    # back to id_token verification, and the old caveat applies again: local signature
+    # checks only, so a disabled Hub user keeps working until the held token expires.
     access_ttl = _env_int("OAUTH_ACCESS_TOKEN_TTL_SECONDS", 30 * 24 * 3600)   # 30 days
+    # Verify the ACCESS token live against Hub, so verification and refresh share one
+    # clock. None → unavailable/disabled, so keep the previous id_token behaviour.
+    token_verifier = _make_hub_token_verifier(config_url, client_id, scopes)
     from fastmcp.server.auth import OIDCProxy
     provider = OIDCProxy(
         config_url=config_url,
         client_id=client_id,
         client_secret=client_secret,
         base_url=public_url,
-        verify_id_token=True,                                # Hub access tokens are opaque → verify the id_token
-        required_scopes=scopes,
+        token_verifier=token_verifier,
+        # Only verify the id_token when there is no live access-token verifier: the two are
+        # mutually exclusive, since verify_id_token=True would hand the id_token to it.
+        verify_id_token=token_verifier is None,
+        # OIDCProxy REFUSES required_scopes alongside a custom verifier ("Configure
+        # required scopes on your token verifier instead"), and reads them off the
+        # verifier instead — which is why HubUserinfoVerifier carries the full list.
+        # On the fallback path there is no verifier to carry them, so pass them here.
+        required_scopes=None if token_verifier is not None else scopes,
         extra_authorize_params={"access_type": "offline"},   # Hub: ask for a refresh token
         jwt_signing_key=os.environ.get("FASTMCP_JWT_SIGNING_KEY") or None,
         client_storage=_make_client_storage(),               # persist DCR clients + upstream tokens
@@ -672,6 +843,9 @@ def _build_oauth_provider():
     # them downstream makes every authenticated /cmcp call fail 403 insufficient_scope —
     # ChatGPT connects but sees zero tools. The advertised/upstream set is preserved in
     # _default_scope_str, so relax ONLY the downstream gate (auth itself is still enforced).
+    # This stays necessary on BOTH verifier paths: OAuthProxy seeds required_scopes and
+    # _default_scope_str from `token_verifier.required_scopes`, which is why the verifier
+    # above is constructed carrying the full HUB_SCOPES list.
     provider.required_scopes = []
     return provider
 
