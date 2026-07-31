@@ -67,7 +67,7 @@ DISTILLED_DATA.evidence is a flat array of citable facts. Each entry has a uniqu
   - "bug": one specific issue (id, priority, state, module)
   - "bug_kpi": project-wide open/new bug counts
   - "most_behind_person": one of the most-behind people, already ranked (person, overdue, open) -- "person" is the ONLY token you may use to refer to them, verbatim
-  - "effort_outlier": an epic whose spend went over its estimate or has no estimate (epicId, overshoot, missing_est, total_minutes, spent_minutes)
+  - "effort_outlier": an epic whose spend went over its estimate or has no estimate (epicId, overshoot, missing_est, total_hours, spent_hours)
   - "red_delta": the change in risk-signal counts since the last snapshot (or first_run:true if there is no prior snapshot yet)
 
 HOW TO WRITE (very important):

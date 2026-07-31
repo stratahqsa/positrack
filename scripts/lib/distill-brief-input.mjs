@@ -72,7 +72,7 @@ export function severityForEvidence(e) {
     case "bug":
       return e.priority === "High" ? "high" : e.priority === "Medium" ? "medium" : "low";
     case "effort_outlier":
-      if (e.overshoot && e.total_minutes > 0 && e.spent_minutes >= 2 * e.total_minutes) return "high";
+      if (e.overshoot && e.total_hours > 0 && e.spent_hours >= 2 * e.total_hours) return "high";
       return e.overshoot || e.missing_est ? "medium" : "low";
     case "red_delta":
       return redDeltaTotal(e.red_delta) > 0 ? "high" : "low";
@@ -196,10 +196,37 @@ function buildPeopleEvidence(snapshot, sendRealNames) {
 }
 
 /**
+ * The spend figure that actually matches `epic.total` (the pending-Phase-1
+ * estimate rollup) -- and, not coincidentally, the exact figure that decided
+ * the epic's `overshoot` flag in the first place (core/ytcore.py's
+ * `_overshoot_spend`, summed from each story's own reliable "Spent time"
+ * field). `epic.spent` is a whole-epic-LIFETIME work-item sweep instead --
+ * for a MIXED epic it includes done stories' historical spend too, and can
+ * drift from the story-level truth even without that (the exact bug already
+ * fixed on the dashboard side -- see dashboard/lib/effort.ts's
+ * `epicRemainingSpent` doc; this mirrors that same reasoning here, since the
+ * AI-briefing pipeline is a separate script that never got that fix).
+ * `overshoot_spent` is optional (absent on snapshots that predate it), hence
+ * the fallback.
+ */
+function spendFor(epic) {
+  return epic.overshoot_spent ?? epic.spent;
+}
+
+/** Minutes -> hours, one decimal (e.g. 1902 -> 31.7) -- matches how effort is
+ *  displayed everywhere else in this dashboard (lib/format.ts's fmtHours), so
+ *  the model is given a number a human would actually write, instead of a raw
+ *  minute count it would otherwise have to cite verbatim ("spent 8600
+ *  minutes") per its own instruction to only state facts from DISTILLED_DATA. */
+function minutesToHours(minutes) {
+  return Math.round(((minutes ?? 0) / 60) * 10) / 10;
+}
+
+/**
  * Epics with overshoot=true or missing_est=true, drawn from the still-active
  * sections (pending/mixed/no_stories -- NOT `done`, since a finished epic's
  * overshoot is a historical fact, not something to act on this cycle), sorted
- * by overshoot magnitude (spent - total) descending.
+ * by overshoot magnitude (spent - total, using `spendFor`) descending.
  */
 function buildEffortOutlierEvidence(snapshot, sendSummaries) {
   const sections = snapshot.effort?.sections;
@@ -207,7 +234,7 @@ function buildEffortOutlierEvidence(snapshot, sendSummaries) {
   const pool = [...(sections.pending ?? []), ...(sections.mixed ?? []), ...(sections.no_stories ?? [])];
   const outliers = pool
     .filter((e) => e.overshoot || e.missing_est)
-    .sort((a, b) => b.spent - b.total - (a.spent - a.total));
+    .sort((a, b) => spendFor(b) - b.total - (spendFor(a) - a.total));
 
   return outliers.slice(0, TOP_EPIC_OUTLIERS_N).map((e, i) => {
     const entry = {
@@ -216,8 +243,8 @@ function buildEffortOutlierEvidence(snapshot, sendSummaries) {
       epicId: e.id,
       overshoot: Boolean(e.overshoot),
       missing_est: Boolean(e.missing_est),
-      total_minutes: e.total,
-      spent_minutes: e.spent,
+      total_hours: minutesToHours(e.total),
+      spent_hours: minutesToHours(spendFor(e)),
     };
     // Epic summaries are free-text; gate their egress to the LLM behind
     // AI_SEND_SUMMARIES, same as bug summaries (privacy consistency). The
