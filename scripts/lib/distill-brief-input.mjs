@@ -35,20 +35,25 @@ const BUGS_PER_MODULE_N = 2;
 const TOP_PEOPLE_N = 3;
 const TOP_EPIC_OUTLIERS_N = 3;
 const TOP_AGING_N = 3;
+const TOP_URGENT_N = 5;
 
-// Mirrors scripts/reports/bugs.py's AGING_THRESHOLDS_HIGH_URGENT/_MEDIUM
+// Mirrors scripts/reports/bugs.py's AGING_BUCKETS_HIGH_URGENT/_MEDIUM
 // (PM-confirmed, 2026-07-31) -- kept as a matching literal here rather than
 // shared across the Python/Node boundary, same as other cross-language
-// constants in this codebase. [citable, medium-severity, high-severity] day
-// cutoffs; Medium's are exactly double High/Urgent's.
-const AGING_THRESHOLDS_HIGH_URGENT = [7, 14, 30];
-const AGING_THRESHOLDS_MEDIUM = [14, 28, 60];
+// constants in this codebase. [low-severity-hi, medium-severity-hi] whole-day
+// boundaries -- age <= first value is "none" (too fresh to flag), <= second
+// is "low", <= third is "medium", above it is "high". Medium's are roughly
+// double High/Urgent's.
+const AGING_BOUNDS_HIGH_URGENT = [7, 14, 21];
+const AGING_BOUNDS_MEDIUM = [15, 30, 60];
 
-function agingSeverity(ageDays, thresholds) {
-  const [, mid, hi] = thresholds;
-  if (ageDays >= hi) return "high";
-  if (ageDays >= mid) return "medium";
-  return "low";
+function agingSeverity(ageDays, bounds) {
+  const [none, low, medium] = bounds;
+  const d = Math.floor(ageDays);
+  if (d <= none) return "none";
+  if (d <= low) return "low";
+  if (d <= medium) return "medium";
+  return "high";
 }
 
 function isTruthy(v) {
@@ -91,9 +96,14 @@ export function severityForEvidence(e) {
       if (e.overshoot && e.total_hours > 0 && e.spent_hours >= 2 * e.total_hours) return "high";
       return e.overshoot || e.missing_est ? "medium" : "low";
     case "aging_bug":
-      return agingSeverity(e.age_days, AGING_THRESHOLDS_HIGH_URGENT);
+      return agingSeverity(e.age_days, AGING_BOUNDS_HIGH_URGENT);
     case "aging_bug_medium":
-      return agingSeverity(e.age_days, AGING_THRESHOLDS_MEDIUM);
+      return agingSeverity(e.age_days, AGING_BOUNDS_MEDIUM);
+    case "urgent_bug":
+      // Urgent is the top severity in this instance regardless of age --
+      // unlike aging_bug/aging_bug_medium, there's no "too fresh to flag"
+      // threshold: an open Urgent bug is inherently high-severity news.
+      return "high";
     case "red_delta":
       return redDeltaTotal(e.red_delta) > 0 ? "high" : "low";
     default:
@@ -119,6 +129,7 @@ export function sourceForEvidence(e) {
       return { label: "High-priority bugs", href: "/bugs" };
     case "aging_bug":
     case "aging_bug_medium":
+    case "urgent_bug":
       return { label: e.id, issueId: e.id };
     case "most_behind_person":
       return { label: e.person, href: "/weekly" };
@@ -191,6 +202,12 @@ function buildBugEvidence(snapshot, sendSummaries) {
       kind: "module_hotspot",
       module: m.module,
       count: m.count,
+      // Urgent sub-count within `count` (2026-07-31): Urgent folds into the
+      // combined High/Urgent number everywhere in this report, but with
+      // Urgent this rare (often 1 ticket project-wide) blending it in
+      // silently overstates how many are actually top severity -- the
+      // prompt is told to always state this alongside `count`.
+      urgent_count: m.urgent_count ?? 0,
       top_submodule: m.submodules?.[0]?.submodule ?? null,
       top_submodule_count: m.submodules?.[0]?.count ?? null,
       sample_issue_refs: sampleIssueRefs,
@@ -203,7 +220,9 @@ function buildBugEvidence(snapshot, sendSummaries) {
       ref: "bug-kpi-1",
       kind: "bug_kpi",
       open_high: kpi.open_high ?? 0,
+      open_urgent: kpi.open_urgent ?? 0,
       new_high: kpi.new_high ?? 0,
+      new_urgent: kpi.new_urgent ?? 0,
       new_medium: kpi.new_medium ?? 0,
       total_open: kpi.total_open ?? 0,
     });
@@ -218,27 +237,37 @@ function flattenAgingBuckets(buckets) {
 
 /**
  * The oldest few High/Urgent and Medium bugs, from `bugs.aging_high_urgent`/
- * `bugs.aging_medium` (scripts/reports/bugs.py's `aging_buckets()` -- 3
- * severity buckets, oldest-first within each, already excluding anything
- * younger than the citable threshold). Flattened across buckets and
- * re-sorted by age so the single oldest bug surfaces first regardless of
- * which bucket it landed in, then capped at a few each.
+ * `bugs.aging_medium` (scripts/reports/bugs.py's `aging_buckets()` -- as of
+ * 2026-07-31, 4 severity buckets covering the FULL open backlog for each
+ * priority group, oldest-first within each). The leading "none"-severity
+ * bucket (0-7d High/Urgent, 0-15d Medium) is skipped here -- those bugs
+ * aren't old enough to be worth flagging in the narrative, even though
+ * Bug Analysis's own Aging Bugs section shows them for the full
+ * distribution. The remaining buckets are flattened and re-sorted by age so
+ * the single oldest bug surfaces first regardless of which bucket it landed
+ * in, then capped at a few each.
  *
  * Two separate evidence kinds (not one, shared) so severityForEvidence can
- * apply each priority group's own thresholds -- a 20-day-old Medium bug
- * ("still under its 28-day medium bar") isn't the same severity as a
- * 20-day-old High/Urgent one ("already past its 14-day bar"). Folded
- * directly into the existing "Top issues now" narrative rather than a
- * separate deterministic section, per the PM's explicit instruction
- * (2026-07-31): "its okay to mention the aged open/urgent tickets in top
- * issues itself, no need to show a separate section" -- "follow same
- * treatment for medium bugs".
+ * apply each priority group's own bounds -- a 20-day-old Medium bug ("still
+ * under its 30-day medium bar") isn't the same severity as a 20-day-old
+ * High/Urgent one ("already past its 14-day bar"). Folded directly into the
+ * existing "Top issues now" narrative rather than a separate deterministic
+ * section, per the PM's explicit instruction (2026-07-31): "its okay to
+ * mention the aged open/urgent tickets in top issues itself, no need to show
+ * a separate section" -- "follow same treatment for medium bugs".
+ *
+ * Each entry carries `state` (e.g. "OPEN", "TESTING", "DEVELOPMENT") so the
+ * prompt can distinguish a genuinely UNATTENDED bug (still "OPEN" -- nobody
+ * has started on it) from one that's merely still-open-but-in-progress
+ * (PM ask, 2026-07-31: "an urgent bug not attended... for more than 7 days
+ * is a red flag" / "can we distinguish between unattended and [in-progress]").
  */
 function buildAgingBugEvidence(snapshot) {
-  const highUrgent = flattenAgingBuckets(snapshot.bugs?.aging_high_urgent)
+  const skipFresh = (buckets) => (buckets ?? []).filter((b) => b.severity !== "none");
+  const highUrgent = flattenAgingBuckets(skipFresh(snapshot.bugs?.aging_high_urgent))
     .sort((a, b) => b.age_days - a.age_days)
     .slice(0, TOP_AGING_N);
-  const medium = flattenAgingBuckets(snapshot.bugs?.aging_medium)
+  const medium = flattenAgingBuckets(skipFresh(snapshot.bugs?.aging_medium))
     .sort((a, b) => b.age_days - a.age_days)
     .slice(0, TOP_AGING_N);
 
@@ -266,6 +295,34 @@ function buildAgingBugEvidence(snapshot) {
     });
   });
   return evidence;
+}
+
+/**
+ * Every open Urgent bug (this instance's top severity, above High),
+ * surfaced as its OWN evidence kind so it can never get buried inside a
+ * module-hotspot or bug_kpi sentence about the combined High/Urgent count
+ * (PM ask, 2026-07-31: "isn't it better to mention urgent bugs
+ * separately?"). Complements, rather than replaces, the `urgent_count`
+ * annotation already threaded onto module_hotspot/bug_kpi evidence --
+ * this is a person-readable, standalone callout, not just a number.
+ * Typically 0-1 tickets in this instance, so it rarely costs more than a
+ * sentence of the word budget; capped at TOP_URGENT_N defensively in case a
+ * future instance has more. `age_days` is included for context (an Urgent
+ * bug open 30 minutes reads differently from one open 3 weeks) but does NOT
+ * drive severity -- see severityForEvidence.
+ */
+function buildUrgentBugEvidence(snapshot) {
+  const openBugs = snapshot.bugs?.open_bugs ?? [];
+  const nowMs = snapshot.meta?.generated_at_ms;
+  const urgentBugs = openBugs.filter((b) => b.priority === "Urgent").slice(0, TOP_URGENT_N);
+  return urgentBugs.map((b, i) => ({
+    ref: `urgent-${i + 1}`,
+    kind: "urgent_bug",
+    id: b.id,
+    module: b.module ?? null,
+    state: b.state,
+    age_days: nowMs && b.created ? Math.round(((nowMs - b.created) / 86400000) * 10) / 10 : null,
+  }));
 }
 
 /** Top-N most-behind people (overdue.mjs::mostBehind, i.e. health.ts's own
@@ -395,6 +452,7 @@ export function distillBriefInput(snapshot, env = process.env) {
   const { evidence: peopleEvidence, pseudonymMap } = buildPeopleEvidence(snapshot, sendRealNames);
   const effortEvidence = buildEffortOutlierEvidence(snapshot, sendSummaries);
   const agingEvidence = buildAgingBugEvidence(snapshot);
+  const urgentEvidence = buildUrgentBugEvidence(snapshot);
   const deltaEvidence = buildDeltaEvidence(snapshot);
 
   const allGreen = computeAllGreen({ snapshot, peopleEvidence, effortEvidence, agingEvidence, deltaEvidence });
@@ -407,7 +465,7 @@ export function distillBriefInput(snapshot, env = process.env) {
       sprint: snapshot.meta?.sprint ?? null,
     },
     allGreen,
-    evidence: [...bugEvidence, ...peopleEvidence, ...effortEvidence, ...agingEvidence, deltaEvidence],
+    evidence: [...bugEvidence, ...peopleEvidence, ...effortEvidence, ...agingEvidence, ...urgentEvidence, deltaEvidence],
   };
 
   return { distilled, pseudonymMap };

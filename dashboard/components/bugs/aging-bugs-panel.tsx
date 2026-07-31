@@ -8,12 +8,14 @@ import type { AgingBucket } from "@/lib/types";
 import { BugTable } from "@/components/bugs/bug-table";
 
 const SEVERITY_BAR: Record<AgingBucket["severity"], string> = {
+  none: "bg-good",
   low: "bg-info",
   medium: "bg-warn",
   high: "bg-danger",
 };
 
-const SEVERITY_BADGE: Record<AgingBucket["severity"], "info" | "warn" | "danger"> = {
+const SEVERITY_BADGE: Record<AgingBucket["severity"], "good" | "info" | "warn" | "danger"> = {
+  none: "good",
   low: "info",
   medium: "warn",
   high: "danger",
@@ -26,13 +28,15 @@ const MIN_BAR_PCT = 6;
 /**
  * Bar-graph-per-age-bucket view (docs 2026-07-31: "a graph like view which
  * can expand from each ageing section"), one bar per severity bucket from
- * scripts/reports/bugs.py::aging_buckets() (low/medium/high, ascending —
- * e.g. "7-13d"/"14-29d"/"30+d" for High/Urgent, doubled day ranges for
- * Medium). Clicking a bar expands it into the exact same nested BugTable
- * used by ModuleInsights' row-expand (components/bugs/module-insights.tsx),
- * so the underlying ticket list looks and behaves identically to that
- * already-shipped pattern — only one bucket open at a time keeps the panel
- * compact (bars are meant to be scanned, not all expanded together).
+ * scripts/reports/bugs.py::aging_buckets() (none/low/medium/high, ascending
+ * — e.g. "0-7"/"8-14"/"15-21"/"21+" for High/Urgent, roughly doubled day
+ * ranges for Medium — these 4 buckets cover the FULL open backlog for the
+ * priority group, not just a "citable" subset). Clicking a bar expands it
+ * into the exact same nested BugTable used by ModuleInsights' row-expand
+ * (components/bugs/module-insights.tsx), so the underlying ticket list looks
+ * and behaves identically to that already-shipped pattern — only one bucket
+ * open at a time keeps the panel compact (bars are meant to be scanned, not
+ * all expanded together).
  */
 export function AgingBugsPanel({ buckets, tz }: { buckets: AgingBucket[]; tz: string }) {
   const [expanded, setExpanded] = React.useState<string | null>(null);
