@@ -100,6 +100,14 @@ def build_bugs(ctx, yt, cfg, now_ms):
     }
     new_urgent = sum(1 for b in by_prio["High"] if b["priority"] == "Urgent")
     modules = module_insights(q5)
+    # Same aggregation, over the CURRENT full open-bug list instead of the
+    # rolling 7-day window -- a 7-day-old count can cite bugs already closed
+    # by the time someone reads it (the AI Insights briefing's module-hotspot
+    # evidence switched to this field for exactly that reason, 2026-07-31;
+    # `module_insights` itself stays unchanged, since Health's "hottest
+    # module" deliberately wants the stable 7-day recency signal, not the
+    # full backlog — see dashboard/lib/health.ts's bugPressure() comment).
+    modules_open = module_insights(q6)
     return {
         "window": {"start_ms": w["start_ms"], "end_ms": w["end_ms"], "label": w["label"]},
         "new_in_window": by_prio,
@@ -107,6 +115,7 @@ def build_bugs(ctx, yt, cfg, now_ms):
         "medium_by_state": state_breakdown(q3),
         "low_by_state": state_breakdown(q4),
         "module_insights": modules,
+        "module_insights_open": modules_open,   # same shape, but over ALL currently open bugs
         "seven_day_bugs": q5,   # full 7-day bug list, so the dashboard can expand a Module
                                  # Insights row to show the underlying tickets
         "open_bugs": q6,   # full open-bug list (module/submodule/priority per bug), for the
