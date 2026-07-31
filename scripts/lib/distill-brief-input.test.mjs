@@ -1,10 +1,17 @@
 /**
- * Tests for scripts/lib/distill-brief-input.mjs, focused on the
- * effort_outlier evidence bug fixed 2026-07-31: it used to cite raw
- * epic.spent (a whole-epic-LIFETIME work-item sweep) in raw minutes, which
- * could wildly overstate a MIXED epic's actual overshoot (its done stories'
- * historical spend included) and was never something a human would write
- * ("spent 8600 minutes"). Verified live against PXB1-6156/PXB1-2724.
+ * Tests for scripts/lib/distill-brief-input.mjs, covering two 2026-07-31
+ * fixes:
+ *  - effort_outlier evidence used to cite raw epic.spent (a whole-epic-
+ *    LIFETIME work-item sweep) in raw minutes, which could wildly overstate
+ *    a MIXED epic's actual overshoot (its done stories' historical spend
+ *    included) and was never something a human would write ("spent 8600
+ *    minutes"). Verified live against PXB1-6156/PXB1-2724.
+ *  - module_hotspot evidence used to cite bugs.module_insights (a rolling
+ *    7-day window with NO #Unresolved filter at all -- scripts/reports/
+ *    bugs.py's build_bugs() query for it), so a hotspot's count and its
+ *    sample issue citations could include bugs already closed by the time
+ *    someone reads the briefing. Now prefers module_insights_open /
+ *    open_bugs (both #Unresolved-filtered, current-state).
  *
  * Run: node scripts/lib/distill-brief-input.test.mjs
  */
@@ -26,6 +33,16 @@ function baseSnapshot(overrides = {}) {
 function effortOutliers(snapshot) {
   const { distilled } = distillBriefInput(snapshot, {});
   return distilled.evidence.filter((e) => e.kind === "effort_outlier");
+}
+
+function moduleHotspots(snapshot) {
+  const { distilled } = distillBriefInput(snapshot, {});
+  return distilled.evidence.filter((e) => e.kind === "module_hotspot");
+}
+
+function citedBugs(snapshot) {
+  const { distilled } = distillBriefInput(snapshot, {});
+  return distilled.evidence.filter((e) => e.kind === "bug");
 }
 
 test("effort_outlier: uses overshoot_spent (hours), NOT the whole-epic-lifetime epic.spent", () => {
@@ -90,4 +107,54 @@ test("severityForEvidence: effort_outlier 'high' threshold reads the hours field
     severityForEvidence({ kind: "effort_outlier", overshoot: true, total_hours: 10, spent_hours: 15 }),
     "medium", // over, but under 2x
   );
+});
+
+test("module_hotspot: prefers module_insights_open (current state) over the 7-day module_insights", () => {
+  const snapshot = baseSnapshot({
+    bugs: {
+      // 7-day window: no #Unresolved filter, so this stale count includes
+      // bugs already closed by read time -- must be ignored when the
+      // current-state field is present.
+      module_insights: [{ module: "Sale", count: 90, submodules: [{ submodule: "POS", count: 40 }] }],
+      module_insights_open: [{ module: "Sale", count: 51, submodules: [{ submodule: "POS", count: 22 }] }],
+      new_in_window: {},
+      open_high_older: [],
+      open_bugs: [],
+      kpi: null,
+    },
+  });
+  const [hotspot] = moduleHotspots(snapshot);
+  assert.equal(hotspot.count, 51); // NOT 90
+  assert.equal(hotspot.top_submodule, "POS");
+  assert.equal(hotspot.top_submodule_count, 22); // NOT 40
+});
+
+test("module_hotspot: falls back to module_insights when module_insights_open is absent (older snapshot)", () => {
+  const snapshot = baseSnapshot({
+    bugs: {
+      module_insights: [{ module: "Purchase", count: 26, submodules: [] }],
+      new_in_window: {},
+      open_high_older: [],
+      kpi: null,
+    },
+  });
+  const [hotspot] = moduleHotspots(snapshot);
+  assert.equal(hotspot.module, "Purchase");
+  assert.equal(hotspot.count, 26);
+});
+
+test("cited sample bugs: prefer bugs.open_bugs over the old priority/recency-scoped pool", () => {
+  const snapshot = baseSnapshot({
+    bugs: {
+      module_insights_open: [{ module: "Sale", count: 1, submodules: [] }],
+      // A Low-priority, >7-day-old open bug -- absent from the old
+      // High/Medium-in-window pool, but present in open_bugs.
+      open_bugs: [{ id: "PXB1-9001", priority: "Low", state: "OPEN", module: "Sale" }],
+      new_in_window: { High: [], Medium: [] },
+      open_high_older: [],
+      kpi: null,
+    },
+  });
+  const bugs = citedBugs(snapshot);
+  assert.deepEqual(bugs.map((b) => b.id), ["PXB1-9001"]);
 });

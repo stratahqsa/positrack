@@ -111,18 +111,24 @@ export function sourceForEvidence(e) {
 }
 
 /**
- * Module bug hotspots (bugs.module_insights, already pre-sorted desc by
- * count -- see health.ts's own comment on the same field) joined against the
- * individual bug lists (new_in_window.*, open_high_older) to surface a few
- * concrete, citable issue IDs per hot module. Only
- * {id, priority, state, module} per bug (+ summary iff sendSummaries) --
- * never assignee/reporter (see file header).
+ * Module bug hotspots joined against a bug pool to surface a few concrete,
+ * citable issue IDs per hot module. Only {id, priority, state, module} per
+ * bug (+ summary iff sendSummaries) -- never assignee/reporter (see file
+ * header).
+ *
+ * Prefers `bugs.module_insights_open` (same shape as `module_insights`, but
+ * counted over ALL currently open bugs, not the rolling 7-day window) and
+ * `bugs.open_bugs` as the sample pool -- a 7-day count can cite a bug
+ * already closed by the time someone reads the briefing (real case, module
+ * hotspot text said "51 open bugs" for a count that included several
+ * already-resolved ones, 2026-07-31). Falls back to the old 7-day-scoped
+ * fields on a snapshot that predates `module_insights_open`/`open_bugs`.
  */
 function buildBugEvidence(snapshot, sendSummaries) {
-  const moduleInsights = snapshot.bugs?.module_insights ?? [];
+  const moduleInsights = snapshot.bugs?.module_insights_open ?? snapshot.bugs?.module_insights ?? [];
   const topModules = moduleInsights.slice(0, TOP_MODULES_N);
 
-  const bugPool = [
+  const bugPool = snapshot.bugs?.open_bugs ?? [
     ...(snapshot.bugs?.new_in_window?.High ?? []),
     ...(snapshot.bugs?.open_high_older ?? []),
     ...(snapshot.bugs?.new_in_window?.Medium ?? []),

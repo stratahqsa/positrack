@@ -488,6 +488,12 @@ export interface BugsBlock {
   // the page (2026-07-21).
   seven_day_bugs?: Bug[];
   open_bugs?: Bug[];
+  /** Same shape as `module_insights`, but over ALL currently open bugs
+   *  instead of the rolling 7-day window — used by the AI Insights
+   *  briefing's module-hotspot evidence, so it can't cite a count that
+   *  includes bugs already closed by the time someone reads it (2026-07-31).
+   *  Optional: absent on older snapshots. */
+  module_insights_open?: ModuleInsight[];
   kpi: {
     new_high: number;
     new_medium: number;
