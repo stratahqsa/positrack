@@ -115,45 +115,61 @@ NOW = 1782729000000  # 2026-06-29T10:30:00Z, same fixed instant used elsewhere i
 def _bug_aged(bug_id, age_days_val, **overrides):
     return dict({"id": bug_id, "created": int(NOW - age_days_val * DAY)}, **overrides)
 
-def test_aging_buckets_high_urgent_thresholds_7_14_30():
+def test_aging_buckets_high_urgent_full_range_0_7_8_14_15_21_21plus():
     bugs_list = [
-        _bug_aged("A", 3),    # below citable (7) -> excluded entirely
-        _bug_aged("B", 7),    # exactly at citable boundary -> "7-13d"
-        _bug_aged("C", 13.9), # "7-13d"
-        _bug_aged("D", 14),   # exactly at medium boundary -> "14-29d"
-        _bug_aged("E", 21),   # PXB1-8288-style case -> "14-29d"
-        _bug_aged("F", 30),   # exactly at high boundary -> "30+d"
-        _bug_aged("G", 90),   # "30+d"
+        _bug_aged("A", 3),     # "0-7"
+        _bug_aged("B", 7.9),   # floors to 7 -> "0-7"
+        _bug_aged("C", 8),     # "8-14"
+        _bug_aged("D", 13.9),  # floors to 13 -> "8-14"
+        _bug_aged("E", 15),    # "15-21"
+        _bug_aged("F", 21),    # PXB1-8288-style case -> "15-21"
+        _bug_aged("G", 21.9),  # floors to 21 -> still "15-21"
+        _bug_aged("H", 22),    # "21+"
+        _bug_aged("I", 90),    # "21+"
     ]
-    out = bugs.aging_buckets(bugs_list, bugs.AGING_THRESHOLDS_HIGH_URGENT, NOW)
-    assert [b["range"] for b in out] == ["7-13d", "14-29d", "30+d"]
-    assert [b["severity"] for b in out] == ["low", "medium", "high"]
+    out = bugs.aging_buckets(bugs_list, bugs.AGING_BUCKETS_HIGH_URGENT, NOW)
+    assert [b["range"] for b in out] == ["0-7", "8-14", "15-21", "21+"]
+    assert [b["severity"] for b in out] == ["none", "low", "medium", "high"]
     by_range = {b["range"]: [x["id"] for x in b["bugs"]] for b in out}
-    assert by_range["7-13d"] == ["C", "B"]  # oldest first: 13.9d before 7d
-    assert by_range["14-29d"] == ["E", "D"]  # oldest first: 21d before 14d
-    assert by_range["30+d"] == ["G", "F"]    # oldest first: 90d before 30d
-    assert [b["count"] for b in out] == [2, 2, 2]
+    assert by_range["0-7"] == ["B", "A"]        # oldest first: 7.9d before 3d
+    assert by_range["8-14"] == ["D", "C"]
+    assert by_range["15-21"] == ["G", "F", "E"]
+    assert by_range["21+"] == ["I", "H"]
+    assert [b["count"] for b in out] == [2, 2, 3, 2]
 
-def test_aging_buckets_medium_thresholds_are_double_high_urgent() :
-    assert bugs.AGING_THRESHOLDS_MEDIUM == tuple(t * 2 for t in bugs.AGING_THRESHOLDS_HIGH_URGENT)
+def test_aging_buckets_covers_every_bug_none_excluded():
+    # Unlike the pre-2026-07-31 "citable" scheme, nothing is dropped for
+    # being too fresh -- the sum of all bucket counts equals the input size
+    # (for bugs with a resolvable age).
+    bugs_list = [_bug_aged(str(i), i) for i in range(0, 40)]
+    out = bugs.aging_buckets(bugs_list, bugs.AGING_BUCKETS_HIGH_URGENT, NOW)
+    assert sum(b["count"] for b in out) == len(bugs_list)
 
-def test_aging_buckets_bug_younger_than_citable_threshold_excluded_from_every_bucket():
-    out = bugs.aging_buckets([_bug_aged("A", 6.9)], bugs.AGING_THRESHOLDS_HIGH_URGENT, NOW)
-    assert sum(b["count"] for b in out) == 0
+def test_aging_buckets_medium_full_range_0_15_16_30_31_60_60plus():
+    bugs_list = [
+        _bug_aged("A", 5),    # "0-15"
+        _bug_aged("B", 20),   # "16-30"
+        _bug_aged("C", 45),   # "31-60"
+        _bug_aged("D", 65),   # "60+"
+    ]
+    out = bugs.aging_buckets(bugs_list, bugs.AGING_BUCKETS_MEDIUM, NOW)
+    assert [b["range"] for b in out] == ["0-15", "16-30", "31-60", "60+"]
+    assert [b["severity"] for b in out] == ["none", "low", "medium", "high"]
+    assert [b["count"] for b in out] == [1, 1, 1, 1]
 
 def test_aging_buckets_annotates_age_days_rounded():
-    out = bugs.aging_buckets([_bug_aged("A", 21.04)], bugs.AGING_THRESHOLDS_HIGH_URGENT, NOW)
-    medium_bucket = next(b for b in out if b["range"] == "14-29d")
-    assert medium_bucket["bugs"][0]["age_days"] == 21.0
+    out = bugs.aging_buckets([_bug_aged("A", 21.04)], bugs.AGING_BUCKETS_HIGH_URGENT, NOW)
+    bucket = next(b for b in out if b["range"] == "15-21")
+    assert bucket["bugs"][0]["age_days"] == 21.0
 
 def test_aging_buckets_bug_with_no_created_timestamp_excluded_not_crashed():
-    out = bugs.aging_buckets([{"id": "NO-CREATED"}], bugs.AGING_THRESHOLDS_HIGH_URGENT, NOW)
+    out = bugs.aging_buckets([{"id": "NO-CREATED"}], bugs.AGING_BUCKETS_HIGH_URGENT, NOW)
     assert sum(b["count"] for b in out) == 0
 
-def test_aging_buckets_empty_input_still_returns_three_buckets():
-    out = bugs.aging_buckets([], bugs.AGING_THRESHOLDS_HIGH_URGENT, NOW)
-    assert [b["range"] for b in out] == ["7-13d", "14-29d", "30+d"]
-    assert [b["count"] for b in out] == [0, 0, 0]
+def test_aging_buckets_empty_input_still_returns_four_buckets():
+    out = bugs.aging_buckets([], bugs.AGING_BUCKETS_HIGH_URGENT, NOW)
+    assert [b["range"] for b in out] == ["0-7", "8-14", "15-21", "21+"]
+    assert [b["count"] for b in out] == [0, 0, 0, 0]
 
 def test_module_insights_high_urgent_style_filter_excludes_medium_low():
     # Mirrors build_bugs()'s own filter: module_insights([b for b in q6 if
@@ -168,3 +184,17 @@ def test_module_insights_high_urgent_style_filter_excludes_medium_low():
     mods = bugs.module_insights(filtered)
     assert mods[0]["module"] == "Purchase"
     assert mods[0]["count"] == 3
+
+def test_with_urgent_counts_attaches_urgent_subcount_per_module():
+    # 2026-07-31: Urgent folds into "High" everywhere, but a module's
+    # combined count must still expose how many of those are actually
+    # Urgent (e.g. 9 High/Urgent where only 1 is Urgent) so callers don't
+    # blend the two into one ambiguous number.
+    hu_bugs = (
+        [{"summary": "Sale: POS - a", "module": "Sale", "priority": "High"}] * 8
+        + [{"summary": "Sale: POS - b", "module": "Sale", "priority": "Urgent"}] * 1
+        + [{"summary": "Purchase: RG - c", "module": "Purchase", "priority": "High"}] * 3
+    )
+    mods = bugs._with_urgent_counts(bugs.module_insights(hu_bugs), hu_bugs)
+    by_module = {m["module"]: m["urgent_count"] for m in mods}
+    assert by_module == {"Sale": 1, "Purchase": 0}

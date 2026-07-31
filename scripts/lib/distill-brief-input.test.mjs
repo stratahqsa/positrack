@@ -206,12 +206,49 @@ test("module_hotspot: prefers module_insights_high_urgent over module_insights_o
   assert.equal(hotspot.count, 3); // NOT 51 or 90
 });
 
+test("module_hotspot: carries urgent_count so the Urgent sub-count is never blended into count silently", () => {
+  const snapshot = baseSnapshot({
+    bugs: {
+      module_insights_high_urgent: [{ module: "Sale", count: 9, urgent_count: 1, submodules: [] }],
+      new_in_window: {}, open_high_older: [], open_bugs: [], kpi: null,
+    },
+  });
+  const [hotspot] = moduleHotspots(snapshot);
+  assert.equal(hotspot.count, 9);
+  assert.equal(hotspot.urgent_count, 1);
+});
+
+test("module_hotspot: urgent_count defaults to 0 when the module entry predates the field", () => {
+  const snapshot = baseSnapshot({
+    bugs: {
+      module_insights_high_urgent: [{ module: "Sale", count: 9, submodules: [] }],
+      new_in_window: {}, open_high_older: [], open_bugs: [], kpi: null,
+    },
+  });
+  const [hotspot] = moduleHotspots(snapshot);
+  assert.equal(hotspot.urgent_count, 0);
+});
+
+test("bug_kpi: carries open_urgent/new_urgent alongside open_high/new_high", () => {
+  const snapshot = baseSnapshot({
+    bugs: {
+      module_insights: [], new_in_window: {}, open_high_older: [],
+      kpi: { open_high: 22, open_urgent: 1, new_high: 4, new_urgent: 0, new_medium: 23, total_open: 216 },
+    },
+  });
+  const { distilled } = distillBriefInput(snapshot, {});
+  const [kpi] = distilled.evidence.filter((e) => e.kind === "bug_kpi");
+  assert.equal(kpi.open_high, 22);
+  assert.equal(kpi.open_urgent, 1);
+  assert.equal(kpi.new_urgent, 0);
+});
+
 function agingEvidence(snapshot) {
   const { distilled } = distillBriefInput(snapshot, {});
   return distilled.evidence.filter((e) => e.kind === "aging_bug" || e.kind === "aging_bug_medium");
 }
 
-test("aging_bug evidence: flattens aging_high_urgent buckets, oldest first, capped at 3", () => {
+test("aging_bug evidence: flattens aging_high_urgent buckets, oldest first, capped at 3, skipping the 'none' bucket", () => {
   const snapshot = baseSnapshot({
     bugs: {
       module_insights: [],
@@ -219,10 +256,11 @@ test("aging_bug evidence: flattens aging_high_urgent buckets, oldest first, capp
       open_high_older: [],
       kpi: null,
       aging_high_urgent: [
-        { range: "7-13d", severity: "low", count: 1, bugs: [{ id: "A", priority: "High", state: "OPEN", module: "Sale", age_days: 9 }] },
-        { range: "14-29d", severity: "medium", count: 1, bugs: [{ id: "B", priority: "Urgent", state: "OPEN", module: "Purchase", age_days: 21 }] },
+        { range: "0-7", severity: "none", count: 1, bugs: [{ id: "FRESH", priority: "High", state: "OPEN", module: "Sale", age_days: 3 }] },
+        { range: "8-14", severity: "low", count: 1, bugs: [{ id: "A", priority: "High", state: "OPEN", module: "Sale", age_days: 9 }] },
+        { range: "15-21", severity: "medium", count: 1, bugs: [{ id: "B", priority: "Urgent", state: "OPEN", module: "Purchase", age_days: 21 }] },
         {
-          range: "30+d", severity: "high", count: 2,
+          range: "21+", severity: "high", count: 2,
           bugs: [
             { id: "C", priority: "High", state: "OPEN", module: "Sale", age_days: 90 },
             { id: "D", priority: "High", state: "OPEN", module: "Sale", age_days: 31 },
@@ -232,35 +270,45 @@ test("aging_bug evidence: flattens aging_high_urgent buckets, oldest first, capp
     },
   });
   const evidence = agingEvidence(snapshot).filter((e) => e.kind === "aging_bug");
-  assert.deepEqual(evidence.map((e) => e.id), ["C", "D", "B"]); // oldest-first across buckets, capped at 3 (A dropped)
+  // Oldest-first across the 3 non-"none" buckets, capped at 3 -- "FRESH"
+  // (from the "none" bucket) and "A" (4th-oldest of the remaining) both
+  // dropped: FRESH because it's too young to flag, A because only 3 fit.
+  assert.deepEqual(evidence.map((e) => e.id), ["C", "D", "B"]);
   assert.equal(evidence[0].age_days, 90);
 });
 
-test("aging_bug_medium evidence: separate kind, own thresholds via severityForEvidence", () => {
+test("aging_bug_medium evidence: separate kind, own bounds via severityForEvidence", () => {
   const snapshot = baseSnapshot({
     bugs: {
       module_insights: [], new_in_window: {}, open_high_older: [], kpi: null,
       aging_medium: [
-        { range: "14-27d", severity: "low", count: 0, bugs: [] },
-        { range: "28-59d", severity: "medium", count: 1, bugs: [{ id: "M1", priority: "Medium", state: "OPEN", module: "Sale", age_days: 40 }] },
-        { range: "60+d", severity: "high", count: 0, bugs: [] },
+        { range: "0-15", severity: "none", count: 0, bugs: [] },
+        { range: "16-30", severity: "low", count: 0, bugs: [] },
+        { range: "31-60", severity: "medium", count: 1, bugs: [{ id: "M1", priority: "Medium", state: "OPEN", module: "Sale", age_days: 40 }] },
+        { range: "60+", severity: "high", count: 0, bugs: [] },
       ],
     },
   });
   const [entry] = agingEvidence(snapshot);
   assert.equal(entry.kind, "aging_bug_medium");
   assert.equal(entry.id, "M1");
-  // 40 days: past aging_bug_medium's 28d "medium" bar but well under its 60d
-  // "high" bar -- must NOT be scored against the High/Urgent 14/30 bars
+  // 40 days: past aging_bug_medium's 30d "medium" bar but well under its 60d
+  // "high" bar -- must NOT be scored against the High/Urgent 7/14/21 bars
   // (which would wrongly call it "high").
   assert.equal(severityForEvidence(entry), "medium");
 });
 
-test("severityForEvidence: aging_bug and aging_bug_medium use different thresholds for the same age", () => {
-  // 20 days: past High/Urgent's 14d medium bar (-> "medium") but still under
-  // Medium's own 28d medium bar (-> "low").
+test("severityForEvidence: aging_bug and aging_bug_medium use different bounds for the same age", () => {
+  // 20 days: past High/Urgent's 14d "low" bar but still under its 21d
+  // "medium" bar (-> "medium"); for Medium, still under its own 30d "low"
+  // bar (-> "low").
   assert.equal(severityForEvidence({ kind: "aging_bug", age_days: 20 }), "medium");
   assert.equal(severityForEvidence({ kind: "aging_bug_medium", age_days: 20 }), "low");
+});
+
+test("severityForEvidence: aging_bug age within the 'none' range (<=7d) still resolves to 'none'", () => {
+  assert.equal(severityForEvidence({ kind: "aging_bug", age_days: 5 }), "none");
+  assert.equal(severityForEvidence({ kind: "aging_bug_medium", age_days: 5 }), "none");
 });
 
 test("allGreen is false when there are aging bugs but nothing else is red", () => {
@@ -268,10 +316,23 @@ test("allGreen is false when there are aging bugs but nothing else is red", () =
     bugs: {
       module_insights: [], new_in_window: {}, open_high_older: [], kpi: { open_high: 0, new_high: 0 },
       aging_high_urgent: [
-        { range: "7-13d", severity: "low", count: 1, bugs: [{ id: "A", priority: "High", state: "OPEN", module: "Sale", age_days: 9 }] },
+        { range: "8-14", severity: "low", count: 1, bugs: [{ id: "A", priority: "High", state: "OPEN", module: "Sale", age_days: 9 }] },
       ],
     },
   });
   const { distilled } = distillBriefInput(snapshot, {});
   assert.equal(distilled.allGreen, false);
+});
+
+test("allGreen stays true when the only aging bugs are in the fresh 'none' bucket", () => {
+  const snapshot = baseSnapshot({
+    bugs: {
+      module_insights: [], new_in_window: {}, open_high_older: [], kpi: { open_high: 0, new_high: 0 },
+      aging_high_urgent: [
+        { range: "0-7", severity: "none", count: 1, bugs: [{ id: "FRESH", priority: "High", state: "OPEN", module: "Sale", age_days: 3 }] },
+      ],
+    },
+  });
+  const { distilled } = distillBriefInput(snapshot, {});
+  assert.equal(distilled.allGreen, true);
 });

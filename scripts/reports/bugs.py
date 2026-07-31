@@ -70,12 +70,27 @@ def _dedupe(raw_list):
             seen.add(k); out.append(r)
     return out
 
-# [citable, medium-severity, high-severity] day cutoffs (PM-confirmed, 2026-07-31).
-# Medium is exactly double High/Urgent's, by the PM's own stated rule — Low
-# priority is deliberately excluded: aging is expected there by design (that's
-# what "low priority" means), so per-ticket flagging wouldn't be actionable.
-AGING_THRESHOLDS_HIGH_URGENT = (7, 14, 30)
-AGING_THRESHOLDS_MEDIUM = (14, 28, 60)
+# 4 whole-day buckets (label, lo, hi, severity), ascending, hi=None on the
+# last meaning "more than the previous bucket's hi" (PM-confirmed,
+# 2026-07-31). Every open bug in the priority group lands in exactly one
+# bucket — unlike the pre-2026-07-31 3-bucket "citable" scheme, nothing is
+# dropped for being too fresh; the leading "none"-severity bucket is what
+# used to be excluded entirely. Medium's ranges are roughly double
+# High/Urgent's, by the PM's own stated rule. Low priority stays excluded
+# from aging entirely (aging is expected there by design, so per-ticket
+# flagging wouldn't be actionable).
+AGING_BUCKETS_HIGH_URGENT = [
+    ("0-7", 0, 7, "none"),
+    ("8-14", 8, 14, "low"),
+    ("15-21", 15, 21, "medium"),
+    ("21+", 22, None, "high"),
+]
+AGING_BUCKETS_MEDIUM = [
+    ("0-15", 0, 15, "none"),
+    ("16-30", 16, 30, "low"),
+    ("31-60", 31, 60, "medium"),
+    ("60+", 61, None, "high"),
+]
 
 def _age_days(bug, now_ms):
     """Age in days (float) since `bug["created"]`, or None if it has no created
@@ -85,30 +100,27 @@ def _age_days(bug, now_ms):
         return None
     return (now_ms - created) / 86400000.0
 
-def aging_buckets(bugs, thresholds, now_ms):
+def aging_buckets(bugs, bucket_defs, now_ms):
     """Buckets `bugs` (already priority-filtered by the caller, e.g. all open
-    High+Urgent, or all open Medium) by age against `thresholds` =
-    (citable_days, medium_days, high_days), ascending. Returns exactly 3
-    buckets in citable order — "citable-(medium-1)" (severity low),
-    "medium-(high-1)" (severity medium), "high+" (severity high) — each with
-    its full bug list (oldest first, each bug annotated with `age_days`), so
-    nothing is silently sampled once a bug clears the citable bar. Bugs
-    younger than `thresholds[0]` are excluded entirely (not yet worth
-    flagging) — the same "citable" framing the AI-brief evidence uses."""
-    lo, mid, hi = thresholds
-    ranges = [
-        ("%d-%dd" % (lo, mid - 1), "low", lo, mid),
-        ("%d-%dd" % (mid, hi - 1), "medium", mid, hi),
-        ("%d+d" % hi, "high", hi, None),
-    ]
+    High+Urgent, or all open Medium) by whole days since creation into the 4
+    (label, lo, hi, severity) ranges in `bucket_defs` (ascending; hi=None on
+    the last bucket means "more than the previous bucket's hi"). Every bug
+    with a resolvable age lands in exactly one bucket — this shows the FULL
+    age distribution for Bug Analysis's Aging Bugs section, not just a
+    citable subset (the AI-brief evidence builder is what skips the
+    "none"-severity bucket when picking bugs to cite, not this function).
+    Each bucket's bugs are oldest-first, annotated with `age_days`."""
     out = []
-    for label, severity, lo_b, hi_b in ranges:
+    for label, lo, hi, severity in bucket_defs:
         items = []
         for b in bugs:
             age = _age_days(b, now_ms)
-            if age is None or age < lo_b:
+            if age is None:
                 continue
-            if hi_b is not None and age >= hi_b:
+            age_whole_days = int(age)
+            if age_whole_days < lo:
+                continue
+            if hi is not None and age_whole_days > hi:
                 continue
             entry = dict(b)
             entry["age_days"] = round(age, 1)
@@ -116,6 +128,19 @@ def aging_buckets(bugs, thresholds, now_ms):
         items.sort(key=lambda x: -x["age_days"])
         out.append({"range": label, "severity": severity, "count": len(items), "bugs": items})
     return out
+
+def _with_urgent_counts(modules, bugs):
+    """Attaches `urgent_count` to each module_insights() entry — the Urgent
+    sub-count within that module's combined High+Urgent count, so callers
+    (the AI-brief evidence, in particular) can state "N High/Urgent (M
+    Urgent)" instead of blending the two into one ambiguous number
+    (2026-07-31: with Urgent this rare — often just 1 ticket project-wide —
+    folding it silently into "High" overstates how many are actually top
+    severity)."""
+    urgent_by_module = Counter((b.get("module") or "(No module)") for b in bugs if b.get("priority") == "Urgent")
+    for m in modules:
+        m["urgent_count"] = urgent_by_module.get(m["module"], 0)
+    return modules
 
 def build_bugs(ctx, yt, cfg, now_ms):
     """Run the underlying queries and shape the block. `yt` is the ytcore module."""
@@ -161,9 +186,10 @@ def build_bugs(ctx, yt, cfg, now_ms):
     # is what the AI-brief's module-hotspot evidence switched to (2026-07-31)
     # — `module_insights_open` (all priorities) stays for anything else that
     # wants the broader view.
-    modules_high_urgent = module_insights([b for b in q6 if b["priority"] in ("High", "Urgent")])
-    aging_high_urgent = aging_buckets(q2, AGING_THRESHOLDS_HIGH_URGENT, now_ms)
-    aging_medium = aging_buckets(q3, AGING_THRESHOLDS_MEDIUM, now_ms)
+    hu_open = [b for b in q6 if b["priority"] in ("High", "Urgent")]
+    modules_high_urgent = _with_urgent_counts(module_insights(hu_open), hu_open)
+    aging_high_urgent = aging_buckets(q2, AGING_BUCKETS_HIGH_URGENT, now_ms)
+    aging_medium = aging_buckets(q3, AGING_BUCKETS_MEDIUM, now_ms)
     return {
         "window": {"start_ms": w["start_ms"], "end_ms": w["end_ms"], "label": w["label"]},
         "new_in_window": by_prio,
@@ -172,9 +198,10 @@ def build_bugs(ctx, yt, cfg, now_ms):
         "low_by_state": state_breakdown(q4),
         "module_insights": modules,
         "module_insights_open": modules_open,   # same shape, but over ALL currently open bugs
-        "module_insights_high_urgent": modules_high_urgent,   # same shape again, High+Urgent only
-        "aging_high_urgent": aging_high_urgent,   # 3 age buckets over all open High+Urgent bugs
-        "aging_medium": aging_medium,              # same, over all open Medium bugs (doubled thresholds)
+        "module_insights_high_urgent": modules_high_urgent,   # same shape again, High+Urgent only,
+                                                                # each entry also carrying urgent_count
+        "aging_high_urgent": aging_high_urgent,   # 4 age buckets covering ALL open High+Urgent bugs
+        "aging_medium": aging_medium,              # same, over ALL open Medium bugs (~double the ranges)
         "seven_day_bugs": q5,   # full 7-day bug list, so the dashboard can expand a Module
                                  # Insights row to show the underlying tickets
         "open_bugs": q6,   # full open-bug list (module/submodule/priority per bug), for the
