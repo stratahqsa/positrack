@@ -24,6 +24,17 @@ export function isOverdue(story, nowMs) {
   return !story.done && story.qaTs != null && story.qaTs < nowMs;
 }
 
+/** schedule.stories with a genuinely unlinked ticket excluded (parentId
+ *  null — no epic AND no parent story, e.g. PXB1-6847/6848). Mirrors
+ *  dashboard/lib/health.ts::linkedStories() exactly (added there 2026-07-25,
+ *  commit 4988606 -- this mirror was NOT updated at the time, which let a
+ *  person's "most behind" overdue count drift from what the Health dashboard
+ *  shows for the same person whenever they had an unlinked overdue story;
+ *  fixed 2026-08-01). */
+function linkedStories(snapshot) {
+  return (snapshot.schedule?.stories ?? []).filter((story) => story.parentId != null);
+}
+
 /**
  * Snapshot-wide accountability signals: unowned (blank assignee) stories,
  * overdue stories (isOverdue, any week), re-opened stories (state contains
@@ -31,11 +42,11 @@ export function isOverdue(story, nowMs) {
  * (ties broken by open count, then name) so the busiest/most-at-risk person
  * sorts first. Mirrors dashboard/lib/health.ts::accountability() exactly.
  *
- * @param {{schedule?: {stories?: Array<{done:boolean, assignee:string, qaTs:number|null, state?:string}>}}} snapshot
+ * @param {{schedule?: {stories?: Array<{done:boolean, assignee:string, qaTs:number|null, state?:string, parentId?:string|null}>}}} snapshot
  * @param {number} nowMs
  */
 export function accountability(snapshot, nowMs) {
-  const stories = snapshot.schedule?.stories ?? [];
+  const stories = linkedStories(snapshot);
 
   const byPersonMap = new Map();
   for (const story of stories) {
