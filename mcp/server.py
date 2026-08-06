@@ -20,13 +20,16 @@ either source so it is transport-ready.
 import base64
 import contextlib
 import hashlib
+import json
 import logging
 import os
+import re
 import sys
 import time
 
 # Import the shared engine from ../core (sibling of mcp/).
 _HERE = os.path.dirname(os.path.abspath(__file__))
+_CONTEXT_DIR = os.path.join(os.path.dirname(_HERE), "context")
 sys.path.insert(0, os.path.join(os.path.dirname(_HERE), "core"))
 import ytcore as core  # noqa: E402
 
@@ -525,6 +528,90 @@ def yt_reassign(from_user: str, to_user: str, project: str = "", comment: str = 
 def yt_article_create(project: str, summary: str, content: str = "", commit: bool = False) -> dict:
     """Create a Knowledge Base article. commit=False previews; confirm before commit=True."""
     return _run(lambda: core.article_create(_resolve_ctx(), project, summary, content, commit))
+
+
+# ---------- project context (git-controlled, local file) ----------
+
+_SAFE_PROJECT_CODE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
+
+
+@mcp.tool
+def yt_context(project: str, section: str = "") -> dict:
+    """Return the git-controlled project context for a Posibolt project.
+
+    Call this FIRST when starting work on ANY project. It returns strategic
+    context that lives in version-controlled JSON files reviewed via PR:
+    identity, goals, milestones, modules, KPIs, risks, dependencies, team
+    roster, and free-form leader notes.
+
+    Combine with yt_report / yt_search / yt_effort for the full picture:
+    yt_context tells you WHAT a project is about and what matters;
+    yt_report / yt_search tell you WHERE it stands right now.
+
+    DO call this before yt_search, yt_report, or yt_effort.
+    DO NOT use this for ticket data — use yt_search / yt_get for that.
+    DO NOT try to write context via MCP — edit files in git via PR.
+
+    `project`: project short code, e.g. 'BPX', 'PXB1' (case-insensitive).
+    `section`: optional — return only one section. One of: identity, goals,
+    milestones, modules, kpis, risks, dependencies, team, notes.
+    Omit to get the full context.
+
+    Format: JSON (YAML support planned if authoring friction warrants it).
+    """
+    def go():
+        code = project.strip().upper()
+        if not code:
+            raise core.YTError(None, "project code is required (e.g. 'BPX')")
+        if not _SAFE_PROJECT_CODE.match(code):
+            raise core.YTError(
+                None,
+                f"project code must be alphanumeric/hyphens/underscores, "
+                f"1-32 chars (got {code!r})")
+
+        filepath = os.path.join(_CONTEXT_DIR, f"{code}.json")
+
+        # Defence-in-depth: resolved path must stay inside _CONTEXT_DIR.
+        real = os.path.realpath(filepath)
+        if not real.startswith(os.path.realpath(_CONTEXT_DIR) + os.sep):
+            raise core.YTError(None, "invalid project code")
+
+        if not os.path.isfile(filepath):
+            return {
+                "project": code,
+                "context": None,
+                "message": f"No context file for {code}. "
+                           f"Create context/{code}.json in the repo via PR.",
+            }
+
+        size = os.path.getsize(filepath)
+        if size > 256_000:
+            raise core.YTError(
+                None,
+                f"context file for {code} is {size:,} bytes (limit 256 KB)")
+
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if not isinstance(data, dict):
+            raise core.YTError(
+                None,
+                f"context file for {code} must be a JSON object, "
+                f"got {type(data).__name__}")
+
+        if section:
+            key = section.strip().lower()
+            valid = ("identity", "goals", "milestones", "modules",
+                     "kpis", "risks", "dependencies", "team", "notes")
+            if key not in valid:
+                raise core.YTError(
+                    None,
+                    f"Unknown section '{key}'. Valid: {', '.join(valid)}")
+            return {"project": code, "section": key,
+                    "context": data.get(key)}
+
+        return {"project": code, "context": data}
+    return _run(go)
 
 
 # ---------- health (explicit; FastMCP does not provide one) ----------
