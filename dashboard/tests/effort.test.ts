@@ -137,12 +137,20 @@ describe("pendingP1Spent", () => {
 });
 
 describe("epicRemainingSpent", () => {
-  it("PENDING epic: uses epic.spent directly (no stories to inflate it)", () => {
-    const epic = makeEpic({ category: "PENDING", spent: 300, stories: [] });
-    expect(epicRemainingSpent(epic)).toBe(300);
+  it("PENDING epic: sums its stories' own spent (pendingP1Spent), NOT epic.spent", () => {
+    // Real case (PXB1-6156, 2026-07-25 through 2026-07-30): epic.spent is an
+    // independent work-item sweep that had to re-derive a total YouTrack
+    // already tracks correctly on the story itself, and drifted. Reading the
+    // story's own field sidesteps that entirely.
+    const epic = makeEpic({
+      category: "PENDING",
+      spent: 432, // the (wrong, drifted) whole-epic sweep total -- must be ignored
+      stories: [makeStory({ id: "S-pending", state: "OPEN", spent: 1260 })],
+    });
+    expect(epicRemainingSpent(epic)).toBe(1260);
   });
 
-  it("NO_STORIES epic: uses epic.spent directly, same as PENDING", () => {
+  it("NO_STORIES epic: uses epic.spent directly -- nothing to sum from", () => {
     const epic = makeEpic({ category: "NO_STORIES", spent: 120, stories: [] });
     expect(epicRemainingSpent(epic)).toBe(120);
   });

@@ -8,6 +8,7 @@ import { BugTable } from "@/components/bugs/bug-table";
 import { Section } from "@/components/bugs/section";
 import { StateBreakdown } from "@/components/bugs/state-breakdown";
 import { ModuleInsightsPanel } from "@/components/bugs/module-insights-panel";
+import { AgingBugsPanel } from "@/components/bugs/aging-bugs-panel";
 import { priorityVariant } from "@/components/weekly/badge-tone";
 
 // Snapshot is read from disk (dev) or the Release (prod) per request —
@@ -101,6 +102,26 @@ export default async function BugsPage() {
                 tz={tz}
               />
             </Section>
+
+            {bugs.aging_high_urgent ? (
+              <Section
+                title="Aging Bugs — High/Urgent"
+                tone="danger"
+                count={bugs.aging_high_urgent.reduce((n, b) => n + b.count, 0)}
+              >
+                <AgingBugsPanel buckets={bugs.aging_high_urgent} tz={tz} />
+              </Section>
+            ) : null}
+
+            {bugs.aging_medium ? (
+              <Section
+                title="Aging Bugs — Medium"
+                tone="warn"
+                count={bugs.aging_medium.reduce((n, b) => n + b.count, 0)}
+              >
+                <AgingBugsPanel buckets={bugs.aging_medium} tz={tz} />
+              </Section>
+            ) : null}
           </>
         )}
 

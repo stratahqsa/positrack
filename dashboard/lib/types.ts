@@ -31,6 +31,13 @@ export interface Story {
   created: number;
   est: Rollup;
   /**
+   * When this story itself was resolved (epoch ms), or null/absent if still
+   * open. core/ytcore.py's `_epic_stories()` has always written this into
+   * the snapshot JSON; only added to the type here (2026-07-26) once a
+   * consumer (the DONE table's post-cutoff sub-row filter) needed it.
+   */
+  resolved?: number | null;
+  /**
    * Child issue type — "STORY" | "BUG" | "UI" | "DEVELOPMENT" | "QA & AUTOMATION".
    * Optional: absent on older snapshots. Used by the Type filter.
    */
@@ -465,7 +472,31 @@ export interface StateBreakdownRow {
 export interface ModuleInsight {
   module: string;
   count: number;
+  /** Urgent sub-count within `count` — Urgent folds into the combined
+   *  High/Urgent count everywhere in this report, but callers that state
+   *  `count` should also state this (Urgent is usually a small handful, so
+   *  blending it in silently can understate how many are top severity).
+   *  Optional: absent on older snapshots / non-High/Urgent module lists. */
+  urgent_count?: number;
   submodules: { submodule: string; count: number }[];
+}
+
+/** A bug annotated with its age, as returned inside an AgingBucket. */
+export interface AgingBug extends Bug {
+  age_days: number;
+}
+
+/** One age bucket from scripts/reports/bugs.py::aging_buckets() — e.g.
+ *  "0-7"/none, "8-14"/low, "15-21"/medium, "21+"/high for High/Urgent bugs
+ *  (Medium's ranges are roughly double). As of 2026-07-31 these 4 buckets
+ *  cover the FULL open backlog for the priority group — "none" is what used
+ *  to be silently excluded as "too fresh to flag" under the old 3-bucket
+ *  scheme. Bugs within a bucket are oldest-first. */
+export interface AgingBucket {
+  range: string;
+  severity: "none" | "low" | "medium" | "high";
+  count: number;
+  bugs: AgingBug[];
 }
 
 export interface BugsBlock {
@@ -481,6 +512,25 @@ export interface BugsBlock {
   // the page (2026-07-21).
   seven_day_bugs?: Bug[];
   open_bugs?: Bug[];
+  /** Same shape as `module_insights`, but over ALL currently open bugs
+   *  instead of the rolling 7-day window — used by the AI Insights
+   *  briefing's module-hotspot evidence, so it can't cite a count that
+   *  includes bugs already closed by the time someone reads it (2026-07-31).
+   *  Optional: absent on older snapshots. */
+  module_insights_open?: ModuleInsight[];
+  /** Same shape again, but ranked/counted by High+Urgent bugs only — a
+   *  module can look "hot" mostly from low-stakes Medium/Low tickets on the
+   *  all-priority view; this is what the AI Insights briefing's
+   *  module-hotspot evidence uses instead (2026-07-31). Optional: absent on
+   *  older snapshots. */
+  module_insights_high_urgent?: ModuleInsight[];
+  /** 4 age buckets (none/low/medium/high severity) covering ALL open
+   *  High+Urgent bugs — ranges 0-7/8-14/15-21/21+ days. Optional: absent on
+   *  older snapshots. */
+  aging_high_urgent?: AgingBucket[];
+  /** Same shape, covering ALL open Medium bugs — ranges roughly double
+   *  (0-15/16-30/31-60/60+ days). Optional: absent on older snapshots. */
+  aging_medium?: AgingBucket[];
   kpi: {
     new_high: number;
     new_medium: number;

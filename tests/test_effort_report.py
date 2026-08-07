@@ -367,6 +367,90 @@ def test_attribute_spend_epic_story_bug_and_unattributed():
     assert un == 7                                      # never silently dropped
 
 
+def test_extract_children_matches_requested_link_types_case_insensitively():
+    issues = [{"idReadable": "P", "links": [
+        {"direction": "OUTWARD", "linkType": {"name": "BUGS REPORTED"}, "issues": [{"idReadable": "C"}]},
+    ]}]
+    assert yt._extract_children(issues, {"bugs reported"}) == {"C": "P"}
+
+
+def test_extract_children_only_matches_requested_types():
+    # A "Subtask" link is present but not requested -> not walked.
+    issues = [{"idReadable": "P", "links": [
+        {"direction": "OUTWARD", "linkType": {"name": "Subtask"}, "issues": [{"idReadable": "C"}]},
+    ]}]
+    assert yt._extract_children(issues, {"bugs reported"}) == {}
+
+
+def test_extract_children_ignores_inward_and_unrelated_link_types():
+    issues = [{"idReadable": "P", "links": [
+        {"direction": "INWARD", "linkType": {"name": "Bugs Reported"}, "issues": [{"idReadable": "C1"}]},
+        {"direction": "OUTWARD", "linkType": {"name": "Relates"}, "issues": [{"idReadable": "C2"}]},
+    ]}]
+    assert yt._extract_children(issues, {"subtask", "bugs reported"}) == {}
+
+
+def test_extract_children_first_writer_wins():
+    issues = [
+        {"idReadable": "P1", "links": [
+            {"direction": "OUTWARD", "linkType": {"name": "Subtask"}, "issues": [{"idReadable": "C"}]},
+        ]},
+        {"idReadable": "P2", "links": [
+            {"direction": "OUTWARD", "linkType": {"name": "Subtask"}, "issues": [{"idReadable": "C"}]},
+        ]},
+    ]
+    assert yt._extract_children(issues, {"subtask"}) == {"C": "P1"}
+
+
+def test_resolve_bug_parents_walks_dev_ticket_back_to_its_story():
+    # Real shape (verified live, 2026-07-30): PXB1-6156 (epic) -[Subtask]->
+    # PXB1-7601 (story) -[Subtask]-> PXB1-7962 (dev ticket) -[Bugs Reported]->
+    # PXB1-8455/PXB1-8457 (bugs). subtask_children has BOTH hops of the
+    # Subtask chain (epic->story and story->dev-ticket); bug_children has the
+    # dev-ticket->bug hop. A bug's parent must resolve to the STORY
+    # (PXB1-7601), not the dev ticket (PXB1-7962) -- _attribute_spend can't
+    # place time on a dev-ticket id, only on an epic or a tracked story.
+    subtask_children = {"PXB1-7601": "PXB1-6156", "PXB1-7962": "PXB1-7601"}
+    bug_children = {"PXB1-8455": "PXB1-7962", "PXB1-8457": "PXB1-7962"}
+    assert yt._resolve_bug_parents(subtask_children, bug_children) == {
+        "PXB1-8455": "PXB1-7601",
+        "PXB1-8457": "PXB1-7601",
+    }
+
+
+def test_resolve_bug_parents_falls_back_to_dev_ticket_id_if_orphaned():
+    # Defensive: a dev ticket that's somehow not itself a known Subtask child
+    # (shouldn't happen) doesn't crash -- falls back to its own id rather
+    # than raising, matching _attribute_spend's own "unattributed" fallback
+    # for anything it still can't resolve.
+    assert yt._resolve_bug_parents({}, {"BUG": "DEV-ORPHAN"}) == {"BUG": "DEV-ORPHAN"}
+
+
+def test_bug_reported_via_dev_ticket_reaches_its_epic_end_to_end():
+    # Full chain, real shape (PXB1-6156 -> PXB1-7601 -> PXB1-7962 -> PXB1-8455/
+    # PXB1-8457): _resolve_bug_parents' output feeds straight into
+    # _attribute_spend exactly as _child_parent_map composes them, proving the
+    # two bugs' logged time now reaches the epic instead of `unattributed`.
+    story_epic = {"PXB1-7601": "PXB1-6156"}
+    epic_ids = ["PXB1-6156"]
+    subtask_children = {"PXB1-7601": "PXB1-6156", "PXB1-7962": "PXB1-7601"}
+    bug_children = {"PXB1-8455": "PXB1-7962", "PXB1-8457": "PXB1-7962"}
+    bug_parent = yt._resolve_bug_parents(subtask_children, bug_children)
+
+    # A "Propagated from Bug" copy of this same time would also land on the
+    # story, but work_item_pool's _split_by_type excludes it before `items`
+    # ever reaches _attribute_spend -- that filtering is orthogonal to this
+    # test, which is purely about the bug's ORIGINAL entry now resolving to
+    # the epic instead of `unattributed`.
+    items = [
+        {"issue": "PXB1-8455", "minutes": 540},   # 9.0h, direct on the bug
+        {"issue": "PXB1-8457", "minutes": 228},   # 3.8h, direct on the bug
+    ]
+    spend, un = yt._attribute_spend(items, story_epic, epic_ids, bug_parent)
+    assert spend == {"PXB1-6156": 768}   # 540 + 228, the two bugs' direct time
+    assert un == 0                        # nothing left unattributed
+
+
 def test_attribute_spend_does_not_use_issue_rollup():
     # Attribution is purely from work items; an epic with no work-item entries gets 0
     # spend even if (in reality) it carries a Spent-time rollup. Guards against

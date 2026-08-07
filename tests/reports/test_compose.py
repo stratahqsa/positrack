@@ -9,7 +9,9 @@ def test_bugs_block_shape():
         def get_issues(self, *a, **k): return []
     b = bugs.build_bugs(ctx=None, yt=FakeYT(), cfg=cfg, now_ms=1752035640000)
     assert set(b) == {"window", "new_in_window", "open_high_older", "medium_by_state",
-                      "low_by_state", "module_insights", "seven_day_bugs", "open_bugs", "kpi"}
+                      "low_by_state", "module_insights", "module_insights_open",
+                      "module_insights_high_urgent", "aging_high_urgent", "aging_medium",
+                      "seven_day_bugs", "open_bugs", "kpi"}
     assert set(b["new_in_window"]) == {"High", "Medium", "Low"}
     assert b["kpi"]["total_open"] == 0
 

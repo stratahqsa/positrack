@@ -14,13 +14,16 @@ import { scopeLabel, stateVariant } from "@/components/weekly/badge-tone";
  * Sortable epic table reused by S0 (done), S1 (pending), and S2 (mixed) —
  * docs/reports-dashboard/plans/06-effort.md Task 2 / PRD_3 §5. Columns and
  * the per-row effort source vary by `variant`:
- *  - "done": Epic·Summary(+resolved)·Dev·UI·QA·Total·Spent. PRD_3 §4:
- *    "rollupAll = sum over all stories (used for S0 display)" — a DONE
- *    epic's `rollup`/`total` are the REMAINING-effort fields (always 0 by
- *    definition, nothing left to do), so this variant reads `rollup_all`
- *    instead — verified against dashboard/data/latest.json: a sample done
- *    epic carries rollup_all {server:960, ui:1440, testing:720} vs
- *    rollup {0,0,0}/total 0.
+ *  - "done": Epic·Summary(+resolved)·Dev·UI·QA·Total·Spent. An epic lands in
+ *    this section because ITS OWN resolved date is after the 29-Jun cutoff —
+ *    that says nothing about when each individual child story resolved (an
+ *    8-story epic can qualify because its LAST story closed post-cutoff,
+ *    while the other 7 closed months earlier). So both the sub-row list AND
+ *    the epic-line Dev/UI/QA/Total/Spent are scoped to just the stories that
+ *    themselves resolved after `cutoffMs` (2026-07-26) — summing exactly
+ *    what's shown, same "row and total can never disagree" principle as
+ *    "pending"/"mixed" below. Falls back to ALL stories (the old rollup_all-
+ *    equivalent behavior) when `cutoffMs` isn't supplied.
  *  - "pending"/"mixed": Epic·Summary·Assignee·Created·Dev·UI·QA·Total·Spent
  *    (+Est ⚠/✓ for pending only). Reads `rollup`/`total` directly — spot
  *    verified these already equal sum(rollup) exactly, so no separate
@@ -28,12 +31,18 @@ import { scopeLabel, stateVariant } from "@/components/weekly/badge-tone";
  *    summing the same per-row accessor used for the cells above it, so rows
  *    and their total can never visually disagree.
  *
- *    Spent is the exception for "mixed": `Epic.spent` is a whole-epic,
- *    all-stories-ever total (a work-item sweep — see core/ytcore.py), which
- *    would mismatch a Total that's already pending-P1-only. So "mixed" scopes
- *    Spent down to `pendingP1Spent()` — summing each pending-P1 story's own
- *    `spent` field — matching the PM's already-validated scheduled-report
- *    recipe. "pending"/"done" keep the whole-epic `Epic.spent` unchanged.
+ *    Spent is `pendingP1Spent()` for BOTH variants — summing each pending-P1
+ *    story's own `spent` field, not `Epic.spent` (a whole-epic, all-stories-
+ *    ever work-item sweep — see core/ytcore.py's `_attribute_spend`). Used to
+ *    be `Epic.spent` for "pending" on the assumption that a PENDING epic (no
+ *    done stories) would make the sweep equal pending-only spend anyway —
+ *    true in principle, but the sweep has to independently re-derive a total
+ *    YouTrack already maintains correctly on the story itself, and real
+ *    chances to drift turned up live (PXB1-6156, 2026-07-25 through
+ *    2026-07-30). Reading the story's own field sidesteps re-implementing
+ *    YouTrack's own propagation logic. See lib/effort.ts's
+ *    `epicRemainingSpent()` for the same reasoning applied to Health's
+ *    Remaining Effort tile.
  */
 export type EpicTableVariant = "done" | "pending" | "mixed";
 
@@ -74,16 +83,21 @@ const LABELS: Record<SortKey, string> = {
 
 const RIGHT_ALIGN = new Set<SortKey>(["dev", "ui", "qa", "total", "spent"]);
 
-/** Which of an epic's stories expand into sub-rows, per variant: "done" and
- *  "pending" show ALL stories (PENDING epics have zero done stories by the
- *  category rule itself — PRD_3 §4 "PENDING: has stories, none done"); only
- *  "mixed" filters down to the pending ones (PRD_3 §5 "expandable pending
- *  sub-rows"). This still includes pending Phase-2/Phase-3 stories (for
+/** Which of an epic's stories expand into sub-rows, per variant: "pending"
+ *  shows ALL stories (PENDING epics have zero done stories by the category
+ *  rule itself — PRD_3 §4 "PENDING: has stories, none done"); "mixed" filters
+ *  down to the pending ones (PRD_3 §5 "expandable pending sub-rows"); "done"
+ *  filters down to stories that themselves resolved after `cutoffMs` (see
+ *  file doc above) — falls back to ALL stories when no cutoff is supplied.
+ *  "pending"/"mixed" still include pending Phase-2/Phase-3 stories (for
  *  visibility — the epic's "P2/P3 · n" badge already flags the scope
- *  leakage); it's deliberately looser than `isPendingPhase1` below, which
+ *  leakage); that's deliberately looser than `isPendingPhase1` below, which
  *  additionally excludes any later phase for the Spent/estimate rollups. */
-function subStories(epic: Epic, variant: EpicTableVariant): Story[] {
+function subStories(epic: Epic, variant: EpicTableVariant, cutoffMs?: number): Story[] {
   if (variant === "mixed") return epic.stories.filter((s) => !isDoneState(s.state));
+  if (variant === "done" && cutoffMs != null) {
+    return epic.stories.filter((s) => s.resolved != null && s.resolved > cutoffMs);
+  }
   return epic.stories;
 }
 
@@ -99,17 +113,25 @@ function rollupEffort(r: Rollup): { dev: number; ui: number; qa: number } {
   return { dev: r.server, ui: r.ui, qa: r.testing };
 }
 
-function rowEffort(epic: Epic, variant: EpicTableVariant): RowEffort {
+function rowEffort(epic: Epic, variant: EpicTableVariant, cutoffMs?: number): RowEffort {
   if (variant === "done") {
-    const r = rollupEffort(epic.rollup_all);
-    return { ...r, total: r.dev + r.ui + r.qa, spent: epic.spent };
+    const stories = subStories(epic, variant, cutoffMs);
+    const dev = stories.reduce((t, s) => t + s.est.server, 0);
+    const ui = stories.reduce((t, s) => t + s.est.ui, 0);
+    const qa = stories.reduce((t, s) => t + s.est.testing, 0);
+    const spent = stories.reduce((t, s) => t + (s.spent ?? 0), 0);
+    return { dev, ui, qa, total: dev + ui + qa, spent };
   }
   const r = rollupEffort(epic.rollup);
-  const spent = variant === "mixed" ? pendingP1Spent(epic) : epic.spent;
-  return { ...r, total: epic.total, spent };
+  return { ...r, total: epic.total, spent: pendingP1Spent(epic) };
 }
 
-function sortValue(epic: Epic, key: SortKey, variant: EpicTableVariant): string | number | null {
+function sortValue(
+  epic: Epic,
+  key: SortKey,
+  variant: EpicTableVariant,
+  cutoffMs?: number,
+): string | number | null {
   switch (key) {
     case "id":
       return epic.id;
@@ -122,15 +144,15 @@ function sortValue(epic: Epic, key: SortKey, variant: EpicTableVariant): string 
     case "resolved":
       return epic.resolved;
     case "dev":
-      return rowEffort(epic, variant).dev;
+      return rowEffort(epic, variant, cutoffMs).dev;
     case "ui":
-      return rowEffort(epic, variant).ui;
+      return rowEffort(epic, variant, cutoffMs).ui;
     case "qa":
-      return rowEffort(epic, variant).qa;
+      return rowEffort(epic, variant, cutoffMs).qa;
     case "total":
-      return rowEffort(epic, variant).total;
+      return rowEffort(epic, variant, cutoffMs).total;
     case "spent":
-      return rowEffort(epic, variant).spent;
+      return rowEffort(epic, variant, cutoffMs).spent;
   }
 }
 
@@ -143,19 +165,19 @@ function compare(a: string | number | null, b: string | number | null): number {
   return a - b;
 }
 
-function sortEpics(epics: Epic[], sort: SortState, variant: EpicTableVariant): Epic[] {
+function sortEpics(epics: Epic[], sort: SortState, variant: EpicTableVariant, cutoffMs?: number): Epic[] {
   const sign = sort.dir === "asc" ? 1 : -1;
   return [...epics].sort((a, b) => {
-    const cmp = compare(sortValue(a, sort.key, variant), sortValue(b, sort.key, variant));
+    const cmp = compare(sortValue(a, sort.key, variant, cutoffMs), sortValue(b, sort.key, variant, cutoffMs));
     // Stable tie-break by epic ID, matching weekly/story-table.tsx's convention.
     return cmp !== 0 ? sign * cmp : a.id.localeCompare(b.id);
   });
 }
 
-function computeTotals(epics: Epic[], variant: EpicTableVariant): RowEffort {
+function computeTotals(epics: Epic[], variant: EpicTableVariant, cutoffMs?: number): RowEffort {
   return epics.reduce<RowEffort>(
     (acc, epic) => {
-      const eff = rowEffort(epic, variant);
+      const eff = rowEffort(epic, variant, cutoffMs);
       return {
         dev: acc.dev + eff.dev,
         ui: acc.ui + eff.ui,
@@ -241,17 +263,19 @@ function EffortCells({ eff }: { eff: RowEffort }) {
 function EpicDataRow({
   epic,
   variant,
+  cutoffMs,
   subCount,
   expanded,
   onToggle,
 }: {
   epic: Epic;
   variant: EpicTableVariant;
+  cutoffMs?: number;
   subCount: number;
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const eff = rowEffort(epic, variant);
+  const eff = rowEffort(epic, variant, cutoffMs);
   const canExpand = subCount > 0;
   const doneCount = epic.stories.length - subCount; // only meaningful for "mixed" (subCount = pending count there)
 
@@ -389,14 +413,23 @@ function TotalsRow({ totals, variant, columnCount }: { totals: RowEffort; varian
   );
 }
 
-export function EpicEffortTable({ epics, variant }: { epics: Epic[]; variant: EpicTableVariant }) {
+export function EpicEffortTable({
+  epics,
+  variant,
+  cutoffMs,
+}: {
+  epics: Epic[];
+  variant: EpicTableVariant;
+  /** "done" variant only: stories/effort scoped to `resolved > cutoffMs` — see file doc. */
+  cutoffMs?: number;
+}) {
   const defaultSort = DEFAULT_SORT[variant];
   const [sort, setSort] = React.useState<SortState>(defaultSort);
-  const [rows, setRows] = React.useState<Epic[]>(() => sortEpics(epics, defaultSort, variant));
+  const [rows, setRows] = React.useState<Epic[]>(() => sortEpics(epics, defaultSort, variant, cutoffMs));
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
 
   React.useEffect(() => {
-    setRows(sortEpics(epics, sort, variant));
+    setRows(sortEpics(epics, sort, variant, cutoffMs));
     // Intentionally NOT depending on `sort` — mirrors weekly/story-table.tsx:
     // sort changes are applied directly in handleSort below, and re-running
     // this effect on every header click would just redundantly re-sort. This
@@ -405,13 +438,13 @@ export function EpicEffortTable({ epics, variant }: { epics: Epic[]; variant: Ep
     // reused architecture and protects against `epics` changing for any
     // future reason.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [epics, variant]);
+  }, [epics, variant, cutoffMs]);
 
   function handleSort(key: SortKey) {
     const dir: SortDir = sort.key === key && sort.dir === "asc" ? "desc" : "asc";
     const next: SortState = { key, dir };
     setSort(next);
-    setRows((prev) => sortEpics(prev, next, variant));
+    setRows((prev) => sortEpics(prev, next, variant, cutoffMs));
   }
 
   function toggleExpanded(id: string) {
@@ -423,7 +456,7 @@ export function EpicEffortTable({ epics, variant }: { epics: Epic[]; variant: Ep
     });
   }
 
-  const totals = React.useMemo(() => computeTotals(epics, variant), [epics, variant]);
+  const totals = React.useMemo(() => computeTotals(epics, variant, cutoffMs), [epics, variant, cutoffMs]);
   const columnCount = COLUMN_KEYS[variant].length + (variant === "pending" ? 1 : 0);
 
   if (epics.length === 0) {
@@ -452,13 +485,14 @@ export function EpicEffortTable({ epics, variant }: { epics: Epic[]; variant: Ep
         </thead>
         <tbody>
           {rows.map((epic) => {
-            const subs = subStories(epic, variant);
+            const subs = subStories(epic, variant, cutoffMs);
             const isExpanded = expanded.has(epic.id);
             return (
               <React.Fragment key={epic.id}>
                 <EpicDataRow
                   epic={epic}
                   variant={variant}
+                  cutoffMs={cutoffMs}
                   subCount={subs.length}
                   expanded={isExpanded}
                   onToggle={() => toggleExpanded(epic.id)}

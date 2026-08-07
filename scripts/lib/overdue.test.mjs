@@ -6,6 +6,15 @@
  * output as the TS accountability() test -- if scripts/lib/overdue.mjs ever
  * silently drifts from dashboard/lib/health.ts, this test fails.
  *
+ * PXB1-6848 (Sarika Agrawal's only story) is genuinely unlinked (parentId
+ * null, no epic/parent story) -- health.ts's accountability() excludes it
+ * via linkedStories() (added 2026-07-25, commit 4988606), so Sarika doesn't
+ * appear in byPerson at all. This mirror was NOT updated to match until
+ * 2026-08-01 (real symptom: the AI Insights "most behind" narrative counted
+ * an unlinked overdue story for a person that the Health dashboard silently
+ * excluded, so the two disagreed on the same person's overdue count from the
+ * exact same snapshot).
+ *
  * Run: node scripts/lib/overdue.test.mjs
  */
 import assert from "node:assert/strict";
@@ -76,6 +85,9 @@ const STORIES = [
     bugs: [],
   },
   {
+    // Real ticket, real shape: genuinely unlinked (no epic, no parent
+    // story). accountability()/mostBehind() must exclude it via
+    // linkedStories() -- see the dedicated "excludes unlinked stories" test.
     storyId: "PXB1-6848",
     summary: "Stock Valuation Report-Alpha Report",
     state: "RE-OPEN",
@@ -89,7 +101,7 @@ const STORIES = [
     qaEst: 0,
     spent: 1260,
     ddTs: 1783339200000,
-    qaTs: 1783684800000, // 10 Jul 2026 -> not due this week, globally overdue
+    qaTs: 1783684800000, // 10 Jul 2026 -> would be globally overdue if linked
     sprint: "beta1-21",
     parentId: null,
     epicId: null,
@@ -117,6 +129,9 @@ const STORIES = [
   },
   {
     // Synthetic (same as health.test.ts): exercises the `unowned` branch.
+    // Given a real parentId (unlike PXB1-6848) since blank-assignee and
+    // unlinked-story are orthogonal concerns -- this row should still count
+    // once linkedStories() is applied.
     storyId: "PXB1-9999",
     summary: "(fixture) unowned placeholder story",
     state: "OPEN",
@@ -132,8 +147,8 @@ const STORIES = [
     ddTs: Date.UTC(2026, 7, 1),
     qaTs: Date.UTC(2026, 7, 10),
     sprint: "beta1-21",
-    parentId: null,
-    epicId: null,
+    parentId: "PXB1-52",
+    epicId: "PXB1-52",
     bugs: [],
   },
 ];
@@ -155,15 +170,17 @@ test("isOverdue: not done AND qaTs before nowMs", () => {
 test("accountability: matches dashboard/tests/health.test.ts exactly on the same fixtures + NOW_MS", () => {
   const result = accountability(scheduleSnapshot(), NOW_MS);
   // unowned: PXB1-9999 (blank assignee).
-  // overdue (not done, qaTs < NOW_MS, any week): 7206, 6848, 1634.
-  // reopened (state contains "re-open"): 7206, 7560, 6848.
+  // overdue (not done, qaTs < NOW_MS, any week, linked): 7206, 1634. 6848 is
+  // excluded by linkedStories() (no parent link) despite otherwise qualifying.
+  // reopened (state contains "re-open", linked): 7206, 7560. 6848 excluded, same reason.
   assert.equal(result.unowned, 1);
-  assert.equal(result.overdue, 3);
-  assert.equal(result.reopened, 3);
+  assert.equal(result.overdue, 2);
+  assert.equal(result.reopened, 2);
   assert.deepEqual(result.byPerson, [
     { name: "Shafeek M", overdue: 1, open: 2 }, // 7206 (overdue) + 7560 (not yet)
-    { name: "Pramod Saini", overdue: 1, open: 1 }, // tie-break vs Sarika: name asc
-    { name: "Sarika Agrawal", overdue: 1, open: 1 },
+    { name: "Pramod Saini", overdue: 1, open: 1 },
+    // Sarika Agrawal's only story is PXB1-6848, excluded entirely by
+    // linkedStories() -> she doesn't appear in byPerson at all.
   ]);
 });
 
@@ -179,6 +196,14 @@ test("accountability: excludes done stories and blank assignees from byPerson", 
   );
 });
 
+test("accountability: excludes a genuinely unlinked story even if otherwise overdue (PXB1-6848)", () => {
+  const result = accountability(scheduleSnapshot(), NOW_MS);
+  assert.equal(
+    result.byPerson.some((p) => p.name === "Sarika Agrawal"),
+    false,
+  );
+});
+
 test("accountability: defaults to zero/empty when the schedule block is absent", () => {
   const result = accountability({ meta: { generated_at_ms: NOW_MS } }, NOW_MS);
   assert.deepEqual(result, { unowned: 0, overdue: 0, reopened: 0, byPerson: [] });
@@ -189,7 +214,6 @@ test("mostBehind: anchors to snapshot.meta.generated_at_ms, not a passed-in nowM
   assert.deepEqual(ranked, [
     { name: "Shafeek M", overdue: 1, open: 2 },
     { name: "Pramod Saini", overdue: 1, open: 1 },
-    { name: "Sarika Agrawal", overdue: 1, open: 1 },
   ]);
 });
 

@@ -235,8 +235,18 @@ describe("remainingEffort", () => {
     const s = baseSnapshot();
     s.effort.sections = {
       done: [],
-      // PENDING: no stories to scope by -> epic.spent used directly (10md est, 4md spent -> 6md net).
-      pending: [epic({ id: "PXB1-1", category: "PENDING", total: 4800, spent: 1920 })],
+      // PENDING: sums the pending story's own spent (pendingP1Spent), NOT
+      // epic.spent (a whole-epic-lifetime sweep total that must be ignored,
+      // same as MIXED below) (10md est, 4md spent -> 6md net).
+      pending: [
+        epic({
+          id: "PXB1-1",
+          category: "PENDING",
+          total: 4800,
+          spent: 99_999,
+          stories: [story({ id: "S-1", state: "OPEN", spent: 1920 })],
+        }),
+      ],
       // MIXED: epic.spent is a huge whole-epic-lifetime figure that must be
       // ignored; only the pending-P1 story's own `spent` (2md) counts
       // (5md est - 2md pending-spent -> 3md net).
@@ -261,7 +271,7 @@ describe("remainingEffort", () => {
           stories: [story({ id: "S-over", state: "OPEN", spent: 2880 })],
         }),
       ],
-      // NO_STORIES: same rule as PENDING -> epic.spent used directly (1md est, 0 spent -> 1md net).
+      // NO_STORIES: no stories to sum from -> epic.spent used directly (1md est, 0 spent -> 1md net).
       no_stories: [epic({ id: "PXB1-4", category: "NO_STORIES", total: 480, spent: 0 })],
       p2_backlog: [],
     };
