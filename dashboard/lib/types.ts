@@ -460,6 +460,10 @@ export interface Bug {
   submodule: string | null;
   assignee: string;
   reporter: string;
+  /** Highest sprint this bug was ever assigned to (e.g. "beta1-24"), or ""
+   *  if never assigned one. Optional: absent on snapshots generated before
+   *  this field existed (2026-08-01). */
+  sprint?: string;
 }
 
 export interface StateBreakdownRow {

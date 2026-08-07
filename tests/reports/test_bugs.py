@@ -1,6 +1,6 @@
 from reports import bugs, parse
 
-RAW = {  # Examples_1 §4 verbatim
+RAW = {  # Examples_1 §4 verbatim, + Sprints (2026-08-01)
     "id": "2-48231", "idReadable": "PXB1-3987",
     "summary": "Settings: Register- Placeholder text missing",
     "created": 1751971500000, "resolved": None,
@@ -10,6 +10,7 @@ RAW = {  # Examples_1 §4 verbatim
         {"name": "Priority", "value": {"name": "Medium"}},
         {"name": "Module", "value": {"name": "Settings"}},
         {"name": "Assignee", "value": {"name": "Rahul M"}},
+        {"name": "Sprints", "value": [{"name": "beta1-24"}]},
     ],
 }
 
@@ -19,8 +20,18 @@ def test_parse_bug():
         "id": "PXB1-3987", "summary": "Settings: Register- Placeholder text missing",
         "created": 1751971500000, "state": "OPEN", "priority": "Medium",
         "module": "Settings", "submodule": "Register",
-        "assignee": "Rahul M", "reporter": "Divya S",
+        "assignee": "Rahul M", "reporter": "Divya S", "sprint": "beta1-24",
     }
+
+def test_parse_bug_sprint_picks_highest_when_carried_across_multiple():
+    raw = dict(RAW, customFields=RAW["customFields"][:-1] + [
+        {"name": "Sprints", "value": [{"name": "beta1-22"}, {"name": "beta1-24"}, {"name": "beta1-23"}]},
+    ])
+    assert bugs.parse_bug(raw)["sprint"] == "beta1-24"
+
+def test_parse_bug_sprint_blank_when_never_assigned():
+    raw = dict(RAW, customFields=RAW["customFields"][:-1])
+    assert bugs.parse_bug(raw)["sprint"] == ""
 
 def test_reporter_falls_back_to_login():
     raw = dict(RAW, reporter={"login": "only.login"})
