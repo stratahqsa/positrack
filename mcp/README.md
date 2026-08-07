@@ -107,10 +107,8 @@ Two things independently forced a full browser re-auth, both now addressed:
    re-login. `OAUTH_ACCESS_TOKEN_TTL_SECONDS` (default **30 days**) decouples them;
    the FastMCP JWT becomes a reference token that re-validates and transparently
    refreshes the Hub token on every call. It cannot outlive real access — a revoked
-   Hub session stops working once the held Hub token lapses and its renewal is
-   refused (per-call validation is a local JWKS signature check, not a live call to
-   Hub, so revocation lands **within one Hub access-token lifetime**, not on the next
-   request — a window Hub sets, which this 30-day setting does not widen). With no
+   Hub session stops working once Hub says so, now within
+   `OAUTH_USERINFO_CACHE_SECONDS` (see 3). With no
    upstream refresh token FastMCP caps the
    lifetime at Hub's `expires_in` regardless. So Hub must actually issue refresh
    tokens (`offline_access` in `HUB_SCOPES` + `access_type=offline`, both already
@@ -121,6 +119,21 @@ Two things independently forced a full browser re-auth, both now addressed:
    container filesystem, so every redeploy/restart logs everyone out. Mount a
    Railway volume at `/data` (see `OAUTH_CLIENT_STORE_DIR`) — the boot log says
    which mode is active.
+3. **Verification and refresh read two different clocks.** Hub's access tokens are
+   opaque, so the server used to verify the **id_token** on every call
+   (`verify_id_token=True`) while FastMCP decided refreshes from the **access
+   token's** expiry. Once the id_token lapsed, validation failed but no refresh was
+   triggered, and the session 401'd for good — dropping the connector *mid-session*
+   ("your connection was invalidated") with earlier calls in the same session having
+   succeeded. The session's real ceiling was Hub's id_token lifetime, which is why 30
+   days alone didn't hold. Positrack now verifies the **access token** — the one the
+   tools forward to YouTrack and the one FastMCP refreshes — live against Hub's
+   `userinfo` endpoint, so both read one clock. Successful checks are cached for
+   `OAUTH_USERINFO_CACHE_SECONDS`, which doubles as the revocation window (a disabled
+   Hub user stops working within minutes rather than within a whole token lifetime).
+   Only a 401/403 from Hub counts as a rejection: timeouts, 404s and 5xx are
+   inconclusive, so a Hub blip lets an established session ride on its cached result
+   for up to `OAUTH_USERINFO_GRACE_SECONDS` instead of logging everyone out.
 
 | Env | Default | What it does |
 |---|---|---|
@@ -128,6 +141,12 @@ Two things independently forced a full browser re-auth, both now addressed:
 | `OAUTH_TOKEN_REFRESH_LEEWAY_SECONDS` | `60` | Refresh a Hub token this many seconds *before* expiry, so a call can't race it |
 | `OAUTH_CLIENT_STORE_DIR` | `/data/oauth-clients` | Volume-backed store for DCR clients + upstream tokens |
 | `OAUTH_STORE_ENCRYPTION_KEY` | *(unset)* | Fernet key encrypting that store at rest. **Set it whenever the volume is mounted** — unset means tokens sit in plaintext on the volume. Generate: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+| `OAUTH_VERIFY_VIA_USERINFO` | `1` (on) | Verify the Hub **access token** against Hub's userinfo endpoint instead of verifying the id_token. `0` reverts to the id_token path and reinstates the mid-session-disconnect bug |
+| `OAUTH_USERINFO_CACHE_SECONDS` | `300` | How long a successful verification is reused before re-asking Hub. **This is also the revocation window** |
+| `OAUTH_USERINFO_GRACE_SECONDS` | `3600` | How long an already-verified session keeps working while Hub is unreachable (only 401/403 counts as a real rejection) |
+| `OAUTH_USERINFO_TIMEOUT_SECONDS` | `10` | Per-request timeout for the userinfo call |
+| `OAUTH_USERINFO_CACHE_MAX_ENTRIES` | `2048` | Upper bound on cached verifications |
+| `HUB_USERINFO_URL` | *(discovered)* | Override for Hub's `userinfo_endpoint`, normally read from Hub's discovery document |
 
 Rotating `OAUTH_STORE_ENCRYPTION_KEY` (or `FASTMCP_JWT_SIGNING_KEY`) invalidates
 existing sessions — everyone reconnects once, deliberately.

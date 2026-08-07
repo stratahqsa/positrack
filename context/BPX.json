@@ -1,0 +1,17 @@
+{
+  "identity": {
+    "code": "BPX",
+    "name": "POS X Product Management",
+    "description": "Product management and PRD pipeline for the POS X platform — tracking feature specifications, product decisions, and release coordination across all POS X projects.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [],
+  "milestones": [],
+  "modules": [],
+  "kpis": [],
+  "risks": [],
+  "dependencies": [],
+  "team": [],
+  "notes": ""
+}
