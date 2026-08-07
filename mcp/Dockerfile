@@ -13,6 +13,10 @@ RUN pip install --no-cache-dir -r /app/mcp/requirements.txt
 COPY core/ /app/core/
 COPY mcp/ /app/mcp/
 
+# Project context files — read by yt_context tool.
+# Must stay in sync with _CONTEXT_DIR in server.py.
+COPY context/ /app/context/
+
 # Dual transport (streamable HTTP /mcp + SSE /sse + /health). Railway injects $PORT.
 ENV POSITRACK_TRANSPORT=dual \
     HOST=0.0.0.0 \

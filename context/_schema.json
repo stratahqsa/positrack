@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Positrack Project Context",
+  "description": "Schema for git-controlled project context files consumed by the yt_context MCP tool. One file per project at context/{PROJECT_CODE}.json.",
+  "type": "object",
+  "required": ["identity", "goals", "milestones", "modules", "kpis", "risks", "dependencies", "team", "notes"],
+  "additionalProperties": false,
+  "properties": {
+    "identity": {
+      "type": "object",
+      "description": "Core project identity — what this project IS.",
+      "required": ["code", "name"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "YouTrack project short code (e.g. 'BPX', 'PXB1').",
+          "pattern": "^[A-Za-z0-9_-]{1,32}$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable project name."
+        },
+        "description": {
+          "type": "string",
+          "description": "One-line description of what this project is about."
+        },
+        "owner": {
+          "type": ["string", "null"],
+          "description": "YouTrack login of the project owner/lead."
+        },
+        "launch_target": {
+          "type": ["string", "null"],
+          "description": "Target launch date (ISO 8601, e.g. '2026-09-15')."
+        }
+      }
+    },
+    "goals": {
+      "type": "array",
+      "description": "Business outcomes this project exists to achieve — not tickets, but WHY.",
+      "items": { "type": "string" }
+    },
+    "milestones": {
+      "type": "array",
+      "description": "Key dates with names and completion status.",
+      "items": {
+        "type": "object",
+        "required": ["name", "date", "done"],
+        "properties": {
+          "name": { "type": "string", "description": "Milestone name." },
+          "date": { "type": "string", "description": "Target date (ISO 8601)." },
+          "done": { "type": "boolean", "description": "Whether this milestone is complete." }
+        }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "description": "Major functional areas of the project, each with an owner.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "Module name (e.g. 'Sales', 'Purchase')." },
+          "owner": { "type": ["string", "null"], "description": "YouTrack login of the module owner." },
+          "purpose": { "type": "string", "description": "Brief description of what this module covers." }
+        }
+      }
+    },
+    "kpis": {
+      "type": "array",
+      "description": "Named metrics with targets that define success.",
+      "items": {
+        "type": "object",
+        "required": ["name", "target"],
+        "properties": {
+          "name": { "type": "string", "description": "KPI name (e.g. 'Open High bugs')." },
+          "target": { "type": "string", "description": "Target value or condition (e.g. '< 5 by launch')." },
+          "current": { "description": "Current value — typically filled by AI from live data, not manually." }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "description": "Known risks and mitigations.",
+      "items": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string", "description": "Risk description." },
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"], "description": "Risk severity." },
+          "mitigation": { "type": "string", "description": "What we're doing about it." }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "What this project depends on — other projects, external systems.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "project": { "type": "string", "description": "Dependent project code (if internal)." },
+          "system": { "type": "string", "description": "External system name (if external)." },
+          "description": { "type": "string", "description": "What the dependency is and why it matters." }
+        }
+      }
+    },
+    "team": {
+      "type": "array",
+      "description": "Key roles and who fills them.",
+      "items": {
+        "type": "object",
+        "required": ["role"],
+        "properties": {
+          "role": { "type": "string", "description": "Role title (e.g. 'Product Manager', 'Tech Lead')." },
+          "login": { "type": ["string", "null"], "description": "YouTrack login of the person in this role." }
+        }
+      }
+    },
+    "notes": {
+      "type": ["string", "array"],
+      "description": "Free-form leader annotations — the 'source of truth' commentary. String or array of strings.",
+      "items": { "type": "string" }
+    }
+  }
+}
