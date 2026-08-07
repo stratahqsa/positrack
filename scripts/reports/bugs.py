@@ -17,6 +17,10 @@ def parse_bug(raw):
         "assignee": parse.cf_name(raw, "Assignee"),
         "reporter": ((raw.get("reporter") or {}).get("fullName")
                      or (raw.get("reporter") or {}).get("login") or ""),
+        # Same multi-value "Sprints" field + max-by-trailing-number rule as
+        # schedule.py's parse_story() -- picks the highest sprint a bug was
+        # ever moved into if it carried across more than one (2026-08-01).
+        "sprint": parse.sprint_max(parse._cf_value(raw, "Sprints")),
     }
 
 def in_window(created_ms, win_start_ms, win_end_ms):

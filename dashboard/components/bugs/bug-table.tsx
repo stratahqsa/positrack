@@ -9,7 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
 import { priorityVariant, stateVariant } from "@/components/weekly/badge-tone";
 
-type SortKey = "id" | "summary" | "created" | "state" | "priority" | "assignee" | "module" | "reporter";
+type SortKey =
+  | "id"
+  | "summary"
+  | "created"
+  | "sprint"
+  | "state"
+  | "priority"
+  | "assignee"
+  | "module"
+  | "reporter";
 type SortDir = "asc" | "desc";
 interface SortState {
   key: SortKey;
@@ -25,6 +34,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "id", label: "ID" },
   { key: "summary", label: "Summary" },
   { key: "created", label: "Created" },
+  { key: "sprint", label: "Sprint" },
   { key: "state", label: "State" },
   { key: "assignee", label: "Assignee" },
   { key: "module", label: "Module" },
@@ -46,6 +56,8 @@ function sortValue(bug: Bug, key: SortKey): string | number {
       return bug.summary ?? "";
     case "created":
       return bug.created;
+    case "sprint":
+      return bug.sprint || "";
     case "state":
       return bug.state ?? "";
     case "priority":
@@ -113,9 +125,13 @@ function Th({
 
 /**
  * Reusable bug listing table (docs/reports-dashboard/plans/05-bug-analysis.md
- * Task 2 / PRD_1 §5 §1-§2): ID · Summary · Created (IST, muted) · State ·
- * Assignee · Module · Reporter. Shared by §1's three priority sub-groups and
- * §2's older-open-High list.
+ * Task 2 / PRD_1 §5 §1-§2): ID · Summary · Created (IST, muted) · Sprint ·
+ * State · Assignee · Module · Reporter. Shared by §1's three priority
+ * sub-groups, §2's older-open-High list, Module Insights' row-expand, and
+ * the Aging Bugs bucket-expand -- every bug listing on the Bug Analysis page
+ * goes through this one component, so a column added here shows up
+ * everywhere at once (Sprint added 2026-08-01, "—" when a bug was never
+ * assigned one).
  *
  * Client component with clickable, sortable headers (same re-sort-the-array
  * pattern as weekly/story-table.tsx — never touch the DOM directly). Default
@@ -125,7 +141,10 @@ function Th({
 export function BugTable({ rows, showPriority = false, tz }: { rows: Bug[]; showPriority?: boolean; tz: string }) {
   const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
   const [sorted, setSorted] = React.useState<Bug[]>(() => sortBugs(rows, DEFAULT_SORT));
-  const columns = showPriority ? [...COLUMNS.slice(0, 4), PRIORITY_COLUMN, ...COLUMNS.slice(4)] : COLUMNS;
+  // Priority column slots in right after State (index 5, now that Sprint
+  // occupies index 3) -- keeps the original id/summary/created/sprint/state/
+  // priority/assignee/module/reporter order.
+  const columns = showPriority ? [...COLUMNS.slice(0, 5), PRIORITY_COLUMN, ...COLUMNS.slice(5)] : COLUMNS;
 
   React.useEffect(() => {
     setSorted(sortBugs(rows, sort));
@@ -166,6 +185,15 @@ export function BugTable({ rows, showPriority = false, tz }: { rows: Bug[]; show
               </td>
               <td className="whitespace-nowrap px-2 py-2 align-top text-[11px] text-muted">
                 {fmtDateTime(bug.created, tz)}
+              </td>
+              <td className="whitespace-nowrap px-2 py-2 align-top">
+                {bug.sprint ? (
+                  <Badge variant="accent" size="sm">
+                    {bug.sprint}
+                  </Badge>
+                ) : (
+                  <span className="text-faint">—</span>
+                )}
               </td>
               <td className="px-2 py-2 align-top">
                 {/* Bugs in this block are always open/unresolved (upstream
