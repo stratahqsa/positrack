@@ -1,9 +1,11 @@
 import { loadSnapshot } from "@/lib/data";
+import { currentTz } from "@/lib/tz-server";
 import { Header } from "@/components/shell/header";
 import { Nav } from "@/components/shell/nav";
 import { Section } from "@/components/bugs/section";
-import { StateBreakdown } from "@/components/bugs/state-breakdown";
 import { SupPosxKpi } from "@/components/support/sup-posx-kpi";
+import { ExpandableBreakdown } from "@/components/support/expandable-breakdown";
+import { SupTicketTable } from "@/components/support/sup-ticket-table";
 
 // Same rationale as app/bugs and app/blocker — snapshot read per request so
 // a refreshed snapshot shows with no redeploy.
@@ -12,6 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function SupportTicketsPage() {
   const snap = await loadSnapshot();
   const { meta, sup_posx } = snap;
+  const tz = await currentTz();
 
   return (
     <div className="min-h-screen">
@@ -38,10 +41,33 @@ export default async function SupportTicketsPage() {
           <>
             <SupPosxKpi kpi={sup_posx.kpi} />
 
-            <Section title="Pending Tickets" tone="violet" count={sup_posx.kpi.pending}>
-              <div className="grid gap-x-6 gap-y-5 p-4 md:grid-cols-2">
-                <StateBreakdown title="By State" rows={sup_posx.by_state} tone="info" />
-                <StateBreakdown title="By Location" rows={sup_posx.by_location} tone="good" />
+            <Section title="By State" tone="violet" count={sup_posx.by_state.length}>
+              <div className="p-4">
+                <ExpandableBreakdown
+                  rows={sup_posx.by_state}
+                  tickets={sup_posx.tickets}
+                  groupKey="state"
+                  tone="info"
+                  tz={tz}
+                />
+              </div>
+            </Section>
+
+            <Section title="By Location" tone="violet" count={sup_posx.by_location.length}>
+              <div className="p-4">
+                <ExpandableBreakdown
+                  rows={sup_posx.by_location}
+                  tickets={sup_posx.tickets}
+                  groupKey="location"
+                  tone="good"
+                  tz={tz}
+                />
+              </div>
+            </Section>
+
+            <Section title="All Pending Tickets" tone="violet" count={sup_posx.kpi.pending}>
+              <div className="p-4">
+                <SupTicketTable rows={sup_posx.tickets} tz={tz} />
               </div>
             </Section>
           </>

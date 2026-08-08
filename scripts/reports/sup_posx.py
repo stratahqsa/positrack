@@ -37,6 +37,16 @@ def _breakdown(tickets, key, blank_label):
             for k, n in counts.most_common()]
 
 
+def _age_days(ticket, now_ms):
+    """Age in days (float) since `ticket["created"]`, anchored to the
+    snapshot's OWN generation time (never the viewer's clock) -- same
+    convention as scripts/reports/bugs.py's aging-bug feature, so "17 days
+    old" means the same thing everywhere on the dashboard regardless of when
+    someone loads the page."""
+    created = ticket.get("created")
+    return round((now_ms - created) / 86400000.0, 1) if created else None
+
+
 def build_sup_posx(ctx, yt, now_ms):
     """Run the underlying query and shape the block. `yt` is the ytcore
     module. Deliberately does NOT take a `cfg` (ReportsConfig) -- SUP is a
@@ -48,14 +58,14 @@ def build_sup_posx(ctx, yt, now_ms):
     state_excl = "".join(" State: -%s" % s for s in EXCLUDED_STATES)
     query = "project: %s Type: {POS X}%s" % (SUP_PROJECT, state_excl)
     tickets = [parse_ticket(r) for r in yt.get_issues(ctx, query, fields=F)]
+    for t in tickets:
+        t["age_days"] = _age_days(t, now_ms)
 
     by_state = _breakdown(tickets, "state", "(No state)")
     by_location = _breakdown(tickets, "location", "(No location)")
 
-    oldest_days = None
-    if tickets:
-        oldest_created = min(t["created"] for t in tickets if t.get("created"))
-        oldest_days = round((now_ms - oldest_created) / 86400000.0, 1)
+    ages = [t["age_days"] for t in tickets if t["age_days"] is not None]
+    oldest_days = max(ages) if ages else None
 
     return {
         "tickets": tickets,
