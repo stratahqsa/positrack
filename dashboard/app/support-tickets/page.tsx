@@ -5,7 +5,7 @@ import { Nav } from "@/components/shell/nav";
 import { Section } from "@/components/bugs/section";
 import { SupPosxKpi } from "@/components/support/sup-posx-kpi";
 import { ExpandableBreakdown } from "@/components/support/expandable-breakdown";
-import { SupTicketTable } from "@/components/support/sup-ticket-table";
+import { SupTicketsPanel } from "@/components/support/sup-tickets-panel";
 
 // Same rationale as app/bugs and app/blocker — snapshot read per request so
 // a refreshed snapshot shows with no redeploy.
@@ -41,7 +41,11 @@ export default async function SupportTicketsPage() {
           <>
             <SupPosxKpi kpi={sup_posx.kpi} />
 
-            <Section title="By State" tone="violet" count={sup_posx.by_state.length}>
+            <Section title="All Pending Tickets" tone="violet" count={sup_posx.kpi.pending}>
+              <SupTicketsPanel tickets={sup_posx.tickets} tz={tz} />
+            </Section>
+
+            <Section title="By State" tone="violet" count={sup_posx.kpi.pending}>
               <div className="p-4">
                 <ExpandableBreakdown
                   rows={sup_posx.by_state}
@@ -53,7 +57,7 @@ export default async function SupportTicketsPage() {
               </div>
             </Section>
 
-            <Section title="By Location" tone="violet" count={sup_posx.by_location.length}>
+            <Section title="By Location" tone="violet" count={sup_posx.kpi.pending}>
               <div className="p-4">
                 <ExpandableBreakdown
                   rows={sup_posx.by_location}
@@ -62,12 +66,6 @@ export default async function SupportTicketsPage() {
                   tone="good"
                   tz={tz}
                 />
-              </div>
-            </Section>
-
-            <Section title="All Pending Tickets" tone="violet" count={sup_posx.kpi.pending}>
-              <div className="p-4">
-                <SupTicketTable rows={sup_posx.tickets} tz={tz} />
               </div>
             </Section>
           </>

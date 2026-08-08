@@ -16,9 +16,12 @@ interface SortState {
   dir: SortDir;
 }
 
-/** PM-confirmed (2026-08-08): "all pending ones sorted by date ascending" —
- *  oldest first, matching bugs/bug-table.tsx's own default-sort rationale. */
-const DEFAULT_SORT: SortState = { key: "created", dir: "asc" };
+/** PM-confirmed (2026-08-08): newest first — with filters now available and
+ *  the KPI strip's own "Oldest ticket" stat already covering the staleness
+ *  angle, this table reads better as a general browse/triage view than an
+ *  oldest-first backlog list. Flip to ascending any time via the Created
+ *  header, same as every other sortable table on this dashboard. */
+const DEFAULT_SORT: SortState = { key: "created", dir: "desc" };
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "id", label: "ID" },
