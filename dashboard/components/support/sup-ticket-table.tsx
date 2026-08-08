@@ -8,6 +8,7 @@ import type { SupTicket } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
 import { categoricalVariant } from "@/lib/categorical-color";
+import { supStateVariant } from "@/components/support/sup-state-tone";
 
 type SortKey = "id" | "summary" | "created" | "reporter" | "age_days" | "state" | "assignee" | "location";
 type SortDir = "asc" | "desc";
@@ -167,7 +168,7 @@ export function SupTicketTable({ rows, tz }: { rows: SupTicket[]; tz: string }) 
                 {t.age_days != null ? `${Math.round(t.age_days)}d` : <span className="text-faint">—</span>}
               </td>
               <td className="px-2 py-2 align-top">
-                <Badge variant={categoricalVariant(t.state)} size="sm">
+                <Badge variant={supStateVariant(t.state)} size="sm">
                   {t.state || "—"}
                 </Badge>
               </td>
