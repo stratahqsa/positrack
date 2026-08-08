@@ -329,6 +329,36 @@ export interface Snapshot {
   /** Bug Blocker Dashboard data block (RE-OPEN dev tickets + linked bugs).
    *  Optional: absent on snapshots that predate the feature. */
   bug_blocker?: BugBlockerBlock;
+  /** Support Tickets data block (SUP project, Type: POS X, pending only).
+   *  Optional: absent on snapshots that predate the feature. */
+  sup_posx?: SupPosxBlock;
+}
+
+/** One pending SUP ticket (scripts/reports/sup_posx.py::parse_ticket). */
+export interface SupTicket {
+  id: string;
+  summary: string;
+  created: number;
+  state: string;
+  location: string | null;
+  assignee: string;
+}
+
+/** Support Tickets data block: every currently-pending SUP/Type:POS X
+ *  ticket (State not in Solved/Closed), plus By State / By Location
+ *  breakdowns (same {state,count,bar,pct} shape as BugsBlock's
+ *  medium_by_state/low_by_state -- reused as-is for the Location panel too,
+ *  where `state` holds a location name instead). */
+export interface SupPosxBlock {
+  tickets: SupTicket[];
+  by_state: StateBreakdownRow[];
+  by_location: StateBreakdownRow[];
+  kpi: {
+    pending: number;
+    oldest_days: number | null;
+    top_state: string | null;
+    top_location: string | null;
+  };
 }
 
 /** A bug linked to a Bug Blocker ticket via an OUTWARD "Bugs Reported" link,
