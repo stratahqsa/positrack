@@ -71,6 +71,18 @@ def test_build_sup_posx_shapes_kpi_and_breakdowns():
     assert block["kpi"]["oldest_days"] == round((now_ms - 1744900000000) / 86400000.0, 1)
     assert {r["state"] for r in block["by_location"]} == {"SA", "UAE"}
 
+def test_build_sup_posx_annotates_each_ticket_with_age_days():
+    now_ms = 1745100000000
+    yt = FakeYT([RAW])
+    block = sup_posx.build_sup_posx(ctx=None, yt=yt, now_ms=now_ms)
+    expected = round((now_ms - RAW["created"]) / 86400000.0, 1)
+    assert block["tickets"][0]["age_days"] == expected
+
+def test_age_days_anchored_to_now_ms_not_wall_clock():
+    ticket = {"created": 1745000000000}
+    assert sup_posx._age_days(ticket, 1745000000000 + 86400000) == 1.0
+    assert sup_posx._age_days({"created": None}, 1745000000000) is None
+
 def test_build_sup_posx_empty_result_has_null_kpi_fields():
     block = sup_posx.build_sup_posx(ctx=None, yt=FakeYT([]), now_ms=1745100000000)
     assert block["kpi"] == {"pending": 0, "oldest_days": None, "top_state": None, "top_location": None}

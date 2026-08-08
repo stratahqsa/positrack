@@ -342,6 +342,9 @@ export interface SupTicket {
   state: string;
   location: string | null;
   assignee: string;
+  /** Days since `created`, anchored to the snapshot's own generation time
+   *  (never the viewer's clock) — null only if `created` was somehow absent. */
+  age_days: number | null;
 }
 
 /** Support Tickets data block: every currently-pending SUP/Type:POS X
