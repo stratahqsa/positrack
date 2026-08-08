@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { StateBreakdownRow, SupTicket } from "@/lib/types";
-import { stateVariant } from "@/components/weekly/badge-tone";
+import { categoricalVariant } from "@/lib/categorical-color";
 import { SupTicketTable } from "@/components/support/sup-ticket-table";
 
 type Tone = "info" | "good";
@@ -101,7 +101,7 @@ export function ExpandableBreakdown({
                     <ChevronRight className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")} />
                   </button>
                   <Badge
-                    variant={stateVariant(row.state, false)}
+                    variant={categoricalVariant(row.state)}
                     size="sm"
                     className="w-[190px] shrink-0 justify-center truncate"
                   >

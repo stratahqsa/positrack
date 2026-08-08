@@ -7,7 +7,7 @@ import { fmtDateTime } from "@/lib/format";
 import type { SupTicket } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
-import { stateVariant } from "@/components/weekly/badge-tone";
+import { categoricalVariant } from "@/lib/categorical-color";
 
 type SortKey = "id" | "summary" | "created" | "reporter" | "age_days" | "state" | "assignee" | "location";
 type SortDir = "asc" | "desc";
@@ -167,15 +167,21 @@ export function SupTicketTable({ rows, tz }: { rows: SupTicket[]; tz: string }) 
                 {t.age_days != null ? `${Math.round(t.age_days)}d` : <span className="text-faint">—</span>}
               </td>
               <td className="px-2 py-2 align-top">
-                <Badge variant={stateVariant(t.state, false)} size="sm">
+                <Badge variant={categoricalVariant(t.state)} size="sm">
                   {t.state || "—"}
                 </Badge>
               </td>
               <td className="px-2 py-2 align-top text-fg/80">
                 {t.assignee || <span className="text-faint">—</span>}
               </td>
-              <td className="px-2 py-2 align-top text-muted">
-                {t.location || <span className="text-faint">—</span>}
+              <td className="px-2 py-2 align-top">
+                {t.location ? (
+                  <Badge variant={categoricalVariant(t.location)} size="sm">
+                    {t.location}
+                  </Badge>
+                ) : (
+                  <span className="text-faint">—</span>
+                )}
               </td>
             </tr>
           ))}
