@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { StateBreakdownRow, SupTicket } from "@/lib/types";
 import { categoricalVariant } from "@/lib/categorical-color";
+import { supStateVariant } from "@/components/support/sup-state-tone";
 import { SupTicketTable } from "@/components/support/sup-ticket-table";
 
 type Tone = "info" | "good";
@@ -101,7 +102,7 @@ export function ExpandableBreakdown({
                     <ChevronRight className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")} />
                   </button>
                   <Badge
-                    variant={categoricalVariant(row.state)}
+                    variant={groupKey === "state" ? supStateVariant(row.state) : categoricalVariant(row.state)}
                     size="sm"
                     className="w-[190px] shrink-0 justify-center truncate"
                   >
