@@ -21,6 +21,9 @@ def parse_ticket(raw):
         "state": parse.cf_name(raw, "State"),
         "location": parse.cf_name(raw, "Location") or None,
         "assignee": parse.cf_name(raw, "Assignee"),
+        # Same fullName-then-login fallback as bugs.py::parse_bug.
+        "reporter": ((raw.get("reporter") or {}).get("fullName")
+                     or (raw.get("reporter") or {}).get("login") or ""),
     }
 
 
@@ -54,7 +57,7 @@ def build_sup_posx(ctx, yt, now_ms):
     every other report module reads `cfg.project`/`cfg.scope` from, so
     threading `cfg` through here would misleadingly imply it respects those
     baselines when it doesn't."""
-    F = "id,idReadable,summary,created,customFields(name,value(name,text))"
+    F = "id,idReadable,summary,created,reporter(fullName,login),customFields(name,value(name,text))"
     state_excl = "".join(" State: -%s" % s for s in EXCLUDED_STATES)
     query = "project: %s Type: {POS X}%s" % (SUP_PROJECT, state_excl)
     tickets = [parse_ticket(r) for r in yt.get_issues(ctx, query, fields=F)]

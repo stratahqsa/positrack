@@ -4,6 +4,7 @@ RAW = {
     "id": "3-1001", "idReadable": "SUP-4821",
     "summary": "POS X freezing on receipt print",
     "created": 1745000000000,
+    "reporter": {"fullName": "Divya S", "login": "divya.s"},
     "customFields": [
         {"name": "State", "value": {"name": "Escalated"}},
         {"name": "Location", "value": {"name": "SA"}},
@@ -16,8 +17,12 @@ def test_parse_ticket():
     assert t == {
         "id": "SUP-4821", "summary": "POS X freezing on receipt print",
         "created": 1745000000000, "state": "Escalated", "location": "SA",
-        "assignee": "Rahul M",
+        "assignee": "Rahul M", "reporter": "Divya S",
     }
+
+def test_parse_ticket_reporter_falls_back_to_login():
+    raw = dict(RAW, reporter={"login": "only.login"})
+    assert sup_posx.parse_ticket(raw)["reporter"] == "only.login"
 
 def test_parse_ticket_blank_location_is_none():
     raw = dict(RAW, customFields=RAW["customFields"][:1] + RAW["customFields"][2:])
