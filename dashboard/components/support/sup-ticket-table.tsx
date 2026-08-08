@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
 import { stateVariant } from "@/components/weekly/badge-tone";
 
-type SortKey = "id" | "summary" | "created" | "age_days" | "state" | "assignee" | "location";
+type SortKey = "id" | "summary" | "created" | "reporter" | "age_days" | "state" | "assignee" | "location";
 type SortDir = "asc" | "desc";
 interface SortState {
   key: SortKey;
@@ -24,6 +24,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "id", label: "ID" },
   { key: "summary", label: "Summary" },
   { key: "created", label: "Created" },
+  { key: "reporter", label: "Reporter" },
   { key: "age_days", label: "Age" },
   { key: "state", label: "State" },
   { key: "assignee", label: "Assignee" },
@@ -38,6 +39,8 @@ function sortValue(t: SupTicket, key: SortKey): string | number {
       return t.summary ?? "";
     case "created":
       return t.created;
+    case "reporter":
+      return t.reporter || "";
     case "age_days":
       return t.age_days ?? -1;
     case "state":
@@ -104,10 +107,11 @@ function Th({
 /**
  * Reusable ticket listing table for the Support Tickets page — mirrors
  * bugs/bug-table.tsx exactly (same sortable-header pattern, same visual
- * density), with SUP's own column set: ID · Summary · Created · Age · State
- * · Assignee · Location. Shared by the By State / By Location expand rows
- * (components/support/expandable-breakdown.tsx) and the "All Pending
- * Tickets" full listing, so a column added here shows up everywhere at once.
+ * density), with SUP's own column set: ID · Summary · Created · Reporter ·
+ * Age · State · Assignee · Location. Shared by the By State / By Location
+ * expand rows (components/support/expandable-breakdown.tsx) and the "All
+ * Pending Tickets" full listing, so a column added here shows up everywhere
+ * at once.
  */
 export function SupTicketTable({ rows, tz }: { rows: SupTicket[]; tz: string }) {
   const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
@@ -152,6 +156,9 @@ export function SupTicketTable({ rows, tz }: { rows: SupTicket[]; tz: string }) 
               </td>
               <td className="whitespace-nowrap px-2 py-2 align-top text-[11px] text-muted">
                 {fmtDateTime(t.created, tz)}
+              </td>
+              <td className="px-2 py-2 align-top text-muted">
+                {t.reporter || <span className="text-faint">—</span>}
               </td>
               <td className="whitespace-nowrap px-2 py-2 align-top text-[11px] text-muted">
                 {t.age_days != null ? `${Math.round(t.age_days)}d` : <span className="text-faint">—</span>}
