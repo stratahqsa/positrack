@@ -51,7 +51,7 @@ export function SupPosxView({ tickets, tz }: { tickets: SupTicket[]; tz: string 
     <div className="space-y-5">
       <SupPosxKpi kpi={kpi} />
 
-      <Card className="p-3">
+      <Card className="relative z-30 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <MultiSelect
             label="Reporter"
@@ -93,6 +93,12 @@ export function SupPosxView({ tickets, tz }: { tickets: SupTicket[]; tz: string 
         </div>
       </Card>
 
+      <Section title="All Pending Tickets" tone="violet" count={filtered.length}>
+        <div className="p-4">
+          <SupTicketTable rows={filtered} tz={tz} />
+        </div>
+      </Section>
+
       <Section title="By State" tone="violet" count={filtered.length}>
         <div className="p-4">
           <ExpandableBreakdown rows={byState} tickets={filtered} groupKey="state" tone="info" tz={tz} />
@@ -102,12 +108,6 @@ export function SupPosxView({ tickets, tz }: { tickets: SupTicket[]; tz: string 
       <Section title="By Location" tone="violet" count={filtered.length}>
         <div className="p-4">
           <ExpandableBreakdown rows={byLocation} tickets={filtered} groupKey="location" tone="good" tz={tz} />
-        </div>
-      </Section>
-
-      <Section title="All Pending Tickets" tone="violet" count={filtered.length}>
-        <div className="p-4">
-          <SupTicketTable rows={filtered} tz={tz} />
         </div>
       </Section>
     </div>
