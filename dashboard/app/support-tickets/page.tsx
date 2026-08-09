@@ -2,10 +2,7 @@ import { loadSnapshot } from "@/lib/data";
 import { currentTz } from "@/lib/tz-server";
 import { Header } from "@/components/shell/header";
 import { Nav } from "@/components/shell/nav";
-import { Section } from "@/components/bugs/section";
-import { SupPosxKpi } from "@/components/support/sup-posx-kpi";
-import { ExpandableBreakdown } from "@/components/support/expandable-breakdown";
-import { SupTicketsPanel } from "@/components/support/sup-tickets-panel";
+import { SupPosxView } from "@/components/support/sup-posx-view";
 
 // Same rationale as app/bugs and app/blocker — snapshot read per request so
 // a refreshed snapshot shows with no redeploy.
@@ -38,37 +35,7 @@ export default async function SupportTicketsPage() {
             No Support Tickets data in this snapshot yet — this block hasn&apos;t been generated.
           </div>
         ) : (
-          <>
-            <SupPosxKpi kpi={sup_posx.kpi} />
-
-            <Section title="All Pending Tickets" tone="violet" count={sup_posx.kpi.pending}>
-              <SupTicketsPanel tickets={sup_posx.tickets} tz={tz} />
-            </Section>
-
-            <Section title="By State" tone="violet" count={sup_posx.kpi.pending}>
-              <div className="p-4">
-                <ExpandableBreakdown
-                  rows={sup_posx.by_state}
-                  tickets={sup_posx.tickets}
-                  groupKey="state"
-                  tone="info"
-                  tz={tz}
-                />
-              </div>
-            </Section>
-
-            <Section title="By Location" tone="violet" count={sup_posx.kpi.pending}>
-              <div className="p-4">
-                <ExpandableBreakdown
-                  rows={sup_posx.by_location}
-                  tickets={sup_posx.tickets}
-                  groupKey="location"
-                  tone="good"
-                  tz={tz}
-                />
-              </div>
-            </Section>
-          </>
+          <SupPosxView tickets={sup_posx.tickets} tz={tz} />
         )}
 
         <footer className="flex flex-col items-start justify-between gap-2 border-t border-border/60 pt-4 text-[11px] text-faint sm:flex-row sm:items-center">
