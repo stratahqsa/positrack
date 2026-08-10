@@ -1,0 +1,36 @@
+{
+  "identity": {
+    "code": "DAB",
+    "name": "Data Analytics and BI",
+    "description": "Database views, ETL pipelines, and AWS QuickSight reports — business intelligence across regions.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Maintain and expand business intelligence reporting via DB views, ETL pipelines, and AWS QuickSight",
+    "Deliver accurate, timely analytics that support business decisions across regions",
+    "Reduce manual report generation through better automation and self-service dashboards"
+  ],
+  "milestones": [
+    {"name": "Core QuickSight dashboards operational for all regions", "date": null, "done": false},
+    {"name": "ETL pipeline documented and monitored", "date": null, "done": false}
+  ],
+  "modules": [],
+  "kpis": [
+    {"name": "Active QuickSight dashboards operational", "target": "All regions covered"},
+    {"name": "ETL pipeline failures per month", "target": "< 5"},
+    {"name": "Manual report requests", "target": "Trending down"},
+    {"name": "V8 MVP analytics project delivered", "target": "MVP live and operational"}
+  ],
+  "risks": [
+    {"description": "ETL pipelines break silently — reports show stale data without anyone noticing", "severity": "high", "mitigation": "Pipeline monitoring with alerts on failure or data staleness"},
+    {"description": "V8 MVP analytics project depends on V8 data quality which is inconsistent", "severity": "medium", "mitigation": "Data validation layer in ETL; surface data quality issues rather than hiding them in reports"}
+  ],
+  "dependencies": [
+    {"project": "POS", "description": "V8 database is the primary data source for ETL and reporting"},
+    {"system": "AWS QuickSight", "description": "Dashboard and visualisation platform"},
+    {"system": "AWS (ETL infra)", "description": "Data pipeline hosting and scheduling"}
+  ],
+  "team": [],
+  "notes": "Primarily UAE-focused. Covers DB views, ETL pipelines, and AWS QuickSight reports. The V8 MVP analytics project is a current workstream — AI read-only analytics layer over V8 data. Data quality from V8 is inconsistent, so the ETL layer must validate rather than blindly pass through. The instance guide lists this as 'DAB' (sometimes referred to as 'DABI' internally)."
+}

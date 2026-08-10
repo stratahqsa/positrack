@@ -1,0 +1,36 @@
+{
+  "identity": {
+    "code": "DVP",
+    "name": "DevOps",
+    "description": "Infrastructure, deployment pipelines, and cloud/on-prem operations across all Posibolt products.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Maintain reliable infrastructure and deployment pipelines for all Posibolt products",
+    "Improve CI/CD automation to reduce manual deployment effort and errors",
+    "Manage infrastructure cost efficiency across cloud and on-prem environments",
+    "Support POS X infrastructure requirements as beta approaches"
+  ],
+  "milestones": [
+    {"name": "POS X deployment pipeline production-ready", "date": null, "done": false},
+    {"name": "CI/CD automation covering all active products", "date": null, "done": false}
+  ],
+  "modules": [],
+  "kpis": [
+    {"name": "Deployment success rate", "target": "> 85%"},
+    {"name": "Mean time to recover from outage", "target": "< 5 hours"},
+    {"name": "Manual deployment steps remaining", "target": "Trending to 0"}
+  ],
+  "risks": [
+    {"description": "POS X infrastructure requirements not scoped early enough — scramble at launch", "severity": "high", "mitigation": "Infra requirements doc aligned with PXB1 milestones; staging environment mirroring production"},
+    {"description": "Manual deployment steps cause errors or outages", "severity": "medium", "mitigation": "Automate incrementally; track remaining manual steps as a KPI trending to zero"}
+  ],
+  "dependencies": [
+    {"project": "PXB1", "description": "POS X infra requirements drive new pipeline and hosting needs"},
+    {"system": "AWS", "description": "Cloud infrastructure provider"},
+    {"system": "Railway", "description": "MCP server hosting (Positrack)"}
+  ],
+  "team": [],
+  "notes": "Covers infrastructure and deployment across all products — V8 on-prem and cloud, POS X, Positrack (Railway), analytics (AWS). The instance guide lists this as 'DVPS' but the actual YouTrack code is 'DVP'. CI/CD automation is a work in progress — manual deployment steps still exist and are a source of errors."
+}

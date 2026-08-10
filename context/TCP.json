@@ -1,0 +1,20 @@
+{
+  "identity": {
+    "code": "TCP",
+    "name": "Test Cases",
+    "description": "QA test case repository for V8 regression and acceptance testing.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Maintain a comprehensive test case repository for V8 regression and acceptance testing",
+    "Ensure test cases stay current as V8 receives patches and critical fixes"
+  ],
+  "milestones": [],
+  "modules": [],
+  "kpis": [],
+  "risks": [],
+  "dependencies": [],
+  "team": [],
+  "notes": ""
+}

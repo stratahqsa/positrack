@@ -1,0 +1,32 @@
+{
+  "identity": {
+    "code": "SSU",
+    "name": "SA Server Update Roadmap",
+    "description": "Planned server updates and migrations for SA clients — Kanban-style roadmap.",
+    "owner": "Peer Thanesh",
+    "launch_target": null
+  },
+  "goals": [
+    "Execute planned server updates and migrations for SA clients on schedule",
+    "Minimise downtime and client disruption during server transitions",
+    "Maintain a clear, visible roadmap of upcoming server work"
+  ],
+  "milestones": [
+    {"name": "Server update roadmap published and visible to stakeholders", "date": null, "done": false},
+    {"name": "All planned SA server migrations complete", "date": null, "done": false}
+  ],
+  "modules": [],
+  "kpis": [
+    {"name": "Server updates completed on schedule", "target": "100%"},
+    {"name": "Client downtime during migrations", "target": "< 10 hours per update"}
+  ],
+  "risks": [
+    {"description": "Server migration causes unexpected client downtime or data issues", "severity": "high", "mitigation": "Pre-migration testing; rollback plan for every update; client communication before and after"}
+  ],
+  "dependencies": [
+    {"project": "DVP", "description": "DevOps team executes server migrations"},
+    {"project": "POS", "description": "Server updates must not break V8 client installations"}
+  ],
+  "team": [],
+  "notes": "Kanban-style project owned by Peer Thanesh. Tracks planned server updates and migrations for SA clients. Each update is its own card — the project is a roadmap, not a backlog."
+}

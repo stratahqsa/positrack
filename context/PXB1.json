@@ -1,0 +1,51 @@
+{
+  "identity": {
+    "code": "PXB1",
+    "name": "POS X Beta Phase 1",
+    "description": "Active POS X development — a two-tier POS system (Lite and Growth) targeting first live customer deployment.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Launch POS X to at least one live end-customer — this is goal zero; everything else serves it",
+    "Deliver the Lite tier (single-location, streamlined POS) as a complete, sellable product — not a demo",
+    "Deliver the Growth tier (multi-location, warehouse, advanced pricing, purchase orders, RBAC) for scaling businesses",
+    "Implement the feature gating framework (hidden vs disabled-with-tooltip vs fully available) cleanly across all 10 module areas from the feature matrix",
+    "Cover core ERP workflows: Register, Product Catalog, Pricing, Customer, Stock/Inventory, Purchase, Sales Controls, Finance, Document Control",
+    "Build for depth over time — the architecture must support adding V8-level richness module by module through the BPX product process, not ad-hoc feature creep",
+    "Maintain code quality and test coverage standards throughout rapid development"
+  ],
+  "milestones": [
+    {"name": "Lite tier feature-complete (all 10 module areas from feature matrix)", "date": null, "done": false},
+    {"name": "Growth tier feature-complete (multi-location, warehouse, advanced pricing, PO, RBAC)", "date": null, "done": false},
+    {"name": "Feature gating framework live (Lite vs Growth toggle working end-to-end)", "date": null, "done": false},
+    {"name": "Internal pilot (team using POS X for real transactions)", "date": null, "done": false},
+    {"name": "First external customer live on POS X", "date": null, "done": false},
+    {"name": "Phase 1 closeout / Phase 2 kickoff", "date": null, "done": false}
+  ],
+  "modules": [],
+  "kpis": [
+    {"name": "Lite tier modules complete", "target": "10/10 before launch"},
+    {"name": "Growth tier modules complete", "target": "10/10 before launch"},
+    {"name": "Open critical bugs", "target": "0 at launch"},
+    {"name": "Open high bugs", "target": "< 13 at launch"},
+    {"name": "Issues without estimates", "target": "< 25% of active backlog"},
+    {"name": "Feature matrix coverage (features implemented vs spec)", "target": "100% before pilot"}
+  ],
+  "risks": [
+    {"description": "Scope creep — features added outside BPX pipeline delay launch", "severity": "critical", "mitigation": "Enforce BPX as single intake; zero tolerance for side-channel requests"},
+    {"description": "Lite vs Growth feature gating becomes inconsistent or breaks across modules", "severity": "high", "mitigation": "Centralised gating framework with automated tests; feature matrix as regression baseline"},
+    {"description": "First customer launch fails due to undiscovered edge cases in real transactions", "severity": "high", "mitigation": "Internal pilot with real transaction data before external launch; dedicated beta support channel"},
+    {"description": "Team split between V8 maintenance and POS X slows both", "severity": "high", "mitigation": "Clear resource allocation; V8 in maintenance mode with minimal dev investment"},
+    {"description": "V8 feature depth expectations not met — customers expect V8 maturity from day one", "severity": "medium", "mitigation": "Explicit Lite/Growth positioning; manage expectations through BPX gap analysis"}
+  ],
+  "dependencies": [
+    {"project": "BPX", "description": "PRDs and feature specs — PXB1 builds what BPX defines"},
+    {"project": "DVP", "description": "POS X deployment infrastructure, CI/CD pipelines"},
+    {"project": "TCX", "description": "Test case coverage for quality gates before launch"},
+    {"project": "POS", "description": "V8 as reference implementation — feature parity comparison baseline"},
+    {"project": "DAB", "description": "Analytics and reporting capabilities for POS X"}
+  ],
+  "team": [],
+  "notes": "This is the future of the company. Phase 1 ships a two-tier POS: Lite (single-location, streamlined) and Growth (multi-location, warehouse, advanced pricing, RBAC). The feature matrix (PXB-A-238) is the definitive spec for what's in each tier. Goal zero is one live customer — everything else is secondary. The product must gain depth over time to match V8's maturity, but through BPX's product process, not ad-hoc. YouTrack schema differs from V8 — work type is 'TaskType' here, not 'Type'. The old PXB project is dormant; PXB1 is the active one."
+}

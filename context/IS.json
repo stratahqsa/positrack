@@ -1,0 +1,37 @@
+{
+  "identity": {
+    "code": "IS",
+    "name": "Integration Support",
+    "description": "WooCommerce, Shopify, RFID, HR and other integration development and project tracking across SA and UAE.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Maintain and stabilise existing integrations (Shopify, WooCommerce, RFID, HR) across all regions",
+    "Deliver new integration projects on time with clear scope and testing",
+    "Reduce integration-related support escalations through better documentation and monitoring",
+    "Begin planning integration architecture for POS X"
+  ],
+  "milestones": [
+    {"name": "All active integration projects documented with scope and ETA", "date": null, "done": false},
+    {"name": "POS X integration architecture plan drafted", "date": null, "done": false}
+  ],
+  "modules": [],
+  "kpis": [
+    {"name": "Integration projects delivered on time", "target": "> 50%"},
+    {"name": "Integration-related support escalations", "target": "Reduce quarter-over-quarter"},
+    {"name": "Open unresolved issues", "target": "< 50 at any time"}
+  ],
+  "risks": [
+    {"description": "Third-party API changes (Shopify, Woo) break integrations without warning", "severity": "high", "mitigation": "Monitor partner changelogs; automated integration health checks"},
+    {"description": "POS X integration architecture not planned early enough, causing V8-era technical debt to carry over", "severity": "medium", "mitigation": "Start POS X integration architecture planning in parallel with Phase 1"}
+  ],
+  "dependencies": [
+    {"project": "POS", "description": "Integrations connect to the V8 core — V8 API changes break integrations"},
+    {"system": "Shopify", "description": "Third-party API — breaking changes outside our control"},
+    {"system": "WooCommerce", "description": "Third-party API — breaking changes outside our control"},
+    {"system": "RFID vendors", "description": "Hardware vendor SDKs and firmware"}
+  ],
+  "team": [],
+  "notes": "Covers both SA and UAE. Integrations span Shopify, WooCommerce, RFID, and HR systems. Each integration project has its own scope and timeline — this is more of a portfolio than a single product. The IS project has no Estimate field, only Spent time — so 'unestimated' checks don't apply here. POS X integration architecture should be planned before Phase 1 ships, not after."
+}
