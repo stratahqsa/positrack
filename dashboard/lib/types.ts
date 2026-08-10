@@ -602,6 +602,12 @@ export interface DrillBug {
    *  as the standalone skill report. Optional: absent means "open", so
    *  existing snapshots/consumers are unaffected. */
   done?: boolean;
+  /** When this bug was created/resolved. Optional: Weekly Deadline's
+   *  drill-down doesn't fetch these (its bug row layout doesn't need them);
+   *  Android's does, so its bug rows can render Created/Resolved cells in
+   *  the same column grid as a story row. */
+  created?: number | null;
+  resolved?: number | null;
 }
 
 /** A story row shared by Release Schedule + Weekly Deadline views (scripts/reports/schedule.py::parse_story). */

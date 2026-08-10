@@ -52,7 +52,8 @@ STORY_DONE = {
 }
 
 BUG_OPEN = {
-    "idReadable": "APP-908", "summary": "Scan crashes on old device", "resolved": None,
+    "idReadable": "APP-908", "summary": "Scan crashes on old device",
+    "created": 1701000000000, "resolved": None,
     "customFields": [
         {"name": "State", "value": {"name": "Open"}},
         {"name": "Assignee", "value": {"name": "Zaid"}},
@@ -60,7 +61,8 @@ BUG_OPEN = {
     ],
 }
 BUG_CLOSED = {
-    "idReadable": "APP-1012", "summary": "Old scan bug (stale)", "resolved": 123,
+    "idReadable": "APP-1012", "summary": "Old scan bug (stale)",
+    "created": 1690500000000, "resolved": 1699000000000,
     "customFields": [{"name": "State", "value": {"name": "Closed"}}],
 }
 
@@ -124,6 +126,18 @@ def test_resolved_bugs_are_kept_not_dropped():
     by_id = {b["bugId"]: b for b in block["stories"][0]["bugs"]}
     assert by_id["APP-908"]["done"] is False
     assert by_id["APP-1012"]["done"] is True
+
+
+def test_bug_rows_carry_created_and_resolved_for_column_alignment():
+    # The dashboard renders each bug as a row in the SAME column grid as a
+    # story row (Created/Resolved columns), so both timestamps must be on
+    # the bug dict, not just a done flag.
+    block = android.build_android(ctx=None, yt=_yt())
+    by_id = {b["bugId"]: b for b in block["stories"][0]["bugs"]}
+    assert by_id["APP-908"]["created"] == 1701000000000
+    assert by_id["APP-908"]["resolved"] is None
+    assert by_id["APP-1012"]["created"] == 1690500000000
+    assert by_id["APP-1012"]["resolved"] == 1699000000000
 
 
 def test_done_story_has_no_bugs():
