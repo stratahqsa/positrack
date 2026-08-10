@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, CalendarClock, Rocket, Bug, Gauge, ShieldAlert, LifeBuoy, Sparkles } from "lucide-react";
+import { Activity, CalendarClock, Rocket, Bug, Gauge, ShieldAlert, LifeBuoy, Sparkles, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Surface {
@@ -14,15 +14,17 @@ interface Surface {
 }
 
 /**
- * The 8 report surfaces — Health, Weekly Deadline, Release Schedule, Bug
- * Analysis, Effort, Bug Blocker, Support Tickets, and Insights all have real
- * routes now. `href` stays optional on `Surface` so a future surface without
- * a route yet can still render as a disabled "soon" item, same as every
- * surface here did before its own plan wired it up. Insights is the odd one
- * out functionally (an AI-generated read-only briefing, not a direct
- * snapshot-block view) but navigates the same way as the rest. Support
- * Tickets is the odd one out data-wise (SUP project, not PXB1) but is
- * baked into the same one Snapshot everything else reads (2026-08-01).
+ * The 9 report surfaces — Health, Weekly Deadline, Release Schedule, Bug
+ * Analysis, Effort, Bug Blocker, Android, Support Tickets, and Insights all
+ * have real routes now. `href` stays optional on `Surface` so a future
+ * surface without a route yet can still render as a disabled "soon" item,
+ * same as every surface here did before its own plan wired it up. Insights
+ * is the odd one out functionally (an AI-generated read-only briefing, not a
+ * direct snapshot-block view) but navigates the same way as the rest.
+ * Support Tickets and Android are the odd ones out data-wise (SUP project /
+ * a single excluded epic, not the main PXB1 Phase-1 sweep) but are both
+ * baked into the same one Snapshot everything else reads (2026-08-01,
+ * 2026-08-10).
  */
 const SURFACES: Surface[] = [
   { key: "health", label: "Health", icon: Activity, href: "/" },
@@ -31,6 +33,7 @@ const SURFACES: Surface[] = [
   { key: "bug-analysis", label: "Bug Analysis", icon: Bug, href: "/bugs" },
   { key: "effort", label: "Effort", icon: Gauge, href: "/effort" },
   { key: "bug-blocker", label: "Bug Blocker", icon: ShieldAlert, href: "/blocker" },
+  { key: "android", label: "Android", icon: Smartphone, href: "/android" },
   { key: "support-tickets", label: "Support Tickets", icon: LifeBuoy, href: "/support-tickets" },
   { key: "insights", label: "Insights", icon: Sparkles, href: "/insights" },
 ];

@@ -57,7 +57,7 @@ sys.path.insert(0, _HERE)  # for gamification.py
 import ytcore as yt  # noqa: E402
 import gamification as gam  # noqa: E402
 from reports.config import load_config  # scripts/ is already on sys.path (line 53)
-from reports import bugs as rbugs, schedule as rsched, drilldown as rdrill, bug_blocker as rblocker, sup_posx as rsup  # noqa: E402
+from reports import bugs as rbugs, schedule as rsched, drilldown as rdrill, bug_blocker as rblocker, sup_posx as rsup, android as randroid  # noqa: E402
 
 ENGINE_VERSION = "control-tower-b1"
 DATA_DIR = os.path.join(_ROOT, "web", "data")
@@ -561,6 +561,10 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     # Support Tickets (SUP project, Type: POS X) -- unrelated to PXB1's
     # project/scope config, so no rcfg passed through (see sup_posx.py).
     sup_posx_block = rsup.build_sup_posx(ctx, yt, now_ms)
+    # Android Status Report (PXB1-3295 "POS (Android)" epic) -- deliberately
+    # EXCLUDED from schedule_block above via rcfg.exclude_ids, so it's fetched
+    # as its own separate slice here (see android.py).
+    android_block = randroid.build_android(ctx, yt)
     config_block = {
         "project": rcfg.project, "scope": rcfg.scope, "exclude_ids": rcfg.exclude_ids,
         "man_day_minutes": rcfg.man_day_minutes, "jun29_cutoff_iso": rcfg.jun29_cutoff_iso,
@@ -591,6 +595,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
         "schedule": schedule_block,
         "bug_blocker": bug_blocker_block,
         "sup_posx": sup_posx_block,
+        "android": android_block,
     }
 
 
