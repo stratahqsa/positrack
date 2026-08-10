@@ -1,0 +1,21 @@
+{
+  "identity": {
+    "code": "TCX",
+    "name": "Test Cases X",
+    "description": "QA test case repository for POS X modules — test coverage tracking for Phase 1.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Build and maintain test case coverage for all POS X modules as they are developed",
+    "Ensure test cases are written alongside PRDs and development, not as an afterthought",
+    "Support PXB1 quality gates with traceable, executable test scenarios"
+  ],
+  "milestones": [],
+  "modules": [],
+  "kpis": [],
+  "risks": [],
+  "dependencies": [],
+  "team": [],
+  "notes": ""
+}

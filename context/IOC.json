@@ -1,0 +1,35 @@
+{
+  "identity": {
+    "code": "IOC",
+    "name": "Inter-office Collaboration",
+    "description": "Short-term project aligning implementation, support, SLA, and escalation processes uniformly across SA, UAE, and India.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Align implementation, support, SLA, and escalation processes uniformly across SA, UAE, and India",
+    "Establish shared standards for delivery quality and client communication",
+    "Ensure cross-region handoffs and escalations work without friction",
+    "Deliver measurable improvements in inter-office collaboration within the project's short-term window"
+  ],
+  "milestones": [
+    {"name": "Cross-region process audit complete (SA, UAE, India gaps identified)", "date": null, "done": false},
+    {"name": "Unified escalation and SLA standards published", "date": null, "done": false},
+    {"name": "All regions operating under unified process", "date": null, "done": false}
+  ],
+  "modules": [],
+  "kpis": [
+    {"name": "Process gaps identified and resolved", "target": "100% by project close"},
+    {"name": "Cross-region escalation success rate", "target": "Measurably improved from baseline"}
+  ],
+  "risks": [
+    {"description": "Regional teams agree to unified process on paper but revert to local habits", "severity": "high", "mitigation": "Regular cross-region check-ins; measurable compliance metrics, not just documentation"},
+    {"description": "Short-term project window closes before lasting change takes hold", "severity": "medium", "mitigation": "Embed process changes into tools and workflows (YouTrack, Zoho) so they persist after project ends"}
+  ],
+  "dependencies": [
+    {"project": "SUP", "description": "Support process is a core area being unified across regions"},
+    {"project": "POS", "description": "Implementation process depends on V8 deployment standards"}
+  ],
+  "team": [],
+  "notes": "Short-term, high-importance project. The goal is to get SA, UAE, and India operating uniformly on implementation, support, SLAs, and escalations. This is important for the group — if regional processes don't align, POS X rollout across geographies will be chaotic. Changes must be embedded in tools (YouTrack, Zoho) so they outlive the project itself."
+}

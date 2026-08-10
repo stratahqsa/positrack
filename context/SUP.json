@@ -1,0 +1,37 @@
+{
+  "identity": {
+    "code": "SUP",
+    "name": "Posibolt Helpdesk",
+    "description": "Native YouTrack Helpdesk for client support tickets — L1/L2 support with escalation states. SA uses Zoho Desk for L1, YouTrack for escalations.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Provide timely L1/L2 support with clear SLA tracking and escalation paths",
+    "Reduce average resolution time for client tickets",
+    "Improve escalation flow between Zoho Desk (L1) and YouTrack (L2/dev) in SA",
+    "Track and reduce repeat issues to surface systemic product problems"
+  ],
+  "milestones": [
+    {"name": "Zoho Desk → YouTrack escalation flow documented and measured", "date": null, "done": false},
+    {"name": "SLA targets defined and tracked per region", "date": null, "done": false}
+  ],
+  "modules": [],
+  "kpis": [
+    {"name": "Average ticket resolution time", "target": "Reduce quarter-over-quarter"},
+    {"name": "Tickets breaching SLA", "target": "< 13%"},
+    {"name": "Repeat/recurring issues (same root cause)", "target": "Tracked and trending down"},
+    {"name": "Escalation rate (L1 → L2/dev)", "target": "Tracked and trending down"}
+  ],
+  "risks": [
+    {"description": "Zoho Desk → YouTrack escalation path has gaps — tickets get lost between systems", "severity": "high", "mitigation": "Document and test the full escalation flow; add tracking for tickets in transit between systems"},
+    {"description": "Support load increases as POS X launches alongside V8 (two products to support)", "severity": "medium", "mitigation": "Separate support queues for V8 and POS X; dedicated POS X beta support channel"}
+  ],
+  "dependencies": [
+    {"project": "POS", "description": "V8 bug resolution — support can't close tickets if dev doesn't fix"},
+    {"project": "IS", "description": "Integration issues escalated through support"},
+    {"system": "Zoho Desk", "description": "SA L1 support platform — escalation handoff to YouTrack"}
+  ],
+  "team": [],
+  "notes": "This is a native YouTrack Helpdesk project with its own escalation states (Escalated, X Dev Ticket Created, V8 Dev Ticket Created). SA uses Zoho Desk for L1 and escalates to YouTrack for L2/dev — this handoff is a known gap. The project has Client Name, Location, and SLA-ish fields. When POS X launches, support load will temporarily increase as two products run in parallel."
+}
