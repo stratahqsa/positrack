@@ -13,6 +13,7 @@ type SortKey =
   | "storyId"
   | "summary"
   | "state"
+  | "created"
   | "assignee"
   | "sprint"
   | "epic"
@@ -30,10 +31,14 @@ interface SortState {
   dir: SortDir;
 }
 
-/** PRD_4 §6: "Default sort: QA Deadline ascending." */
+/** PRD_4 §6: "Default sort: QA Deadline ascending." Callers that need a
+ *  different default (e.g. Android's created-date sort) pass their own via
+ *  the `defaultSort` prop; this stays the fallback for Weekly Deadline. */
 const DEFAULT_SORT: SortState = { key: "qaTs", dir: "asc" };
 
-const COLUMNS: { key: SortKey; label: string; align?: "right"; tint?: boolean }[] = [
+type Column = { key: SortKey; label: string; align?: "right"; tint?: boolean };
+
+const BASE_COLUMNS: Column[] = [
   { key: "storyId", label: "Story" },
   { key: "summary", label: "Summary" },
   { key: "state", label: "State" },
@@ -49,7 +54,18 @@ const COLUMNS: { key: SortKey; label: string; align?: "right"; tint?: boolean }[
   { key: "qaTs", label: "QA DL" },
   { key: "resolved", label: "Resolved" },
 ];
-const COLUMN_COUNT = COLUMNS.length;
+const CREATED_COLUMN: Column = { key: "created", label: "Created" };
+
+/** Created is opt-in (`showCreated`) — inserted right after State, before
+ *  Assignee. Weekly Deadline doesn't request it, so its column set/width is
+ *  unchanged; Android does (its stories have no meaningful default sort key
+ *  like QA Deadline, so "how long has this been open" is the useful lead
+ *  signal). */
+function buildColumns(showCreated: boolean): Column[] {
+  if (!showCreated) return BASE_COLUMNS;
+  const idx = BASE_COLUMNS.findIndex((c) => c.key === "assignee");
+  return [...BASE_COLUMNS.slice(0, idx), CREATED_COLUMN, ...BASE_COLUMNS.slice(idx)];
+}
 
 /**
  * The epic a story rolls up to, for display/linking. `epicId` is scope-gated
@@ -83,6 +99,8 @@ function sortValue(
       return s.summary ?? "";
     case "state":
       return s.state ?? "";
+    case "created":
+      return s.created;
     case "assignee":
       return s.assignee || null;
     case "sprint":
@@ -196,6 +214,7 @@ function StoryRow({
   expanded,
   canExpand,
   onToggle,
+  showCreated,
 }: {
   story: ScheduleStory;
   epicId: string | null;
@@ -203,9 +222,11 @@ function StoryRow({
   expanded: boolean;
   canExpand: boolean;
   onToggle: () => void;
+  showCreated: boolean;
 }) {
   const isReopen = !story.done && (story.state ?? "").toLowerCase().includes("re-open");
   const verdict = verdictVsQa(story.resolved, story.qaTs);
+  const openBugCount = story.bugs.filter((b) => !b.done).length;
 
   return (
     <tr
@@ -225,11 +246,14 @@ function StoryRow({
               type="button"
               onClick={onToggle}
               aria-expanded={expanded}
-              aria-label={`${expanded ? "Collapse" : "Expand"} ${story.bugs.length} open bug${story.bugs.length === 1 ? "" : "s"} for ${story.storyId}`}
-              className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-danger/90 transition-colors hover:bg-danger/10"
+              aria-label={`${expanded ? "Collapse" : "Expand"} bugs for ${story.storyId}`}
+              className={cn(
+                "inline-flex items-center gap-0.5 rounded px-1 py-0.5 transition-colors",
+                openBugCount > 0 ? "text-danger/90 hover:bg-danger/10" : "text-muted hover:bg-elevated/60",
+              )}
             >
               <Bug className="size-3.5" />
-              <span className="tabular text-[10.5px] font-semibold">{story.bugs.length}</span>
+              <span className="tabular text-[10.5px] font-semibold">{openBugCount}</span>
               <ChevronRight className={cn("size-3 transition-transform", expanded && "rotate-90")} />
             </button>
           ) : null}
@@ -244,6 +268,9 @@ function StoryRow({
           {story.state || "—"}
         </Badge>
       </td>
+      {showCreated ? (
+        <td className="whitespace-nowrap px-2 py-2 align-top text-muted">{fmtDate(story.created)}</td>
+      ) : null}
       <td className="px-2 py-2 align-top text-fg/80">
         {story.assignee || <span className="text-faint">—</span>}
       </td>
@@ -289,17 +316,25 @@ function StoryRow({
   );
 }
 
-/** DrillBug rows are always open (the upstream drill-down keeps open bugs
- *  only — Examples_4 §8), so there's no "done" state to consider here. */
-function BugRow({ bug }: { bug: DrillBug }) {
+/** Most callers' bugs are always open (Weekly Deadline's RE-OPEN drill-down
+ *  only ever fetches open bugs — Examples_4 §8), but Android's drill-down
+ *  keeps resolved/done bugs too (same as the standalone skill report), so
+ *  this branches on `bug.done` — absent/false renders exactly as before. */
+function BugRow({ bug, columnCount }: { bug: DrillBug; columnCount: number }) {
+  const done = bug.done ?? false;
   return (
-    <tr className="border-t border-border/30 bg-danger/[0.03] text-[11.5px]">
-      <td colSpan={COLUMN_COUNT} className="py-0">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-danger/40 py-1.5 pl-6 pr-2">
-          <Bug className="size-3 shrink-0 text-danger/70" />
+    <tr className={cn("border-t border-border/30 text-[11.5px]", done ? "bg-good/[0.03]" : "bg-danger/[0.03]")}>
+      <td colSpan={columnCount} className="py-0">
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 py-1.5 pl-6 pr-2",
+            done ? "border-good/40" : "border-danger/40",
+          )}
+        >
+          <Bug className={cn("size-3 shrink-0", done ? "text-good/70" : "text-danger/70")} />
           <IssueLink id={bug.bugId} showIcon={false} className="text-[11.5px]" />
           <span className="min-w-0 flex-1 truncate text-fg/70">{bug.summary}</span>
-          <Badge variant={stateVariant(bug.state, false)} size="sm">
+          <Badge variant={stateVariant(bug.state, done)} size="sm">
             {bug.state || "—"}
           </Badge>
           <span className="text-muted">{bug.assignee || "—"}</span>
@@ -315,14 +350,48 @@ function BugRow({ bug }: { bug: DrillBug }) {
   );
 }
 
+/** Nested toggle at the bottom of a story's expanded bug list — resolved
+ *  bugs stay hidden until this is clicked, same as the standalone skill
+ *  report (open bugs are the default/primary signal; resolved history is
+ *  opt-in, not shown automatically). */
+function ShowResolvedRow({
+  count,
+  expanded,
+  onToggle,
+  columnCount,
+}: {
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+  columnCount: number;
+}) {
+  return (
+    <tr className="border-t border-border/30 bg-elevated/20 text-[11.5px]">
+      <td colSpan={columnCount} className="py-0">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="flex w-full items-center gap-1.5 border-l-2 border-border-strong py-1.5 pl-6 pr-2 text-muted transition-colors hover:text-fg"
+        >
+          <ChevronRight className={cn("size-3 shrink-0 transition-transform", expanded && "rotate-90")} />
+          {expanded ? "Hide" : "Show"} {count} resolved bug{count === 1 ? "" : "s"}
+        </button>
+      </td>
+    </tr>
+  );
+}
+
 function TotalsRow({
   totals,
+  labelColSpan,
 }: {
   totals: { devEst: number; uiEst: number; qaEst: number; spent: number };
+  labelColSpan: number;
 }) {
   return (
     <tr className="border-t-2 border-border-strong bg-elevated/60 text-[12px] font-semibold">
-      <td className="px-2 py-2 text-fg/90" colSpan={6}>
+      <td className="px-2 py-2 text-fg/90" colSpan={labelColSpan}>
         Totals
       </td>
       <td className="px-2 py-2 text-right tabular">{fmtHours(totals.devEst)}</td>
@@ -367,15 +436,26 @@ function TotalsRow({
 export function StoryTable({
   stories,
   epicNames,
+  defaultSort,
+  showCreated = false,
 }: {
   stories: ScheduleStory[];
   epicNames: Record<string, string>;
+  /** Overrides DEFAULT_SORT (QA Deadline ascending). Omit to keep Weekly
+   *  Deadline's PRD-mandated default unchanged. */
+  defaultSort?: SortState;
+  /** Inserts a Created column after State. Off by default (Weekly Deadline
+   *  doesn't request it). */
+  showCreated?: boolean;
 }) {
-  const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
+  const initialSort = defaultSort ?? DEFAULT_SORT;
+  const columns = React.useMemo(() => buildColumns(showCreated), [showCreated]);
+  const [sort, setSort] = React.useState<SortState>(initialSort);
   const [rows, setRows] = React.useState<ScheduleStory[]>(() =>
-    sortStories(stories, DEFAULT_SORT, epicNames),
+    sortStories(stories, initialSort, epicNames),
   );
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
+  const [resolvedExpanded, setResolvedExpanded] = React.useState<Set<string>>(() => new Set());
 
   React.useEffect(() => {
     setRows(sortStories(stories, sort, epicNames));
@@ -401,6 +481,15 @@ export function StoryTable({
     });
   }
 
+  function toggleResolvedExpanded(storyId: string) {
+    setResolvedExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(storyId)) next.delete(storyId);
+      else next.add(storyId);
+      return next;
+    });
+  }
+
   const totals = React.useMemo(() => computeTotals(stories), [stories]);
 
   if (stories.length === 0) {
@@ -412,7 +501,7 @@ export function StoryTable({
       <table className="w-full min-w-[1260px] border-collapse">
         <thead className="sticky top-0 z-10 bg-surface-2/95 backdrop-blur">
           <tr>
-            {COLUMNS.map((c) => (
+            {columns.map((c) => (
               <Th
                 key={c.key}
                 label={c.label}
@@ -439,14 +528,41 @@ export function StoryTable({
                   expanded={isExpanded}
                   canExpand={canExpand}
                   onToggle={() => toggleExpanded(story.storyId)}
+                  showCreated={showCreated}
                 />
-                {isExpanded && canExpand
-                  ? story.bugs.map((bug) => <BugRow key={bug.bugId} bug={bug} />)
-                  : null}
+                {isExpanded && canExpand ? (
+                  <>
+                    {story.bugs
+                      .filter((b) => !b.done)
+                      .map((bug) => (
+                        <BugRow key={bug.bugId} bug={bug} columnCount={columns.length} />
+                      ))}
+                    {(() => {
+                      const resolvedBugs = story.bugs.filter((b) => b.done);
+                      if (resolvedBugs.length === 0) return null;
+                      const showResolved = resolvedExpanded.has(story.storyId);
+                      return (
+                        <React.Fragment key="resolved">
+                          <ShowResolvedRow
+                            count={resolvedBugs.length}
+                            expanded={showResolved}
+                            onToggle={() => toggleResolvedExpanded(story.storyId)}
+                            columnCount={columns.length}
+                          />
+                          {showResolved
+                            ? resolvedBugs.map((bug) => (
+                                <BugRow key={bug.bugId} bug={bug} columnCount={columns.length} />
+                              ))
+                            : null}
+                        </React.Fragment>
+                      );
+                    })()}
+                  </>
+                ) : null}
               </React.Fragment>
             );
           })}
-          <TotalsRow totals={totals} />
+          <TotalsRow totals={totals} labelColSpan={showCreated ? 7 : 6} />
         </tbody>
       </table>
     </div>

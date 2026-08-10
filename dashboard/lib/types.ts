@@ -332,6 +332,10 @@ export interface Snapshot {
   /** Support Tickets data block (SUP project, Type: POS X, pending only).
    *  Optional: absent on snapshots that predate the feature. */
   sup_posx?: SupPosxBlock;
+  /** Android Status Report data block (PXB1-3295 "POS (Android)" epic --
+   *  deliberately excluded from `schedule` above, fetched as its own slice).
+   *  Optional: absent on snapshots that predate the feature. */
+  android?: AndroidBlock;
 }
 
 /** One pending SUP ticket (scripts/reports/sup_posx.py::parse_ticket). */
@@ -584,7 +588,7 @@ export interface BugsBlock {
   };
 }
 
-/** An open bug surfaced by the RE-OPEN story → dev ticket drill-down. */
+/** A bug surfaced by a story → dev ticket → "Bugs Reported" drill-down. */
 export interface DrillBug {
   bugId: string;
   summary: string;
@@ -592,6 +596,12 @@ export interface DrillBug {
   assignee: string;
   priority: string;
   devTicketId: string;
+  /** True when the bug is resolved/done. Weekly Deadline's RE-OPEN
+   *  drill-down only ever fetches open bugs (Examples_4 §8), so this is
+   *  absent/false there; Android's drill-down keeps resolved bugs too, same
+   *  as the standalone skill report. Optional: absent means "open", so
+   *  existing snapshots/consumers are unaffected. */
+  done?: boolean;
 }
 
 /** A story row shared by Release Schedule + Weekly Deadline views (scripts/reports/schedule.py::parse_story). */
@@ -627,6 +637,25 @@ export interface ScheduleBlock {
   epics: ScheduleEpic[];
   stories: ScheduleStory[];
   orphan_count: number;
+}
+
+/** Android Status Report data block (scripts/reports/android.py::build_android)
+ *  -- every direct-subtask story under the PXB1-3295 "POS (Android)" epic,
+ *  each with its own open bugs (APP project) attached via the same
+ *  Subtask -> "Bugs Reported" drill-down as Weekly Deadline's RE-OPEN
+ *  stories, applied here to every story instead of just RE-OPEN ones. Story
+ *  rows reuse `ScheduleStory` as-is -- same shape, just always scoped to one
+ *  epic. */
+export interface AndroidBlock {
+  epicId: string;
+  epicName: string;
+  stories: ScheduleStory[];
+  kpi: {
+    total_stories: number;
+    done_stories: number;
+    open_stories: number;
+    open_bugs: number;
+  };
 }
 
 /** A dated trend point derived from snapshot-*.json files. */
