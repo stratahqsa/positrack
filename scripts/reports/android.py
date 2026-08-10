@@ -36,8 +36,9 @@ def _resolve_all_bugs(candidates, fetch_bug):
     """Like drilldown.resolve_bugs(), but keeps EVERY candidate bug -- open
     AND resolved/done -- instead of dropping done ones, since the Android
     report shows a story's full bug history (skill-report parity), not just
-    what's still blocking it. Adds a `done` flag so the UI can tell the two
-    apart."""
+    what's still blocking it. Adds `done`/`created`/`resolved` so the UI can
+    render each bug row in the same column grid as a story row (Created/
+    Resolved columns need real values, not just an open/done flag)."""
     out = []
     for bid, dev_id in candidates.items():
         raw = fetch_bug(bid)
@@ -45,7 +46,8 @@ def _resolve_all_bugs(candidates, fetch_bug):
         out.append({"bugId": bid, "summary": raw.get("summary") or "", "state": state,
                     "assignee": parse.cf_name(raw, "Assignee"),
                     "priority": parse.cf_name(raw, "Priority"), "devTicketId": dev_id,
-                    "done": parse.is_done(state)})
+                    "done": parse.is_done(state),
+                    "created": raw.get("created"), "resolved": raw.get("resolved")})
     return out
 
 
@@ -72,7 +74,7 @@ def build_android(ctx, yt, chunk=40):
           "links(direction,linkType(name),issues(id,idReadable))")
     LF = ("id,idReadable,links(direction,linkType(name),"
           "issues(id,idReadable,summary,links(direction,linkType(name),issues(id,idReadable))))")
-    BF = "id,idReadable,summary,resolved,customFields(name,value(name,text))"
+    BF = "id,idReadable,summary,created,resolved,customFields(name,value(name,text))"
 
     stories_raw = _bulk(ctx, yt, story_ids, SF, chunk)
     stories = [parse_story(stories_raw[sid]) for sid in story_ids if sid in stories_raw]

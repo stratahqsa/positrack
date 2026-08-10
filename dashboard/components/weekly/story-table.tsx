@@ -128,6 +128,66 @@ function sortValue(
   }
 }
 
+/**
+ * Renders a bug's value for a given story column, so a bug row can be built
+ * from the SAME `columns` array as a story row — real `<td>`s in the same
+ * table, not a free-floating flex layout, so alignment with the story grid
+ * (State/Created/Assignee/Sprint/…) comes from the browser's own table
+ * layout instead of hand-matched widths. Columns with no bug-side meaning
+ * (Sprint, every estimate/deadline column) render a plain dash. Priority —
+ * which has no column of its own — rides along in the State cell as a
+ * second badge; the dev ticket link takes over the otherwise-empty Epic
+ * slot (a bug's dev ticket is its "parent", the same relationship a story
+ * has to its epic).
+ */
+function bugCellValue(bug: DrillBug, done: boolean, key: SortKey): React.ReactNode {
+  switch (key) {
+    case "storyId":
+      return (
+        <div className="flex items-center gap-1.5">
+          <Bug className={cn("size-3 shrink-0", done ? "text-good/70" : "text-danger/70")} />
+          <IssueLink id={bug.bugId} showIcon={false} className="text-[11.5px]" />
+        </div>
+      );
+    case "summary":
+      return <span className="line-clamp-2 text-fg/70">{bug.summary}</span>;
+    case "state":
+      return (
+        <div className="flex flex-wrap items-center gap-1">
+          <Badge variant={stateVariant(bug.state, done)} size="sm">
+            {bug.state || "—"}
+          </Badge>
+          {bug.priority ? (
+            <Badge variant={priorityVariant(bug.priority)} size="sm">
+              {bug.priority}
+            </Badge>
+          ) : null}
+        </div>
+      );
+    case "created":
+      return bug.created != null ? fmtDate(bug.created) : <span className="text-faint">—</span>;
+    case "assignee":
+      return bug.assignee || <span className="text-faint">—</span>;
+    case "epic":
+      return bug.devTicketId ? (
+        <IssueLink id={bug.devTicketId} showIcon={false} className="text-[11px]" />
+      ) : (
+        <span className="text-faint">—</span>
+      );
+    case "resolved":
+      return bug.resolved != null ? fmtDate(bug.resolved) : <span className="text-faint">—</span>;
+    case "sprint":
+    case "devEst":
+    case "uiEst":
+    case "qaEst":
+    case "totalEst":
+    case "spent":
+    case "ddTs":
+    case "qaTs":
+      return <span className="text-faint">—</span>;
+  }
+}
+
 /** Nulls always sort last regardless of direction (missing data sinks, it
  *  never jumps to the top just because the direction flipped to desc). */
 function compare(a: string | number | null, b: string | number | null): number {
@@ -319,33 +379,28 @@ function StoryRow({
 /** Most callers' bugs are always open (Weekly Deadline's RE-OPEN drill-down
  *  only ever fetches open bugs — Examples_4 §8), but Android's drill-down
  *  keeps resolved/done bugs too (same as the standalone skill report), so
- *  this branches on `bug.done` — absent/false renders exactly as before. */
-function BugRow({ bug, columnCount }: { bug: DrillBug; columnCount: number }) {
+ *  this branches on `bug.done` — absent/false renders exactly as before.
+ *  Renders one real `<td>` per story column (via `bugCellValue`) instead of
+ *  a single merged/flex cell, so a bug row lines up with the story grid
+ *  above it — Created under Created, Assignee under Assignee, etc. */
+function BugRow({ bug, columns }: { bug: DrillBug; columns: Column[] }) {
   const done = bug.done ?? false;
   return (
     <tr className={cn("border-t border-border/30 text-[11.5px]", done ? "bg-good/[0.03]" : "bg-danger/[0.03]")}>
-      <td colSpan={columnCount} className="py-0">
-        <div
+      {columns.map((c, i) => (
+        <td
+          key={c.key}
           className={cn(
-            "flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 py-1.5 pl-6 pr-2",
-            done ? "border-good/40" : "border-danger/40",
+            "px-2 py-1.5 align-top",
+            c.key === "summary" && "max-w-[260px]",
+            (c.key === "created" || c.key === "resolved") && "whitespace-nowrap",
+            c.align === "right" && "text-right tabular",
+            i === 0 && (done ? "border-l-2 border-good/40" : "border-l-2 border-danger/40"),
           )}
         >
-          <Bug className={cn("size-3 shrink-0", done ? "text-good/70" : "text-danger/70")} />
-          <IssueLink id={bug.bugId} showIcon={false} className="text-[11.5px]" />
-          <span className="min-w-0 flex-1 truncate text-fg/70">{bug.summary}</span>
-          <Badge variant={stateVariant(bug.state, done)} size="sm">
-            {bug.state || "—"}
-          </Badge>
-          <span className="text-muted">{bug.assignee || "—"}</span>
-          <Badge variant={priorityVariant(bug.priority)} size="sm">
-            {bug.priority || "—"}
-          </Badge>
-          <span className="inline-flex items-center gap-1 text-faint">
-            dev <IssueLink id={bug.devTicketId} showIcon={false} className="text-[11px]" />
-          </span>
-        </div>
-      </td>
+          {bugCellValue(bug, done, c.key)}
+        </td>
+      ))}
     </tr>
   );
 }
@@ -535,7 +590,7 @@ export function StoryTable({
                     {story.bugs
                       .filter((b) => !b.done)
                       .map((bug) => (
-                        <BugRow key={bug.bugId} bug={bug} columnCount={columns.length} />
+                        <BugRow key={bug.bugId} bug={bug} columns={columns} />
                       ))}
                     {(() => {
                       const resolvedBugs = story.bugs.filter((b) => b.done);
@@ -551,7 +606,7 @@ export function StoryTable({
                           />
                           {showResolved
                             ? resolvedBugs.map((bug) => (
-                                <BugRow key={bug.bugId} bug={bug} columnCount={columns.length} />
+                                <BugRow key={bug.bugId} bug={bug} columns={columns} />
                               ))
                             : null}
                         </React.Fragment>
