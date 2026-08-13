@@ -1,4 +1,5 @@
 import { loadSnapshot } from "@/lib/data";
+import { currentTz } from "@/lib/tz-server";
 import { Header } from "@/components/shell/header";
 import { Nav } from "@/components/shell/nav";
 import { AndroidView } from "@/components/android/android-view";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function AndroidPage() {
   const snap = await loadSnapshot();
   const { meta, android } = snap;
+  const tz = await currentTz();
 
   return (
     <div className="min-h-screen">
@@ -33,7 +35,7 @@ export default async function AndroidPage() {
             No Android Status data in this snapshot yet — this block hasn&apos;t been generated.
           </div>
         ) : (
-          <AndroidView block={android} />
+          <AndroidView block={android} tz={tz} />
         )}
 
         <footer className="flex flex-col items-start justify-between gap-2 border-t border-border/60 pt-4 text-[11px] text-faint sm:flex-row sm:items-center">
