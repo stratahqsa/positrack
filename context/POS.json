@@ -1,0 +1,38 @@
+{
+  "identity": {
+    "code": "POS",
+    "name": "POSibolt ERP V8 Development, Support and Maintenance",
+    "description": "The legacy/flagship ERP product — live client support, bug fixes, and V5 stabilisation. Revenue-generating product today.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Maintain stability and uptime for all active V8 clients across SA, UAE, and India",
+    "Resolve critical and high-priority bugs within SLA targets",
+    "Manage controlled feature freeze as POS X approaches readiness — no major new V8 features, only fixes and client-critical patches",
+    "Support client migration planning to POS X when the time comes"
+  ],
+  "milestones": [
+    {"name": "Version 5 stabilisation complete", "date": null, "done": false},
+    {"name": "Feature freeze (no new V8 features, fixes only)", "date": null, "done": false},
+    {"name": "Client migration plan defined (first cohort for POS X)", "date": null, "done": false}
+  ],
+  "modules": [],
+  "kpis": [
+    {"name": "Open critical/high bugs", "target": "< 25 at any time"},
+    {"name": "V5 stabilisation issues remaining", "target": "0 by stabilisation milestone"},
+    {"name": "Average age of unresolved issues", "target": "< 75 days"}
+  ],
+  "risks": [
+    {"description": "V5 stabilisation drags out, consuming dev resources needed for POS X", "severity": "high", "mitigation": "Time-box stabilisation; hard cut-off date after which only critical fixes accepted"},
+    {"description": "Key V8 knowledge concentrated in few developers — bus factor", "severity": "high", "mitigation": "Document critical V8 systems; pair junior devs on V8 maintenance rotation"},
+    {"description": "Clients resist migration to POS X, extending V8 support obligations indefinitely", "severity": "medium", "mitigation": "Early migration planning; clear V8 end-of-life communication with transition support"}
+  ],
+  "dependencies": [
+    {"project": "DVP", "description": "Infrastructure and deployment for V8 servers"},
+    {"project": "SUP", "description": "Support team surfaces bugs and client issues that drive V8 fixes"},
+    {"project": "IS", "description": "Integrations are part of the V8 product — breakage there is a V8 problem to the client"}
+  ],
+  "team": [],
+  "notes": "V8 is the revenue-generating product today. V5 stabilisation is the current priority — until that's done, nothing else moves. The long-term trajectory is maintenance-only as POS X matures, but there is no hard EOL date yet. Any AI agent querying V8 data should know that some YouTrack states (e.g. 'Completed') may not be flagged as resolved in the config — always check the isResolved flag, not the state name. The instance guide codes this project as 'P8' in some docs but the actual YouTrack code is 'POS'."
+}

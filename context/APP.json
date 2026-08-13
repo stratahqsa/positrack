@@ -1,0 +1,34 @@
+{
+  "identity": {
+    "code": "APP",
+    "name": "App Development",
+    "description": "Posibolt mobile apps maintenance and new app development for POS X platform.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Maintain existing Posibolt mobile apps with timely bug fixes and OS compatibility updates",
+    "Develop new mobile app capabilities aligned with POS X platform requirements",
+    "Ensure app store compliance and publishing hygiene"
+  ],
+  "milestones": [
+    {"name": "Existing apps updated for latest OS compatibility", "date": null, "done": false},
+    {"name": "POS X mobile app requirements defined (aligned with BPX)", "date": null, "done": false}
+  ],
+  "modules": [],
+  "kpis": [
+    {"name": "App store rating maintained", "target": ">= 3.5 stars"},
+    {"name": "Open critical app bugs", "target": "0"}
+  ],
+  "risks": [
+    {"description": "OS updates break existing apps (annual iOS/Android releases)", "severity": "medium", "mitigation": "Pre-release beta testing on new OS versions; budget time around annual release cycles"},
+    {"description": "POS X mobile requirements unclear until core platform stabilises", "severity": "low", "mitigation": "Align mobile planning with BPX; don't start POS X mobile dev until core APIs stable"}
+  ],
+  "dependencies": [
+    {"project": "POS", "description": "Existing apps connect to V8 APIs"},
+    {"project": "PXB1", "description": "POS X mobile app depends on POS X core APIs being stable"},
+    {"system": "Apple / Google", "description": "App Store and Play Store review, OS compatibility requirements"}
+  ],
+  "team": [],
+  "notes": "Covers maintenance of existing Posibolt mobile apps and future POS X mobile development. POS X mobile should not start until core POS X APIs are stable — premature mobile work will result in rework."
+}

@@ -1,0 +1,26 @@
+{
+  "identity": {
+    "code": "OFT",
+    "name": "Office Fix and Track",
+    "description": "Internal IT and office infrastructure requests — equipment, fixes, and operational support.",
+    "owner": null,
+    "launch_target": null
+  },
+  "goals": [
+    "Keep internal IT infrastructure and office systems running smoothly",
+    "Respond to internal IT requests within reasonable turnaround times",
+    "Track and prioritise recurring office/IT issues for permanent fixes"
+  ],
+  "milestones": [],
+  "modules": [],
+  "kpis": [
+    {"name": "Open internal IT requests", "target": "< 25 at any time"},
+    {"name": "Average turnaround time", "target": "< 7 business days"}
+  ],
+  "risks": [
+    {"description": "Internal IT requests deprioritised in favour of product work", "severity": "low", "mitigation": "Minimum SLA for internal requests; dedicated time allocation"}
+  ],
+  "dependencies": [],
+  "team": [],
+  "notes": "Internal IT requests — office fixes, equipment, infrastructure. Low strategic importance but necessary for daily operations. Keep it simple."
+}

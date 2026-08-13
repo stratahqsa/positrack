@@ -6,12 +6,43 @@
     "owner": null,
     "launch_target": null
   },
-  "goals": [],
-  "milestones": [],
+  "goals": [
+    "Embody a Product Operating Model — every POS X feature flows through discovery → specification → prioritisation → delivery → measurement, not ad-hoc requests",
+    "Own the PRD lifecycle: intake, scoping, acceptance criteria, Lite/Growth tier assignment, and sign-off before development begins",
+    "Maintain a single, prioritised backlog that PXB1 development pulls from — no side-channel feature requests bypassing the pipeline",
+    "Define and enforce the Lite vs Growth feature boundary — every feature has an explicit tier decision with rationale documented",
+    "Track feature completeness against the V8 capability set so the gap is visible, measurable, and deliberately managed",
+    "Support Phase 2 planning by keeping Phase 1 decisions, trade-offs, and deferred items traceable and queryable",
+    "Drive data cleanliness — product specs must define what 'clean data' means for each module (valid states, required fields, migration rules) so quality is designed in, not patched after",
+    "Coordinate cross-team alignment on scope, priorities, and trade-offs across SA, UAE, and India stakeholders",
+    "Ensure product decisions are documented and traceable — if someone asks 'why was X scoped this way?' the answer is in BPX, not in someone's head"
+  ],
+  "milestones": [
+    {"name": "Product Operating Model documented and adopted by team", "date": null, "done": false},
+    {"name": "All Phase 1 PRDs written with Lite/Growth tier assignments", "date": null, "done": false},
+    {"name": "V8 → POS X feature gap analysis complete", "date": null, "done": false},
+    {"name": "Phase 2 roadmap drafted (informed by Phase 1 trade-offs and deferred items)", "date": null, "done": false},
+    {"name": "Data cleanliness standards defined per module", "date": null, "done": false}
+  ],
   "modules": [],
-  "kpis": [],
-  "risks": [],
-  "dependencies": [],
+  "kpis": [
+    {"name": "PRDs with acceptance criteria defined", "target": "100% of Phase 1 features"},
+    {"name": "PRDs with Lite/Growth tier assigned", "target": "100% of Phase 1 features"},
+    {"name": "V8 feature gap items documented", "target": "100% of core modules"},
+    {"name": "Average time from PRD intake to dev-ready", "target": "< 5 weeks"},
+    {"name": "Side-channel feature requests (bypassing pipeline)", "target": "0"}
+  ],
+  "risks": [
+    {"description": "Product Operating Model not adopted — teams bypass the process and go direct to dev", "severity": "critical", "mitigation": "Leadership enforcement; PXB1 dev team rejects work without a BPX PRD"},
+    {"description": "PRDs written without sufficient acceptance criteria, leading to rework", "severity": "high", "mitigation": "PRD template with mandatory AC section; review gate before dev-ready status"},
+    {"description": "V8 gap analysis incomplete, leading to surprise missing features at customer launch", "severity": "high", "mitigation": "Systematic module-by-module comparison; involve V8 support team who know client pain points"},
+    {"description": "Phase 1 trade-offs not documented, making Phase 2 planning harder", "severity": "medium", "mitigation": "Every deferred item logged in BPX with rationale; context files track decisions"}
+  ],
+  "dependencies": [
+    {"project": "POS", "description": "V8 feature set is the baseline for gap analysis and tier decisions"},
+    {"project": "SUP", "description": "Client pain points from support inform product priorities"},
+    {"project": "IOC", "description": "Cross-region process alignment affects product requirements per region"}
+  ],
   "team": [],
-  "notes": ""
+  "notes": "BPX is the gatekeeper. No feature enters PXB1 without a BPX PRD. This project embodies the Product Operating Model: discovery → specification → prioritisation → delivery → measurement. The Lite vs Growth tier boundary is owned here — every feature must have an explicit tier assignment with rationale. This context file will be used to plan Phase 2 and assess data cleanliness and operational inefficiencies, so accuracy matters. If the process breaks down and teams bypass BPX, the whole POS X delivery model fails."
 }
