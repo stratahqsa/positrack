@@ -25,6 +25,14 @@ export default async function BugsPage() {
   const snap = await loadSnapshot();
   const { meta, bugs } = snap;
   const tz = await currentTz();
+  // Filtered client-side (well, server-rendered here) from the same full
+  // open-bug list Module Insights' "All Open" tab uses — feeds the by-State
+  // panels' click-to-expand ticket lists; the displayed count/bar/% still
+  // come from bugs.medium_by_state/low_by_state (state-breakdown.tsx never
+  // recomputes those, only resolves "which tickets are in state X").
+  const openBugs = bugs?.open_bugs ?? [];
+  const mediumOpenBugs = openBugs.filter((b) => b.priority === "Medium");
+  const lowOpenBugs = openBugs.filter((b) => b.priority === "Low");
 
   return (
     <div className="min-h-screen">
@@ -89,9 +97,21 @@ export default async function BugsPage() {
               tone="warn"
               count={bugs.kpi.open_medium + bugs.kpi.open_low}
             >
-              <div className="grid gap-x-6 gap-y-5 p-4 md:grid-cols-2">
-                <StateBreakdown title="Medium" rows={bugs.medium_by_state} tone="info" />
-                <StateBreakdown title="Low" rows={bugs.low_by_state} tone="good" />
+              <div className="space-y-6 p-4">
+                <StateBreakdown
+                  title="Medium"
+                  rows={bugs.medium_by_state}
+                  tone="info"
+                  bugs={mediumOpenBugs}
+                  tz={tz}
+                />
+                <StateBreakdown
+                  title="Low"
+                  rows={bugs.low_by_state}
+                  tone="good"
+                  bugs={lowOpenBugs}
+                  tz={tz}
+                />
               </div>
             </Section>
 
