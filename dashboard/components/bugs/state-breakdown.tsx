@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { StateBreakdownRow } from "@/lib/types";
+import type { Bug, StateBreakdownRow } from "@/lib/types";
 import { stateVariant } from "@/components/weekly/badge-tone";
+import { BugTable } from "@/components/bugs/bug-table";
 
 type Tone = "info" | "good";
 
@@ -32,6 +33,22 @@ function sortRows(rows: StateBreakdownRow[], sort: SortState): StateBreakdownRow
       sort.key === "state" ? a.state.localeCompare(b.state) : a.count - b.count;
     return cmp !== 0 ? sign * cmp : a.state.localeCompare(b.state);
   });
+}
+
+/** Groups `bugs` by their `state` field — the per-row ticket list backing
+ *  each state's click-to-expand (same BugTable-on-click pattern as
+ *  AgingBugsPanel). Independent of `rows`/bar/pct, which stay
+ *  server-computed via scripts/reports/bugs.py::state_breakdown() — this
+ *  only needs to answer "which tickets are in state X". */
+function groupByState(bugs: Bug[]): Map<string, Bug[]> {
+  const out = new Map<string, Bug[]>();
+  for (const b of bugs) {
+    const key = b.state || "—";
+    const list = out.get(key);
+    if (list) list.push(b);
+    else out.set(key, [b]);
+  }
+  return out;
 }
 
 function Th({
@@ -88,21 +105,35 @@ function Th({
  * weekly/story-table.tsx / bugs/bug-table.tsx). Bar/Percentage stay
  * non-interactive — they're derived straight from Count, so sorting by
  * Count already orders them.
+ *
+ * Each row is also click-to-expand into that state's underlying tickets
+ * (same BugTable-on-click interaction as AgingBugsPanel, one row open at a
+ * time) — `bugs` is the full open-bug list for this priority (e.g. every
+ * open Medium bug), grouped client-side by state purely to resolve each
+ * row's ticket list; the displayed count/bar/% still come from `rows`
+ * (server-computed), so this never becomes a second source of truth for
+ * those numbers.
  */
 export function StateBreakdown({
   title,
   rows,
   tone,
+  bugs,
+  tz,
 }: {
   title: string;
   rows: StateBreakdownRow[];
   tone: Tone;
+  bugs: Bug[];
+  tz: string;
 }) {
   const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
   const [sorted, setSorted] = React.useState<StateBreakdownRow[]>(() => sortRows(rows, DEFAULT_SORT));
+  const [expanded, setExpanded] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setSorted(sortRows(rows, sort));
+    setExpanded(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]);
 
@@ -113,6 +144,7 @@ export function StateBreakdown({
     setSorted((prev) => sortRows(prev, next));
   }
 
+  const byState = React.useMemo(() => groupByState(bugs), [bugs]);
   const total = rows.reduce((n, r) => n + r.count, 0);
 
   return (
@@ -131,21 +163,54 @@ export function StateBreakdown({
             <span className="flex-1 text-[10px] font-semibold uppercase tracking-wide text-faint">Bar</span>
             <span className="w-11 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wide text-faint">%</span>
           </div>
-          {sorted.map((row) => (
-            <div key={row.state} className="flex items-center gap-2">
-              <Badge variant={stateVariant(row.state, false)} size="sm" className="w-[168px] shrink-0 justify-center">
-                {row.state || "—"}
-              </Badge>
-              <span className="tabular w-7 shrink-0 text-right text-[11.5px] text-fg/80">{row.count}</span>
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-elevated">
+          {sorted.map((row) => {
+            const stateBugs = byState.get(row.state) ?? [];
+            const canExpand = stateBugs.length > 0;
+            const isExpanded = expanded === row.state;
+            return (
+              <div key={row.state}>
                 <div
-                  className={cn("h-full rounded-full", BAR_FILL[tone])}
-                  style={{ width: `${Math.max(row.bar * 100, 2)}%` }}
-                />
+                  className={cn(
+                    "flex items-center gap-2 rounded px-0.5 py-0.5 transition-colors",
+                    canExpand && "cursor-pointer hover:bg-elevated/40",
+                  )}
+                  onClick={canExpand ? () => setExpanded(isExpanded ? null : row.state) : undefined}
+                >
+                  <div className="flex w-[168px] shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={!canExpand}
+                      aria-expanded={isExpanded}
+                      aria-label={`${isExpanded ? "Collapse" : "Expand"} ${stateBugs.length} ticket${stateBugs.length === 1 ? "" : "s"} in ${row.state || "—"}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (canExpand) setExpanded(isExpanded ? null : row.state);
+                      }}
+                      className={cn("shrink-0 text-faint", canExpand && "hover:text-fg")}
+                    >
+                      <ChevronRight className={cn("size-3 transition-transform", isExpanded && "rotate-90")} />
+                    </button>
+                    <Badge variant={stateVariant(row.state, false)} size="sm" className="flex-1 justify-center">
+                      {row.state || "—"}
+                    </Badge>
+                  </div>
+                  <span className="tabular w-7 shrink-0 text-right text-[11.5px] text-fg/80">{row.count}</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-elevated">
+                    <div
+                      className={cn("h-full rounded-full", BAR_FILL[tone])}
+                      style={{ width: `${Math.max(row.bar * 100, 2)}%` }}
+                    />
+                  </div>
+                  <span className="tabular w-11 shrink-0 text-right text-[11px] text-faint">{row.pct}%</span>
+                </div>
+                {isExpanded && canExpand ? (
+                  <div className="mt-1.5 border-t border-border/30 bg-elevated/20 py-2">
+                    <BugTable rows={stateBugs} tz={tz} />
+                  </div>
+                ) : null}
               </div>
-              <span className="tabular w-11 shrink-0 text-right text-[11px] text-faint">{row.pct}%</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
