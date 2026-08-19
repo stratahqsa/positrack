@@ -467,6 +467,30 @@ a race is likely. §5 step 7 recorded Hub's refresh tokens as ~90-day with
 `Last Used: Never` on 2026-07-28, so plain expiry does not explain an 2026-08-19
 failure.
 
+### Ruled out: Hub-side redirect-URI / client misconfiguration (2026-08-19)
+
+The Hub admin UI for the `positrack-chatgpt` service renders its **Redirect URIs**
+and **Base URLs** fields as empty. **This is a rendering artifact, not the
+configuration** — the same page also renders Hub's "Oh-oh... Something went seriously
+wrong" banner and an unsupported-browser warning, so its field values cannot be
+trusted. Do not "fix" those fields on the strength of what the UI shows.
+
+Verified instead by probing Hub's authorize endpoint directly, with a control
+(`client_id` is the service id `f0ffcb02-…`, which is not a secret):
+
+```
+GET /hub/api/rest/oauth2/auth?...&redirect_uri=https://positrack.up.railway.app/auth/callback
+  -> 303 Location: /hub/auth/login…            ACCEPTED
+
+GET /hub/api/rest/oauth2/auth?...&redirect_uri=https://example.invalid/nope
+  -> 303 Location: /hub/auth/oauth/error…      REJECTED
+```
+
+Hub accepts the real callback and rejects a bogus one, so the redirect URI is
+correctly registered and the client is intact. Cause D is **not** a Hub client
+misconfiguration. This probe is safe to repeat — it is read-only and stops at Hub's
+login page.
+
 ### What would settle it
 
 | # | Action | Owner |
