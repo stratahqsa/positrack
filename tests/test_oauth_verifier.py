@@ -447,3 +447,35 @@ def test_no_oauth_config_means_no_provider(monkeypatch):
     for name in ("HUB_CLIENT_ID", "HUB_CLIENT_SECRET", "OAUTH_PUBLIC_URL"):
         monkeypatch.delenv(name, raising=False)
     assert server._build_oauth_provider() is None
+
+
+# ------------------------------------------------------------- brand assets
+def test_brand_routes_serve_the_icon_before_the_oauth_catch_all():
+    """The connector showed RAILWAY's logo because the origin had no favicon, so the
+    client fell back to the domain's icon. Two things fix that and we ship both,
+    since it is undocumented which one a given client reads:
+      * `serverInfo.icons` (the MCP spec mechanism), and
+      * /icon.png + /favicon.ico on the origin (the fallback path).
+
+    These routes must also stay registered BEFORE the OAuth app's catch-all
+    Mount("/"), or it swallows them and the 404 (and Railway's logo) comes back.
+    """
+    paths = [r.path for r in server._brand_routes()]
+    assert paths == ["/icon.png", "/favicon.ico"]
+
+    icon = os.path.join(os.path.dirname(os.path.abspath(server.__file__)), "static", "icon.png")
+    assert os.path.isfile(icon), "mcp/static/icon.png is missing — routes would 404"
+    with open(icon, "rb") as fh:
+        assert fh.read(8) == b"\x89PNG\r\n\x1a\n", "icon.png is not a real PNG"
+
+
+def test_server_icons_need_a_public_origin(monkeypatch):
+    """The icon URL is fetched out of band by the client, so it must be absolute.
+    With no public origin (stdio), advertise nothing rather than a broken relative URL."""
+    monkeypatch.setenv("OAUTH_PUBLIC_URL", "https://positrack.example")
+    icons = server._server_icons()
+    assert icons and str(icons[0].src) == "https://positrack.example/icon.png"
+    assert icons[0].mimeType == "image/png"
+
+    monkeypatch.delenv("OAUTH_PUBLIC_URL", raising=False)
+    assert server._server_icons() is None

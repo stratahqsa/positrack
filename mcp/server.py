@@ -35,6 +35,27 @@ import ytcore as core  # noqa: E402
 
 from fastmcp import FastMCP  # noqa: E402
 
+_STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+
+
+def _server_icons():
+    """The MCP spec-level icon (`serverInfo.icons`), which is how a client is
+    SUPPOSED to learn a server's brand. Needs an absolute URL because the client
+    fetches it out of band, so it is only advertised when OAUTH_PUBLIC_URL is set
+    (stdio callers have no origin to serve it from). Paired with the /icon.png and
+    /favicon.ico routes in build_app(): we serve both because it is not documented
+    which of the two any given client actually reads."""
+    base = (os.environ.get("OAUTH_PUBLIC_URL") or "").rstrip("/")
+    if not base:
+        return None
+    try:
+        import mcp.types
+        return [mcp.types.Icon(src=f"{base}/icon.png", mimeType="image/png",
+                               sizes=["512x512"])]
+    except Exception:  # never let branding break boot
+        return None
+
+
 INSTRUCTIONS = """\
 Positrack — talk to Posibolt's YouTrack (support.posibolt.com) in plain English.
 
@@ -144,7 +165,8 @@ risks"), REMEMBER that recipe for them and reuse it on "run my briefing". Back t
 sections with their own YouTrack saved queries (yt_saved) where they have them.
 """
 
-mcp = FastMCP(name="Positrack", instructions=INSTRUCTIONS)
+mcp = FastMCP(name="Positrack", instructions=INSTRUCTIONS,
+              website_url="https://support.posibolt.com", icons=_server_icons())
 
 
 # ---------- per-call auth resolution (OAuth → header → env) ----------
@@ -992,7 +1014,9 @@ def build_app():
     oauth = _build_oauth_provider()
     if oauth is not None:
         oauth_path = os.environ.get("OAUTH_MCP_PATH", "/cmcp")
-        mcp_oauth = FastMCP(name="Positrack", instructions=INSTRUCTIONS, auth=oauth)
+        mcp_oauth = FastMCP(name="Positrack", instructions=INSTRUCTIONS, auth=oauth,
+                            website_url="https://support.posibolt.com",
+                            icons=_server_icons())
         mcp_oauth.mount(mcp)  # live-link the same 25 tools (sync, no duplication)
         oauth_app = mcp_oauth.http_app(transport="http", path=oauth_path)
         lifespan_apps.append(oauth_app)
@@ -1015,8 +1039,33 @@ def build_app():
             continue
         seen.add(key)
         routes.append(r)
+    # Brand assets must be registered BEFORE extra_routes: the OAuth app goes on as
+    # a catch-all Mount("/") and would otherwise swallow them.
+    routes.extend(_brand_routes())
     routes.extend(extra_routes)
     return Starlette(routes=routes, lifespan=lifespan)
+
+
+def _brand_routes():
+    """Serve the Positrack mark over HTTP.
+
+    With no favicon on the origin, clients fall back to the DOMAIN's icon — and on
+    *.up.railway.app that is Railway's logo, which is why the connector showed
+    Railway's brand rather than ours. /favicon.ico is the conventional path browsers
+    and several MCP clients probe; /icon.png is what `serverInfo.icons` points at.
+    Both serve the same bytes. Missing file degrades to a 404, never a broken boot."""
+    from starlette.responses import FileResponse, Response
+    from starlette.routing import Route
+    icon_path = os.path.join(_STATIC_DIR, "icon.png")
+
+    async def _icon(request):
+        if not os.path.isfile(icon_path):
+            return Response(status_code=404)
+        return FileResponse(icon_path, media_type="image/png",
+                            headers={"Cache-Control": "public, max-age=86400"})
+
+    return [Route("/icon.png", _icon, methods=["GET", "HEAD"]),
+            Route("/favicon.ico", _icon, methods=["GET", "HEAD"])]
 
 
 def public_url_log():
