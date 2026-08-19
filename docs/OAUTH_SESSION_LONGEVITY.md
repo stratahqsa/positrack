@@ -4,8 +4,9 @@
 **Status:** Causes A, B and C are all **closed and verified in production**
 (boot log checked 2026-08-19, see §9). The §3 security item is **closed** —
 `OAUTH_STORE_ENCRYPTION_KEY` is set and the store is encrypted at rest.
-**A new failure, Cause D, is OPEN and live: Hub is rejecting upstream refresh
-tokens and users are dropping mid-session — see §9.**
+**Cause D — found 2026-08-19 — explains what none of the earlier fixes could: the
+upstream refresh had NEVER once succeeded, because the service-id scopes were re-sent
+on refresh and Hub rejected the mismatch. Fixed in code, awaiting deploy — see §9.**
 **Symptom:** originally, users had to sign in again roughly every morning. After the
 2026-07-28 deploy the symptom changed rather than disappeared: sessions now drop
 **part-way through a working session**, with earlier calls in the same session having
@@ -410,11 +411,12 @@ for this, and this fix does not depend on it.
 
 ---
 
-## 9. Cause D — Hub rejects the upstream refresh token (2026-08-19) — **OPEN**
+## 9. Cause D — the scope re-sent on upstream refresh (2026-08-19) — **ROOT-CAUSED & FIXED**
 
-**Status:** live in production, root cause **not yet confirmed**. One plausible
-explanation was investigated and **disproved** (below), so this is genuinely open —
-do not act on the disproved theory.
+**Status:** root cause **confirmed** and fixed in code; **awaiting deploy**. Hub
+rejected every upstream refresh because Positrack re-sent Hub's service-id scopes on
+the refresh request. Several plausible theories were investigated and **disproved**
+along the way — they are tabulated below so nobody re-walks them.
 
 ### What the Railway log shows
 
@@ -422,10 +424,14 @@ Read from the running service on 2026-08-19 (timestamps UTC):
 
 ```
 05:27–05:40Z   POST /cmcp -> 200 OK  x25          sessions working normally
-08:04:56Z      ERROR Upstream token refresh failed: invalid_token (status=401)
-                                                              proxy.py:1489
+08:04:56Z      ERROR Upstream token refresh failed: ...        proxy.py:1489
 08:05–08:27Z   POST /cmcp -> 401 x11,  POST /token -> 401
 ```
+
+> **Careful with this log.** Grepping it suggests the error was
+> `invalid_token (status=401)`. It was not — that is a *separate*, wrapped
+> `middleware.py` record for the downstream 401. The real upstream reason is
+> reassembled below.
 
 Hub is refusing the **refresh token** Positrack presents on the user's behalf. This
 is a different mechanism from Cause C: there, no refresh was *attempted*; here one is
@@ -485,62 +491,69 @@ access token and then died. That single defect explains both the original
 "re-authenticate every morning" symptom and the later mid-session drops. Causes A and
 C addressed real bugs, but neither could deliver long sessions while this held.
 
-### Why Hub rejects it (narrowed, not yet closed)
+### ROOT CAUSE (found 2026-08-19): the scope re-sent on refresh
 
-The server logs `Upstream token refresh failed: invalid_token (status=401)`. That
-string is the exception from the upstream refresh call
-(`oauth_proxy/proxy.py`, the `except` around `oauth_client.refresh_token`).
-
-**`invalid_token` is not a Hub token-endpoint error at all.** Hub documents exactly
-these for that endpoint: `invalid_request`, `invalid_client`, `invalid_grant`,
-`unauthorized_client`, `unsupported_grant_type`, `invalid_scope`. Confirmed live — a
-bogus refresh token returns `invalid_grant` / 403 / "Unknown refresh token", not
-`invalid_token` / 401. `invalid_token` is an RFC 6750 *bearer-token* error, returned
-by resource servers.
-
-So the refresh request is being rejected **before Hub evaluates the grant**, which is
-consistent with it carrying the wrong authentication shape (e.g. a Bearer
-`Authorization` header where Hub expects client credentials) rather than with anything
-wrong with the token. A malformed-auth theory also fits a **100%** failure rate, which
-no expiry or race theory does.
-
-Note a probe that looks tempting but proves nothing: sending a bogus refresh token
-with a deliberately wrong client secret still returns `invalid_grant`, because Hub
-validates the token before the client. Client authentication therefore **cannot** be
-confirmed or excluded that way — a control run confirmed all three combinations
-(right secret, wrong secret, bogus client id) return identical responses.
-
-### Ruled out: Hub-side redirect-URI / client misconfiguration (2026-08-19)
-
-The Hub admin UI for the `positrack-chatgpt` service renders its **Redirect URIs**
-and **Base URLs** fields as empty. **This is a rendering artifact, not the
-configuration** — the same page also renders Hub's "Oh-oh... Something went seriously
-wrong" banner and an unsupported-browser warning, so its field values cannot be
-trusted. Do not "fix" those fields on the strength of what the UI shows.
-
-Verified instead by probing Hub's authorize endpoint directly, with a control
-(`client_id` is the service id `f0ffcb02-…`, which is not a secret):
+**Corrected first:** an earlier pass of this section blamed `invalid_token (status=401)`
+and reasoned about client-authentication shape. That was a **misread log**. FastMCP's
+rich logger wraps a long record onto a second, indented line, and the only
+`(status=%d)` format string in the package is
+`fastmcp/server/auth/middleware.py:176 "Auth error returned: %s (status=%d)"` — the
+**downstream** 401 handed back to the MCP client, i.e. the consequence. The upstream
+reason was on the wrapped line. Reassembled from the raw Railway log it reads:
 
 ```
-GET /hub/api/rest/oauth2/auth?...&redirect_uri=https://positrack.up.railway.app/auth/callback
-  -> 303 Location: /hub/auth/login…            ACCEPTED
-
-GET /hub/api/rest/oauth2/auth?...&redirect_uri=https://example.invalid/nope
-  -> 303 Location: /hub/auth/oauth/error…      REJECTED
+ERROR  Upstream token refresh failed:                            proxy.py:1489
+       invalid_grant: Requested scope does not match allowed by access token
 ```
 
-Hub accepts the real callback and rejects a bogus one, so the redirect URI is
-correctly registered and the client is intact. Cause D is **not** a Hub client
-misconfiguration. This probe is safe to repeat — it is read-only and stops at Hub's
-login page.
+That is Hub's documented `invalid_grant` "scope mismatch with access token".
 
-### What would settle it
+**The mechanism.** Hub treats the service-id "scopes" — the YouTrack service UUID and
+Hub's own `0-0-0-0-0` — as **resource access**, not as scope claims. The access token
+Hub issues therefore echoes only `openid offline_access`. This project already knew
+that: it is why `provider.required_scopes = []` exists, or every `/cmcp` call would
+403 `insufficient_scope`.
 
-| # | Action | Owner |
-|---|---|---|
-| 1 | ~~Check whether Hub rotates refresh tokens~~ — **done, disproved** (see above) | Hub admin |
-| 1a | Capture the **full** upstream exception: raise the server's log level so the `invalid_token` error's response body and request headers are visible. That should name the rejected auth shape outright | Engineering |
-| 1b | Reproduce a refresh locally against Hub with a genuine refresh token, trying `client_secret_post` vs `client_secret_basic`, to confirm which shape Hub accepts | Engineering |
+The same mismatch was never handled on the **upstream** side.
+`OAuthProxy.exchange_refresh_token(client, refresh_token, scopes)` passes the refresh
+token's **stored** scopes — the full requested set — straight into the upstream call
+as `scope=...`. Hub compares that against what the access token allows, finds the two
+service UUIDs it never granted as scopes, and rejects. Every time, for every user,
+since the day it was deployed.
+
+**The fix** (`mcp/server.py`, `_HubOIDCProxy`): override
+`_prepare_scopes_for_upstream_refresh` to return `[]`. FastMCP turns an empty list
+into `scope=None` and authlib omits the parameter, which RFC 6749 §6 defines as
+"identical to that originally granted" — exactly the intent.
+
+Narrowing `HUB_SCOPES` instead would **not** work: `/authorize` genuinely needs the
+service UUIDs or YouTrack REST rejects the resulting token. The two requirements only
+coexist if the scope is dropped at refresh time. Overriding the hook rather than a call
+site covers every upstream refresh path, including the transparent refresh during token
+validation.
+
+Covered by `tests/test_oauth_verifier.py::test_upstream_refresh_does_not_resend_service_scopes`,
+which pins both halves: `_default_scope_str` keeps the UUIDs for authorize, and the
+refresh hook returns nothing.
+
+### Dead ends, recorded so nobody re-walks them
+
+| Theory | Verdict |
+|---|---|
+| fastmcp 3.4.5 -> 3.4.7 regression | **No.** Only `proxy.py` change is a CIMD `private_key_jwt` audience fix on downstream auth; the failing tokens predate it by two months |
+| Hub rotates / single-uses refresh tokens | **No.** Rotation leaves usage behind; all six tokens read `Last Used: Never`. FastMCP also holds a per-token refresh lock |
+| Hub client misconfigured (redirect URI) | **No.** Registered callback accepted, bogus one rejected — verified with a control |
+| Wrong client secret / auth method | **Unfalsifiable that way.** Hub validates the refresh token before the client, so a wrong-secret probe returns `invalid_grant` regardless. Hub accepts both `client_secret_basic` and `client_secret_post` |
+| `OAUTH_STORE_ENCRYPTION_KEY` unset | **No.** Already set; boot log reads `persistent + encrypted` |
+
+### Remaining actions
+
+| # | Action | Owner | Status |
+|---|---|---|---|
+| 1 | Root-cause and fix the refresh | Engineering | **Done** — see above |
+| 2 | Deploy and confirm against Hub: after the next refresh, a Positrack row on Account Security -> Refresh Tokens must show a real `Last Used` date instead of `Never`. **That is the acceptance test** | Engineering | Pending deploy |
+| 3 | Stand up a **staging** service against the same Hub, so refresh can be exercised without disturbing production | Engineering | Open |
+| 4 | Extend CI to cover the OAuth handshake + a refresh cycle — it runs only pytest, the sync gate and `py_compile`, which is why a 100%-broken refresh shipped and stayed broken for months | Engineering | Open |
 | 2 | Stand up a **staging** Railway service against the same Hub, so refresh failures can be reproduced without disturbing the 50 production users | Engineering |
 | 3 | Extend CI to exercise the OAuth handshake + a refresh cycle — today it runs only pytest, the sync gate and `py_compile`, so nothing in this area is covered | Engineering |
 

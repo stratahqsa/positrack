@@ -403,6 +403,35 @@ def test_provider_falls_back_to_id_token_when_userinfo_unavailable(monkeypatch, 
     assert provider.required_scopes == []
 
 
+def test_upstream_refresh_does_not_resend_service_scopes(monkeypatch, oauth_env):
+    """Cause D: upstream refresh had never once succeeded, for any user.
+
+    Hub grants the service-id "scopes" (the YouTrack UUID, and Hub's own
+    0-0-0-0-0) as RESOURCE ACCESS, not as scope claims — the issued access token
+    echoes only `openid offline_access`. FastMCP's `exchange_refresh_token` passes
+    the refresh token's stored scopes straight through to the upstream refresh as
+    `scope=...`, so Hub compared the full requested set against what the access
+    token allows and rejected every single refresh with:
+
+        invalid_grant: Requested scope does not match allowed by access token
+
+    Both halves matter and they pull in opposite directions:
+      * /authorize MUST still request the service UUIDs, or the resulting token
+        is not accepted by the YouTrack REST API at all.
+      * the refresh MUST NOT re-send them. RFC 6749 section 6: an omitted scope
+        means "identical to that originally granted", which is what we want.
+    """
+    _stub_discovery(monkeypatch)
+    provider = server._build_oauth_provider()
+
+    # Unchanged: what we ask Hub for at authorize time still carries the UUIDs.
+    assert provider._default_scope_str == " ".join(SCOPES)
+
+    # The fix: nothing is sent as `scope` on the upstream refresh. FastMCP turns an
+    # empty list into scope=None, which authlib omits from the request entirely.
+    assert provider._prepare_scopes_for_upstream_refresh(list(SCOPES)) == []
+
+
 def test_no_oauth_config_means_no_provider(monkeypatch):
     for name in ("HUB_CLIENT_ID", "HUB_CLIENT_SECRET", "OAUTH_PUBLIC_URL"):
         monkeypatch.delenv(name, raising=False)

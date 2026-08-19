@@ -900,7 +900,41 @@ def _build_oauth_provider():
     # clock. None → unavailable/disabled, so keep the previous id_token behaviour.
     token_verifier = _make_hub_token_verifier(config_url, client_id, scopes)
     from fastmcp.server.auth import OIDCProxy
-    provider = OIDCProxy(
+
+    class _HubOIDCProxy(OIDCProxy):
+        """OIDCProxy that stops re-sending Hub's service-id scopes on refresh.
+
+        Hub treats the service-id "scopes" (the YouTrack service UUID, and Hub's
+        own 0-0-0-0-0) as RESOURCE ACCESS rather than scope claims: the access
+        token it issues echoes only `openid offline_access`. FastMCP's
+        `exchange_refresh_token` hands the refresh token's STORED scopes — the
+        full requested set — straight to the upstream refresh as `scope=...`, so
+        Hub compared that against what the access token actually allows and
+        refused every refresh:
+
+            invalid_grant: Requested scope does not match allowed by access token
+
+        That is why the upstream refresh had never once succeeded for ANY user
+        (Hub's own Account Security page showed every Positrack refresh token as
+        `Last Used: Never`), and therefore why the 30-day session never held: a
+        session could only live as long as Hub's initial access token, then died.
+
+        We cannot simply narrow HUB_SCOPES — /authorize genuinely needs the
+        service UUIDs, or the token YouTrack REST gets back is not accepted. The
+        two requirements only coexist if the scope is dropped at refresh time.
+        RFC 6749 section 6 defines exactly that: an omitted `scope` means
+        "identical to that originally granted", which is what we want. FastMCP
+        turns an empty list into `scope=None` and authlib omits the parameter.
+
+        Overriding the hook (rather than patching a call site) covers every
+        upstream refresh path in OAuthProxy, including the transparent refresh
+        performed during token validation.
+        """
+
+        def _prepare_scopes_for_upstream_refresh(self, scopes: list) -> list:
+            return []
+
+    provider = _HubOIDCProxy(
         config_url=config_url,
         client_id=client_id,
         client_secret=client_secret,
