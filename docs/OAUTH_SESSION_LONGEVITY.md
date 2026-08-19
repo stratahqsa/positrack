@@ -4,9 +4,10 @@
 **Status:** Causes A, B and C are all **closed and verified in production**
 (boot log checked 2026-08-19, see §9). The §3 security item is **closed** —
 `OAUTH_STORE_ENCRYPTION_KEY` is set and the store is encrypted at rest.
-**Cause D — found 2026-08-19 — explains what none of the earlier fixes could: the
-upstream refresh had NEVER once succeeded, because the service-id scopes were re-sent
-on refresh and Hub rejected the mismatch. Fixed in code, awaiting deploy — see §9.**
+**Cause D — found, fixed and CONFIRMED 2026-08-19 — explains what none of the earlier
+fixes could: the upstream refresh had NEVER once succeeded, because the service-id
+scopes were re-sent on refresh and Hub rejected the mismatch. A post-fix token has now
+recorded a real `Last Used` — the first ever. See §9.**
 **Symptom:** originally, users had to sign in again roughly every morning. After the
 2026-07-28 deploy the symptom changed rather than disappeared: sessions now drop
 **part-way through a working session**, with earlier calls in the same session having
@@ -411,12 +412,26 @@ for this, and this fix does not depend on it.
 
 ---
 
-## 9. Cause D — the scope re-sent on upstream refresh (2026-08-19) — **ROOT-CAUSED & FIXED**
+## 9. Cause D — the scope re-sent on upstream refresh (2026-08-19) — **FIXED & CONFIRMED IN PRODUCTION**
 
-**Status:** root cause **confirmed** and fixed in code; **awaiting deploy**. Hub
-rejected every upstream refresh because Positrack re-sent Hub's service-id scopes on
-the refresh request. Several plausible theories were investigated and **disproved**
-along the way — they are tabulated below so nobody re-walks them.
+**Status:** **CLOSED.** Fixed, deployed, and verified against Hub the same day.
+
+Verification (2026-08-19, the acceptance test set before the fix shipped): a refresh
+token minted *after* the deploy recorded a real `Last Used`, while every token minted
+before it still reads `Never` — the two together are the control:
+
+```
+Positrack ChatGPT   created 2026-06-28 19:39   lastUsed Never        <- pre-fix  x6
+Positrack ChatGPT   created 2026-08-19 11:26   lastUsed 13:02        <- POST-FIX
+```
+
+That 13:02 entry is the **first upstream refresh that has ever succeeded** for this
+connector. The deploy's logs also contain **zero** `Upstream token refresh failed`
+records, against a wall of them beforehand.
+
+Hub had rejected every earlier refresh because Positrack re-sent Hub's service-id
+scopes on the refresh request. Several plausible theories were investigated and
+**disproved** along the way — tabulated below so nobody re-walks them.
 
 ### What the Railway log shows
 
@@ -551,7 +566,7 @@ refresh hook returns nothing.
 | # | Action | Owner | Status |
 |---|---|---|---|
 | 1 | Root-cause and fix the refresh | Engineering | **Done** — see above |
-| 2 | Deploy and confirm against Hub: after the next refresh, a Positrack row on Account Security -> Refresh Tokens must show a real `Last Used` date instead of `Never`. **That is the acceptance test** | Engineering | Pending deploy |
+| 2 | Deploy and confirm against Hub: a Positrack row on Account Security -> Refresh Tokens must show a real `Last Used` instead of `Never` | Engineering | **PASSED 2026-08-19 13:02** |
 | 3 | Stand up a **staging** service against the same Hub, so refresh can be exercised without disturbing production | Engineering | Open |
 | 4 | Extend CI to cover the OAuth handshake + a refresh cycle — it runs only pytest, the sync gate and `py_compile`, which is why a 100%-broken refresh shipped and stayed broken for months | Engineering | Open |
 | 2 | Stand up a **staging** Railway service against the same Hub, so refresh failures can be reproduced without disturbing the 50 production users | Engineering |
