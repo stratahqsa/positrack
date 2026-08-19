@@ -427,6 +427,17 @@ def test_upstream_refresh_does_not_resend_service_scopes(monkeypatch, oauth_env)
     # Unchanged: what we ask Hub for at authorize time still carries the UUIDs.
     assert provider._default_scope_str == " ".join(SCOPES)
 
+    # The override must be overriding something REAL. Without this assertion the test
+    # would still pass if FastMCP renamed or removed the hook, leaving our method as
+    # dead code and the refresh silently broken again — the exact failure mode that
+    # let Cause D survive months of green builds.
+    from fastmcp.server.auth import OIDCProxy
+    assert hasattr(OIDCProxy, "_prepare_scopes_for_upstream_refresh"), (
+        "FastMCP no longer defines the upstream-refresh scope hook; _HubOIDCProxy "
+        "is now dead code and Hub will reject every refresh again")
+    assert type(provider)._prepare_scopes_for_upstream_refresh is not \
+        OIDCProxy._prepare_scopes_for_upstream_refresh, "override did not take effect"
+
     # The fix: nothing is sent as `scope` on the upstream refresh. FastMCP turns an
     # empty list into scope=None, which authlib omits from the request entirely.
     assert provider._prepare_scopes_for_upstream_refresh(list(SCOPES)) == []
