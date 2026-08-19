@@ -10,6 +10,34 @@ updates:
       prefix: "deps"
     labels:
       - "dependencies"
+    ignore:
+      # DO NOT let Dependabot bump these two automatically.
+      #
+      # They are not ordinary libraries: fastmcp supplies the OAuth proxy that
+      # ~50 daily connector users authenticate through, plus the dual-transport
+      # mount (/mcp + /sse) and the explicit /health route. py-key-value-aio is
+      # the volume-backed store holding DCR registrations AND upstream Hub
+      # tokens; mcp/requirements.txt requires its version stay aligned with
+      # fastmcp's resolved dep.
+      #
+      # CI (.github/workflows/ci.yml) cannot catch a regression here: it runs
+      # pytest, the engine-sync gate and py_compile, none of which exercise the
+      # OAuth handshake, token refresh, or either transport. So a bump goes
+      # green, satisfies branch protection, merges, and Railway auto-deploys it
+      # straight to production.
+      #
+      # That is exactly what happened on 2026-08-18: PR #76 (fastmcp 3.4.5 ->
+      # 3.4.7) merged and deployed unreviewed, and the connector began failing
+      # upstream token refresh within the hour. See docs/OAUTH_SESSION_LONGEVITY.md.
+      #
+      # Bump these DELIBERATELY instead: open the PR by hand, read the upstream
+      # diff for server/auth/oauth_proxy/, and run the dual-transport smoke test
+      # in mcp/README.md ("Transport note") before merging.
+      #
+      # Security advisories still need actioning - watch Dependabot alerts and
+      # raise those bumps manually, with the same smoke test.
+      - dependency-name: "fastmcp"
+      - dependency-name: "py-key-value-aio"
 
   # Keep the GitHub Actions in our CI pinned to current, secure versions.
   - package-ecosystem: "github-actions"

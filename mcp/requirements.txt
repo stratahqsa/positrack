@@ -1,8 +1,14 @@
 # Positrack MCP server dependencies.
 # FastMCP is PINNED to an exact version: the dual-transport mount (streamable
-# HTTP + SSE) and the explicit /health route are version-sensitive, so any bump
+# HTTP + SSE), the explicit /health route AND the OAuth proxy that ~50 daily
+# connector users authenticate through are all version-sensitive, so any bump
 # must re-run the Step-6 dual-transport smoke test before release.
-fastmcp==3.4.5
+#
+# Dependabot is configured NOT to bump fastmcp or py-key-value-aio
+# (.github/dependabot.yml). Bump them by hand only: CI does not exercise the
+# OAuth handshake or token refresh, so a bad bump merges green and Railway
+# deploys it to production. This bit us on 2026-08-18 (PR #76, 3.4.5 -> 3.4.7).
+fastmcp==3.4.7
 # Persistent OAuth Dynamic-Client-Registration storage (DiskStore on a Railway volume)
 # so connector registrations survive redeploys. py-key-value-aio ships with fastmcp;
 # the [disk] extra adds diskcache. Keep the version aligned with fastmcp's resolved dep.
