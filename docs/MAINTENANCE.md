@@ -138,3 +138,58 @@ isn't a duplicate — it adds the assistant layer (plain-English routing,
 capture-nudging), **preview→commit safety on every write**, location/briefing
 reports, and self-hosted reach, all from the **same engine** that powers the CLI
 and the skill. Keep both in mind when scoping new features.
+
+## CI service account (`secrets.YT_TOKEN`)
+
+`secrets.YT_TOKEN` drives the hourly **Snapshot** workflow (which feeds the POSX
+Reports dashboard) and the **Release schedule** workflow. Both are **read-only**:
+`scripts/snapshot.py` calls only `get_issues`, `report`, `boards`, `effort_report`,
+`work_item_pool` and `whoami` — there is no write anywhere in that path.
+
+**It must be a dedicated service account, never a person's own token.**
+
+> **Why this is not theoretical.** On 2026-08-18 this secret held a maintainer's
+> personal *admin* token. They deleted it during ordinary token hygiene and the hourly
+> snapshot failed with `BLOCKED on YouTrack 401` for roughly ten hours before anyone
+> noticed — the dashboard just quietly went stale. A personal token also means the job
+> runs with that person's full admin rights to do a job that only reads.
+
+### The account
+
+| | |
+|---|---|
+| Login | `positrack-ci` (any dedicated login; it must not be a human's) |
+| Roles | **`Issue Reader` + `Observer`** — *both are required* |
+| Token | Its own permanent token, scope `YouTrack`, stored only in `secrets.YT_TOKEN` |
+
+**Why both roles** — neither is sufficient alone, which is easy to get wrong:
+
+| Role | Grants | Missing on its own |
+|---|---|---|
+| `Issue Reader` | `READ_ISSUE`, `READ_REPORT`, `READ_COMMENT`, `READ_ARTICLE` | `jetbrains.jetpass.user-read-basic` → assignee names cannot be resolved |
+| `Observer` | `user-read-basic`, `READ_COMMENT`, `project-read-basic` | `READ_ISSUE` → cannot read issues at all |
+
+**Time tracking:** the snapshot reads work items (`work_item_pool`,
+`timespent_from_items`). Neither role above lists an explicit work-item read
+permission, so if the Effort report or time-by-person comes back empty after a
+rotation, grant the time-tracking read permission and re-run. Start least-privilege
+and widen only on evidence.
+
+### Rotating it
+
+1. In YouTrack, signed in **as the service account**: avatar → Account Security →
+   New permanent token, scope `YouTrack`.
+2. Set the secret without the value passing through a shell history or a chat:
+   ```bash
+   gh secret set YT_TOKEN --repo stratahqsa/positrack
+   ```
+   (it prompts for the value)
+3. Verify before walking away — a bad token fails in ~20s, a healthy run takes ~5 min:
+   ```bash
+   gh workflow run snapshot.yml
+   gh run list --workflow=snapshot.yml --limit 3
+   ```
+   A failure prints `BLOCKED on YouTrack 401: your token is invalid or expired`.
+
+Personal tokens can then be rotated or revoked freely — including right after an
+accidental paste — without taking the dashboard down.

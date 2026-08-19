@@ -21,6 +21,12 @@ name: Release Schedule
 # SETUP: reuses the same repository secret as the Snapshot workflow —
 #   YT_TOKEN — a YouTrack permanent token. LEAST-PRIVILEGE, READ-ONLY service
 #   account. No second secret is needed; this is the same read-only account.
+#   MUST be a DEDICATED SERVICE ACCOUNT, never a person's own token. On
+#   2026-08-18 this secret held a maintainer's personal admin token; they
+#   deleted it during routine hygiene and the hourly snapshot 401'd for ~10
+#   hours. A personal token also means the job runs with that person's full
+#   admin rights when it only ever reads. See docs/MAINTENANCE.md
+#   ("CI service account") for the exact account + roles.
 
 on:
   workflow_dispatch: {}
