@@ -1,15 +1,15 @@
 import { AlertTriangle, Layers } from "lucide-react";
 import { loadSnapshot } from "@/lib/data";
 import { hasP2Count, missingEstCount, readyToMoveCount, watchList } from "@/lib/effort";
-import { fmtDate, fmtHours, fmtMd } from "@/lib/format";
+import { fmtHours, fmtMd } from "@/lib/format";
 import { Header } from "@/components/shell/header";
 import { Nav } from "@/components/shell/nav";
 import { Section } from "@/components/effort/section";
 import { EffortKpi } from "@/components/effort/effort-kpi";
 import { EpicEffortTable } from "@/components/effort/epic-effort-table";
+import { NoStoriesTable } from "@/components/effort/no-stories-table";
 import { WatchList } from "@/components/effort/watch-list";
 import { P2Backlog } from "@/components/effort/p2-backlog";
-import { IssueLink } from "@/components/ui/issue-link";
 
 // Snapshot is read from disk (dev) or the Release (prod) per request —
 // force-dynamic so a refreshed snapshot shows with no redeploy, same
@@ -102,40 +102,7 @@ export default async function EffortPage() {
               </Section>
 
               <Section title="🚫 No Stories" tone="outline" count={effort.counts.no_stories}>
-                {effort.sections.no_stories.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-[12px] text-faint">No epics without stories.</div>
-                ) : (
-                  <div className="overflow-x-auto scroll-slim">
-                    <table className="w-full min-w-[520px] border-collapse">
-                      <thead className="bg-surface-2/95">
-                        <tr className="text-[10px] font-semibold uppercase tracking-wide text-faint">
-                          <th className="px-2 py-2 text-left">Epic</th>
-                          <th className="px-2 py-2 text-left">Summary</th>
-                          <th className="px-2 py-2 text-left">Assignee</th>
-                          <th className="px-2 py-2 text-left">Created</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {effort.sections.no_stories.map((epic) => (
-                          <tr key={epic.id} className="border-t border-border/50 text-[12px] hover:bg-elevated/40">
-                            <td className="whitespace-nowrap px-2 py-2 align-top">
-                              <IssueLink id={epic.id} showIcon={false} />
-                            </td>
-                            <td className="max-w-[320px] px-2 py-2 align-top">
-                              <span className="line-clamp-2 text-fg/85">{epic.summary}</span>
-                            </td>
-                            <td className="px-2 py-2 align-top text-fg/80">
-                              {epic.assignee || <span className="text-faint">Unassigned</span>}
-                            </td>
-                            <td className="whitespace-nowrap px-2 py-2 align-top text-muted">
-                              {fmtDate(epic.created)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <NoStoriesTable epics={effort.sections.no_stories} />
               </Section>
 
               <Section title="📁 P2/P3 Backlog (moved after 29 Jun)" tone="violet" count={effort.counts.p2_backlog}>
