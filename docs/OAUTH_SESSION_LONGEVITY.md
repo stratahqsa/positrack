@@ -1,10 +1,11 @@
 # Positrack connector: daily re-authentication — causes, fixes, and what must happen server-side
 
 **Audience:** Product Owner / whoever holds Railway + Posibolt Hub admin
-**Status:** Cause A fixed and deployed 2026-07-28 (PR #47). Cause B investigated and
-found not to apply — the volume was already mounted. **Cause C found 2026-07-31 after
-the connector kept dropping mid-session despite the fix; code fix written and verified,
-awaiting deploy — see §8.** One security item remains open, see §3.
+**Status:** Causes A, B and C are all **closed and verified in production**
+(boot log checked 2026-08-19, see §9). The §3 security item is **closed** —
+`OAUTH_STORE_ENCRYPTION_KEY` is set and the store is encrypted at rest.
+**A new failure, Cause D, is OPEN and live: Hub is rejecting upstream refresh
+tokens and users are dropping mid-session — see §9.**
 **Symptom:** originally, users had to sign in again roughly every morning. After the
 2026-07-28 deploy the symptom changed rather than disappeared: sessions now drop
 **part-way through a working session**, with earlier calls in the same session having
@@ -56,7 +57,7 @@ and quietly renew the Hub token behind it. That option was never set.
 >
 > The reasoning below is retained because it is still an accurate description of what
 > happens **if** the volume is ever removed, and because the plaintext-at-rest problem
-> it uncovered is real and still open (§3).
+> it uncovered was real — it has since been fixed (§3, closed 2026-08-19).
 
 Positrack keeps each user's Hub tokens in a store on disk. If that store lands
 **inside the running container**, which has no durable filesystem, every redeploy,
@@ -102,7 +103,7 @@ Changed files: `mcp/server.py`, `mcp/README.md`, `docs/INSTALL_CHATGPT.md`, `CHA
 | Session token no longer copies Hub's expiry; defaults to **30 days**, tunable via `OAUTH_ACCESS_TOKEN_TTL_SECONDS` | `mcp/server.py:833` | Addresses Cause A |
 | Hub token is renewed 60s *before* it lapses instead of at the instant of expiry, so an in-flight request can't race it | `mcp/server.py:836` | Removes a sporadic "call failed, please reconnect" class of error |
 | The no-volume warning now states that **user tokens**, not just registrations, are lost on restart | `mcp/server.py:575` | Makes Cause B visible in the boot log instead of silent |
-| Stored tokens can be encrypted at rest with `OAUTH_STORE_ENCRYPTION_KEY` | `mcp/server.py:588` | Closes a side issue found during the work — see §3 |
+| Stored tokens can be encrypted at rest with `OAUTH_STORE_ENCRYPTION_KEY` | `mcp/server.py:588` | Closes a side issue found during the work — see §3 (key now set; closed 2026-08-19) |
 | Bad/missing encryption key degrades to working-but-unencrypted rather than losing persistence | `mcp/server.py:599` | A key typo can't reintroduce the daily logout |
 
 **Verification performed:** the pinned `fastmcp==3.4.4` was installed and the real
@@ -124,7 +125,7 @@ day to elapse — confirm with an affected user the morning after the deploy.
 
 ---
 
-## 3. A security issue found along the way — **OPEN, live in production**
+## 3. A security issue found along the way — **CLOSED 2026-08-19**
 
 This was originally filed as conditional on adopting a volume. The volume turned out
 to be **already mounted**, so the condition is met and this is a current exposure, not
@@ -135,12 +136,24 @@ the framework's own default, which encrypts even its throwaway store. Anyone wit
 access to the volume's contents or a snapshot of it is holding live Hub access **and
 refresh** tokens that act with those users' YouTrack permissions.
 
-The boot log states the current mode explicitly:
+The boot log states the current mode explicitly. It **used** to read:
 
 ```
 OAuth storage: persistent at /data/oauth-clients but UNENCRYPTED
 (tokens in plaintext on the volume) — set OAUTH_STORE_ENCRYPTION_KEY to encrypt at rest.
 ```
+
+**Resolved.** `OAUTH_STORE_ENCRYPTION_KEY` was subsequently set on the Railway
+service, and the boot log verified on 2026-08-19 now reads:
+
+```
+OAuth storage: persistent + encrypted at /data/oauth-clients (survives redeploys)
+```
+
+The key is valid — the code falls back to plaintext with a warning on a malformed
+Fernet key, and no such warning is present. **Do not set or rotate this variable
+again**: rotating it invalidates every stored session and forces all ~50 users to
+re-authenticate for no benefit.
 
 The fix is a **one-line environment variable** (`OAUTH_STORE_ENCRYPTION_KEY`, §5 step
 3). Note that setting it invalidates the existing plaintext entries, so everyone signs
@@ -164,8 +177,9 @@ resolve. Two are now closed by inspection; one remains true in general.
    deliberately, so a long session can never outlive real access. Hub **does** issue
    refresh tokens to this client (§1, *Ruled out*), so the cap does not engage and the
    30-day setting stands.
-3. **Secrets and settings live in Railway, not the repository.** *Still true, and the
-   reason §3 is still open.* The encryption key and signing key are environment
+3. **Secrets and settings live in Railway, not the repository.** *Still true; this is
+   why §3 could only be closed by a Railway change, not a merge.* The encryption key
+   and signing key are environment
    variables by design; committing them would be the bug. Committed code also has no
    effect until the service redeploys.
 
@@ -184,8 +198,8 @@ renewing).
 |---|---|---|---|
 | 1 | Review and merge the code change | Engineering | **Done** — PR #47 merged as `1b64d8b`, CI green, Railway auto-deployed successfully |
 | 2 | Mount a Railway volume at `/data` | Railway admin | **Not needed — already mounted.** `positrack-volume` was in place before this work; the boot log confirms `persistent at /data/oauth-clients`. The earlier "requested position: skip it" was answering a question that was already settled |
-| 3 | **Set `OAUTH_STORE_ENCRYPTION_KEY` to a Fernet key** | Railway admin | **OPEN — the only outstanding item.** Mandatory now that the volume is confirmed in use (§3); tokens are in plaintext on disk until it is set. Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`, add it under Railway → Variables. Costs one extra sign-in for everyone |
-| 4 | Confirm `FASTMCP_JWT_SIGNING_KEY` is set and will not be rotated casually | Railway admin | **Unconfirmed** — not inspected, to avoid reading production secrets. Rotating it logs everyone out once. Worth checking alongside step 3 |
+| 3 | **Set `OAUTH_STORE_ENCRYPTION_KEY` to a Fernet key** | Railway admin | **DONE** — verified set 2026-08-19; boot log reads `persistent + encrypted at /data/oauth-clients`. **Do not set or rotate it again** — that invalidates every stored session and costs all ~50 users a sign-in for no benefit |
+| 4 | Confirm `FASTMCP_JWT_SIGNING_KEY` is set and will not be rotated casually | Railway admin | **DONE** — confirmed present on 2026-08-19 by listing Railway variable *names* only (no values read). Still must not be rotated casually: it logs everyone out once |
 | 5 | Redeploy, then read the boot log | Engineering | **Done** — boot line reads `persistent at /data/oauth-clients but UNENCRYPTED`, i.e. storage good, encryption pending step 3 |
 | 6 | Check the deploy/restart history for a nightly pattern | Railway admin | **Done** — no nightly pattern; redeploys were ~daily-to-3-daily and tied to merges. Cause B excluded |
 | 7 | On the Hub "Positrack" service, confirm **refresh tokens are issued** and check the **access-token TTL** | Hub admin | **Done** — refresh tokens confirmed issued (~90-day expiry), `Last Used: Never`. No Hub-side change required |
@@ -263,7 +277,10 @@ endpoint exists at all).
 
 ## 8. Cause C — the connector still dropped mid-session after the fix (2026-07-31)
 
-**Status:** root-caused, code fix written and verified locally, **not yet deployed**.
+**Status:** **DEPLOYED AND VERIFIED.** Merged as `b9af2ae` (PR #55, 2026-08-06) and
+live in production — the boot log on 2026-08-19 confirms the access-token path is
+active. The line below said "not yet deployed" for two weeks after it shipped; that
+was stale, not accurate.
 Unlike Causes A and B this one is entirely in our code — no Railway or Hub change is
 required.
 
@@ -381,8 +398,9 @@ and enough elapsed time to pass the point where sessions previously dropped.
 | 3 | Confirm with an affected user that a session now survives past the point it used to drop | Product Owner |
 
 Everyone signs in once more after this deploy, then sessions should hold. Note this is
-independent of the still-open `OAUTH_STORE_ENCRYPTION_KEY` item in §3 — if that key is
-being set, doing it in the same deploy avoids a second round of sign-ins.
+independent of the `OAUTH_STORE_ENCRYPTION_KEY` item in §3, which has since been
+closed — that key is now set, and **must not be rotated** casually, as doing so costs
+every user a fresh sign-in.
 
 ### Also checked
 
@@ -392,7 +410,87 @@ for this, and this fix does not depend on it.
 
 ---
 
-## 9. References
+## 9. Cause D — Hub rejects the upstream refresh token (2026-08-19) — **OPEN**
+
+**Status:** live in production, root cause **not yet confirmed**. One plausible
+explanation was investigated and **disproved** (below), so this is genuinely open —
+do not act on the disproved theory.
+
+### What the Railway log shows
+
+Read from the running service on 2026-08-19 (timestamps UTC):
+
+```
+05:27–05:40Z   POST /cmcp -> 200 OK  x25          sessions working normally
+08:04:56Z      ERROR Upstream token refresh failed: invalid_token (status=401)
+                                                              proxy.py:1489
+08:05–08:27Z   POST /cmcp -> 401 x11,  POST /token -> 401
+```
+
+Hub is refusing the **refresh token** Positrack presents on the user's behalf. This
+is a different mechanism from Cause C: there, no refresh was *attempted*; here one is
+attempted and the upstream rejects it. The user-visible symptom is the same
+("reconnect this connector"), which is why it is easy to mistake for a Cause C
+regression.
+
+### Disproved: the fastmcp 3.4.5 -> 3.4.7 bump
+
+The running deploy is `fa0816f` — Dependabot PR #76, merged and auto-deployed
+2026-08-18 11:16Z. The first 401 follows 22 minutes later, and `mcp/README.md`
+explicitly warns this dependency is version-sensitive. Rollback looked obvious.
+
+It does not hold up. Diffing the two wheels (`fastmcp` is a metapackage; the code is
+in `fastmcp-slim`) shows only three changed files, and the **entire** change to
+`server/auth/oauth_proxy/proxy.py` is:
+
+```python
+- token_endpoint_url = f"{self.base_url}/token"      # -> https://…app//token
++ token_endpoint_url = self.token_endpoint_url       # -> https://…app/token
+```
+
+That is a **bug fix** for the CIMD `private_key_jwt` audience — it corrects a
+double-slash in the token endpoint URL. It governs how a **downstream** client
+(claude.ai connects via CIMD; the AS metadata advertises
+`client_id_metadata_document_supported: true`) authenticates *to Positrack*. It has
+no bearing on how Positrack authenticates *to Hub*, which is the leg that is failing.
+
+**Rolling back to 3.4.5 would reintroduce the double-slash bug and most likely not
+fix this.** The timing correlation is real but appears to be coincidence — a redeploy
+restarts the container, and any refresh due around then surfaces at once.
+
+### Leading hypothesis (unconfirmed)
+
+Hub may issue **single-use / rotating** refresh tokens. If two tool calls refresh
+concurrently, one rotation wins and invalidates the other's token, yielding exactly
+`invalid_token`. With ~50 users and MCP clients that fire tool calls in parallel, such
+a race is likely. §5 step 7 recorded Hub's refresh tokens as ~90-day with
+`Last Used: Never` on 2026-07-28, so plain expiry does not explain an 2026-08-19
+failure.
+
+### What would settle it
+
+| # | Action | Owner |
+|---|---|---|
+| 1 | On the Hub "Positrack" service, check whether refresh tokens are **single-use / rotating**, and whether the token list shows mass invalidation | Hub admin |
+| 2 | Stand up a **staging** Railway service against the same Hub, so refresh failures can be reproduced without disturbing the 50 production users | Engineering |
+| 3 | Extend CI to exercise the OAuth handshake + a refresh cycle — today it runs only pytest, the sync gate and `py_compile`, so nothing in this area is covered | Engineering |
+
+Railway's log window only reaches back to the last container boot, so evidence from
+before 2026-08-18 11:17Z is no longer available. Capture logs promptly on the next
+occurrence.
+
+### Guard added as a result
+
+Dependabot no longer bumps `fastmcp` or `py-key-value-aio`
+(`.github/dependabot.yml`). CI cannot catch a regression in either, so an automatic
+bump merges green under branch protection and Railway deploys it straight to
+production — which is how #76 reached users unreviewed. Bump both by hand, after
+reading the upstream diff for `server/auth/oauth_proxy/` and running the
+dual-transport smoke test in `mcp/README.md`.
+
+---
+
+## 10. References
 
 - Connector setup as documented today: `docs/INSTALL_CLAUDE.md:6`, `docs/INSTALL_CHATGPT.md`
 - OAuth proxy implementation: `mcp/server.py:556` (token store), `mcp/server.py:644`
