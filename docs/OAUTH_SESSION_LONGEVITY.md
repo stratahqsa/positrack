@@ -458,14 +458,57 @@ no bearing on how Positrack authenticates *to Hub*, which is the leg that is fai
 fix this.** The timing correlation is real but appears to be coincidence — a redeploy
 restarts the container, and any refresh due around then surfaces at once.
 
-### Leading hypothesis (unconfirmed)
+### DISPROVED: refresh-token rotation
 
-Hub may issue **single-use / rotating** refresh tokens. If two tool calls refresh
-concurrently, one rotation wins and invalidates the other's token, yielding exactly
-`invalid_token`. With ~50 users and MCP clients that fire tool calls in parallel, such
-a race is likely. §5 step 7 recorded Hub's refresh tokens as ~90-day with
-`Last Used: Never` on 2026-07-28, so plain expiry does not explain an 2026-08-19
-failure.
+Hub's docs do say it "may revoke the old refresh token after issuing a new one", so
+rotation looked like the answer. Hub's own records disprove it.
+
+Account Security -> Refresh Tokens for the admin user on 2026-08-19:
+
+| Client Service | Requested | Last Used | Expires |
+|---|---|---|---|
+| Positrack ChatGPT (x5) | Jun 28, 2026 | **Never** | Sep 26, 2026 |
+| Positrack ChatGPT | Jun 29, 2026 | **Never** | Sep 27, 2026 |
+| YouTrack Mobile | Jul 30, 2026 | Aug 17, 2026 | Oct 28, 2026 |
+
+Every YouTrack Mobile token records real use, so the column works and Hub does log
+refreshes. **Every Positrack token reads `Never`** — six of them, all still unexpired.
+
+### The actual finding: upstream refresh has NEVER succeeded
+
+Not once, for any of these tokens. Rotation would leave usage behind; there is none.
+Nor is this a regression from the fastmcp bump — the tokens predate it by two months.
+
+This means **the 30-day session from Cause A has never actually worked.** It depends
+on a refresh that always fails, so a session only ever lasted as long as Hub's initial
+access token and then died. That single defect explains both the original
+"re-authenticate every morning" symptom and the later mid-session drops. Causes A and
+C addressed real bugs, but neither could deliver long sessions while this held.
+
+### Why Hub rejects it (narrowed, not yet closed)
+
+The server logs `Upstream token refresh failed: invalid_token (status=401)`. That
+string is the exception from the upstream refresh call
+(`oauth_proxy/proxy.py`, the `except` around `oauth_client.refresh_token`).
+
+**`invalid_token` is not a Hub token-endpoint error at all.** Hub documents exactly
+these for that endpoint: `invalid_request`, `invalid_client`, `invalid_grant`,
+`unauthorized_client`, `unsupported_grant_type`, `invalid_scope`. Confirmed live — a
+bogus refresh token returns `invalid_grant` / 403 / "Unknown refresh token", not
+`invalid_token` / 401. `invalid_token` is an RFC 6750 *bearer-token* error, returned
+by resource servers.
+
+So the refresh request is being rejected **before Hub evaluates the grant**, which is
+consistent with it carrying the wrong authentication shape (e.g. a Bearer
+`Authorization` header where Hub expects client credentials) rather than with anything
+wrong with the token. A malformed-auth theory also fits a **100%** failure rate, which
+no expiry or race theory does.
+
+Note a probe that looks tempting but proves nothing: sending a bogus refresh token
+with a deliberately wrong client secret still returns `invalid_grant`, because Hub
+validates the token before the client. Client authentication therefore **cannot** be
+confirmed or excluded that way — a control run confirmed all three combinations
+(right secret, wrong secret, bogus client id) return identical responses.
 
 ### Ruled out: Hub-side redirect-URI / client misconfiguration (2026-08-19)
 
@@ -495,7 +538,9 @@ login page.
 
 | # | Action | Owner |
 |---|---|---|
-| 1 | On the Hub "Positrack" service, check whether refresh tokens are **single-use / rotating**, and whether the token list shows mass invalidation | Hub admin |
+| 1 | ~~Check whether Hub rotates refresh tokens~~ — **done, disproved** (see above) | Hub admin |
+| 1a | Capture the **full** upstream exception: raise the server's log level so the `invalid_token` error's response body and request headers are visible. That should name the rejected auth shape outright | Engineering |
+| 1b | Reproduce a refresh locally against Hub with a genuine refresh token, trying `client_secret_post` vs `client_secret_basic`, to confirm which shape Hub accepts | Engineering |
 | 2 | Stand up a **staging** Railway service against the same Hub, so refresh failures can be reproduced without disturbing the 50 production users | Engineering |
 | 3 | Extend CI to exercise the OAuth handshake + a refresh cycle — today it runs only pytest, the sync gate and `py_compile`, so nothing in this area is covered | Engineering |
 
