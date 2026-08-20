@@ -5,9 +5,11 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtDate } from "@/lib/format";
 import type { Epic } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 import { IssueLink } from "@/components/ui/issue-link";
+import { priorityVariant } from "@/components/weekly/badge-tone";
 
-type SortKey = "id" | "summary" | "assignee" | "created";
+type SortKey = "id" | "summary" | "assignee" | "priority" | "created";
 type SortDir = "asc" | "desc";
 interface SortState {
   key: SortKey;
@@ -24,6 +26,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "id", label: "Epic" },
   { key: "summary", label: "Summary" },
   { key: "assignee", label: "Assignee" },
+  { key: "priority", label: "Priority" },
   { key: "created", label: "Created" },
 ];
 
@@ -35,6 +38,8 @@ function sortValue(epic: Epic, key: SortKey): string | number | null {
       return epic.summary ?? "";
     case "assignee":
       return epic.assignee || null;
+    case "priority":
+      return epic.priority || null;
     case "created":
       return epic.created;
   }
@@ -100,7 +105,7 @@ function Th({
  * Sortable table for the Effort report's "No Stories" section — epics with
  * zero child stories, so unlike epic-effort-table.tsx (Done/Pending/Mixed)
  * there's no effort/expand logic to carry: just Epic/Summary/Assignee/
- * Created, each column click-to-sort. A dedicated component rather than a
+ * Priority/Created, each column click-to-sort. A dedicated component rather than a
  * 4th EpicEffortTable variant, since that component's column set and row
  * logic (rollup effort, sub-row expand, Est badge) are all built around
  * epics that DO have stories — forcing "no stories" through it would mean
@@ -128,7 +133,7 @@ export function NoStoriesTable({ epics }: { epics: Epic[] }) {
 
   return (
     <div className="overflow-x-auto scroll-slim">
-      <table className="w-full min-w-[520px] border-collapse">
+      <table className="w-full min-w-[620px] border-collapse">
         <thead className="bg-surface-2/95">
           <tr>
             {COLUMNS.map((c) => (
@@ -147,6 +152,15 @@ export function NoStoriesTable({ epics }: { epics: Epic[] }) {
               </td>
               <td className="px-2 py-2 align-top text-fg/80">
                 {epic.assignee || <span className="text-faint">Unassigned</span>}
+              </td>
+              <td className="px-2 py-2 align-top">
+                {epic.priority ? (
+                  <Badge variant={priorityVariant(epic.priority)} size="sm">
+                    {epic.priority}
+                  </Badge>
+                ) : (
+                  <span className="text-faint">—</span>
+                )}
               </td>
               <td className="whitespace-nowrap px-2 py-2 align-top text-muted">{fmtDate(epic.created)}</td>
             </tr>
