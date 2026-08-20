@@ -32,6 +32,12 @@ name: Snapshot
 #
 # SETUP REQUIRED (repository secrets):
 #   YT_TOKEN               read-only YouTrack token (the snapshot only READS).
+#   MUST be a DEDICATED SERVICE ACCOUNT, never a person's own token. On
+#   2026-08-18 this secret held a maintainer's personal admin token; they
+#   deleted it during routine hygiene and the hourly snapshot 401'd for ~10
+#   hours. A personal token also means the job runs with that person's full
+#   admin rights when it only ever reads. See docs/MAINTENANCE.md
+#   ("CI service account") for the exact account + roles.
 #   BLOB_READ_WRITE_TOKEN  Vercel Blob store read/write token.
 #   SNAPSHOT_SECRET        long random string used as the Blob path prefix; the
 #                          dashboard's SNAPSHOT_DATA_URL must end with it.
