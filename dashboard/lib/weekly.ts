@@ -13,22 +13,31 @@ const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;
 
 /**
- * The Weekly Deadline inclusion filter (Examples_4 §6). The Phase-1 scope
- * filter is already applied upstream (schedule.stories only ever contains
- * Phase-1, non-excluded-epic stories — see lib/types.ts ScheduleBlock), so
- * this covers the remaining 4 checks:
- *   1. done stories are excluded unless resolved AFTER the Jun-29 cutoff
- *      (pending stories always pass this check);
- *   2. both a dev deadline and a QA deadline must be present;
- *   3. at least one of dev/UI/QA estimate must be > 0;
- *   4. the dev deadline must fall on/before the end of the currently-shown
- *      week (`weekEndMs`) — deadlines further out aren't shown yet.
+ * The 3 inclusion checks shared by both the main Week 1..current-week
+ * timeline and the "Looking Ahead" future-weeks preview: done-exclusion,
+ * both deadlines present, at least one estimate > 0 (Examples_4 §6 checks
+ * 1-3). Each caller adds its own "which week window" check on top of this —
+ * weeklyInclude caps to the current week's end, bucketFutureWeeks checks a
+ * specific later week's bounds — so the two views can never disagree about
+ * anything except which week window they're each looking at.
  */
-export function weeklyInclude(s: ScheduleStory, jun29Ms: number, weekEndMs: number): boolean {
+function baseInclude(s: ScheduleStory, jun29Ms: number): boolean {
   if (s.done && (s.resolved == null || s.resolved <= jun29Ms)) return false;
   if (s.ddTs == null || s.qaTs == null) return false;
   if (!(s.devEst > 0 || s.uiEst > 0 || s.qaEst > 0)) return false;
-  if (s.ddTs > weekEndMs) return false;
+  return true;
+}
+
+/**
+ * The Weekly Deadline inclusion filter (Examples_4 §6): baseInclude's 3
+ * checks, plus the dev deadline must fall on/before the end of the
+ * currently-shown week (`weekEndMs`) — deadlines further out aren't shown
+ * in the main timeline (see bucketFutureWeeks for the separate preview of
+ * the next couple of weeks).
+ */
+export function weeklyInclude(s: ScheduleStory, jun29Ms: number, weekEndMs: number): boolean {
+  if (!baseInclude(s, jun29Ms)) return false;
+  if ((s.ddTs as number) > weekEndMs) return false;
   return true;
 }
 
@@ -38,6 +47,9 @@ export interface WeekGroup {
   startMs: number;
   endMs: number;
   isCurrent: boolean;
+  /** True only for bucketFutureWeeks' "Looking Ahead" groups — drives that
+   *  section's distinct (neither past-red nor current-blue) styling. */
+  isFuture?: boolean;
   stories: ScheduleStory[];
 }
 
@@ -86,6 +98,58 @@ export function bucketByWeek(
     group.stories.sort((a, b) => {
       const diff = (a.qaTs ?? Infinity) - (b.qaTs ?? Infinity);
       return diff !== 0 ? diff : a.storyId.localeCompare(b.storyId);
+    });
+  }
+
+  return groups;
+}
+
+/**
+ * Up to `weeksAhead` release weeks AFTER the current one (e.g. Week 10, Week
+ * 11 when the current week is Week 9) — the "Looking Ahead" preview
+ * (2026-08). Same story-inclusion rules as the main timeline (baseInclude),
+ * but each week is capped to ITS OWN bounds instead of "on or before the
+ * current week's end" — the exact restriction bucketByWeek enforces via
+ * weeklyInclude, lifted here for just these next couple of weeks.
+ *
+ * Unlike bucketByWeek, a future week with zero qualifying stories is
+ * DROPPED entirely rather than rendered empty — "add 2 more weeks... if
+ * there are any tickets under those weeks" (PM-confirmed). Deliberately a
+ * separate function/output from bucketByWeek so callers can keep this
+ * preview fully out of the main KPI/filter pipeline: its stories must never
+ * be summed into the page's top KPI strip.
+ */
+export function bucketFutureWeeks(
+  stories: ScheduleStory[],
+  anchorMs: number,
+  jun29Ms: number,
+  nowMs: number,
+  weeksAhead = 2,
+): WeekGroup[] {
+  const { index: curIdx } = currentWeek(nowMs, anchorMs);
+  const groups: WeekGroup[] = [];
+
+  for (let i = 1; i <= weeksAhead; i++) {
+    const index = curIdx + i;
+    const { startMs, endMs } = currentWeek(anchorMs + index * WEEK_MS, anchorMs);
+    const weekStories = stories.filter(
+      (s) => baseInclude(s, jun29Ms) && weekIndexOf(s.ddTs as number, anchorMs) === index,
+    );
+    if (weekStories.length === 0) continue;
+
+    weekStories.sort((a, b) => {
+      const diff = (a.qaTs ?? Infinity) - (b.qaTs ?? Infinity);
+      return diff !== 0 ? diff : a.storyId.localeCompare(b.storyId);
+    });
+
+    groups.push({
+      index,
+      label: weekLabel(index, startMs, endMs),
+      startMs,
+      endMs,
+      isCurrent: false,
+      isFuture: true,
+      stories: weekStories,
     });
   }
 

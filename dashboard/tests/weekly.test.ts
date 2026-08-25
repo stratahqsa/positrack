@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bucketByWeek, weeklyInclude } from "../lib/weekly";
+import { bucketByWeek, bucketFutureWeeks, weeklyInclude } from "../lib/weekly";
 import { baseStory } from "./fixtures";
 
 /**
@@ -267,6 +267,67 @@ describe("bucketByWeek", () => {
 
     const groups = bucketByWeek(stories, ANCHOR, JUN29_CUTOFF, NOW);
 
+    expect(groups[0].stories.map((s) => s.storyId)).toEqual(["PXB1-1000", "PXB1-9999"]);
+  });
+});
+
+/**
+ * "Looking Ahead" preview (2026-08, PM-confirmed): up to 2 weeks after the
+ * current one, but ONLY for weeks that actually have qualifying stories --
+ * unlike bucketByWeek's always-continuous main timeline. NOW = Thu 9 Jul
+ * 2026 -> current week = Week 2 (index 1), so the two preview weeks are
+ * Week 3 (index 2, 14-20 Jul) and Week 4 (index 3, 21-27 Jul).
+ */
+describe("bucketFutureWeeks", () => {
+  it("returns nothing when no story falls in the next 2 weeks", () => {
+    const stories = [baseStory({ storyId: "THIS-WEEK", ddTs: Date.UTC(2026, 6, 9), qaTs: Date.UTC(2026, 6, 9), devEst: 100 })];
+    expect(bucketFutureWeeks(stories, ANCHOR, JUN29_CUTOFF, NOW)).toEqual([]);
+  });
+
+  it("includes a week 1 out with a qualifying story, marked isFuture and not isCurrent", () => {
+    const stories = [
+      baseStory({ storyId: "WK3", ddTs: Date.UTC(2026, 6, 15), qaTs: Date.UTC(2026, 6, 20), devEst: 100 }),
+    ];
+    const groups = bucketFutureWeeks(stories, ANCHOR, JUN29_CUTOFF, NOW);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].index).toBe(2);
+    expect(groups[0].isFuture).toBe(true);
+    expect(groups[0].isCurrent).toBe(false);
+    expect(groups[0].stories.map((s) => s.storyId)).toEqual(["WK3"]);
+  });
+
+  it("drops an empty future week entirely instead of rendering it empty", () => {
+    // Only Week 4 (index 3) has a story; Week 3 (index 2) has none and must
+    // not appear at all (unlike bucketByWeek's continuous-timeline groups).
+    const stories = [
+      baseStory({ storyId: "WK4", ddTs: Date.UTC(2026, 6, 22), qaTs: Date.UTC(2026, 6, 27), devEst: 100 }),
+    ];
+    const groups = bucketFutureWeeks(stories, ANCHOR, JUN29_CUTOFF, NOW);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].index).toBe(3);
+  });
+
+  it("does not include a 3rd week out (beyond the default weeksAhead=2)", () => {
+    const stories = [
+      // Week 5 (index 4, 28 Jul - 3 Aug) -- one week too far.
+      baseStory({ storyId: "WK5", ddTs: Date.UTC(2026, 6, 29), qaTs: Date.UTC(2026, 7, 3), devEst: 100 }),
+    ];
+    expect(bucketFutureWeeks(stories, ANCHOR, JUN29_CUTOFF, NOW)).toEqual([]);
+  });
+
+  it("applies the same baseInclude rules as the main timeline (e.g. missing QA deadline excludes)", () => {
+    const stories = [
+      baseStory({ storyId: "NO-QA", ddTs: Date.UTC(2026, 6, 15), qaTs: null, devEst: 100 }),
+    ];
+    expect(bucketFutureWeeks(stories, ANCHOR, JUN29_CUTOFF, NOW)).toEqual([]);
+  });
+
+  it("sorts by qaTs ascending within a future week", () => {
+    const stories = [
+      baseStory({ storyId: "PXB1-9999", ddTs: Date.UTC(2026, 6, 15), qaTs: Date.UTC(2026, 6, 20), devEst: 100 }),
+      baseStory({ storyId: "PXB1-1000", ddTs: Date.UTC(2026, 6, 15), qaTs: Date.UTC(2026, 6, 18), devEst: 100 }),
+    ];
+    const groups = bucketFutureWeeks(stories, ANCHOR, JUN29_CUTOFF, NOW);
     expect(groups[0].stories.map((s) => s.storyId)).toEqual(["PXB1-1000", "PXB1-9999"]);
   });
 });

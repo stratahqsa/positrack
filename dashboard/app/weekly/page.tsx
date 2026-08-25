@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { loadSnapshot } from "@/lib/data";
 import { applyFilters, deriveFilterOptions, parseFilters } from "@/lib/filters";
-import { bucketByWeek, weeklyInclude } from "@/lib/weekly";
+import { bucketByWeek, bucketFutureWeeks, weeklyInclude } from "@/lib/weekly";
 import { DEFAULT_WEEK1_ANCHOR, currentWeek, parseAnchor } from "@/lib/week";
 import { Header } from "@/components/shell/header";
 import { Nav } from "@/components/shell/nav";
@@ -53,6 +53,15 @@ export default async function WeeklyPage({
   // i.e. the flattened set of stories across the groups actually rendered.
   const kpiStories = visibleGroups.flatMap((g) => g.stories);
 
+  // "Looking Ahead" preview (2026-08, PM-confirmed): up to 2 release weeks
+  // AFTER the current one, shown ONLY for weeks that actually have
+  // qualifying stories — same Assignee/Sprint/State/Epic filters as the main
+  // view (`filtered`), but deliberately fed from neither `bucketByWeek` nor
+  // `visibleGroups`, so it can never affect `kpiStories`/KpiCards above, and
+  // isn't subject to the Week filter (which only knows about weeks
+  // 1..current — see FilterBar's weekCount).
+  const futureGroups = bucketFutureWeeks(filtered, anchorMs, jun29Ms, nowMs);
+
   // Filter-option pools are scoped to "included" stories (weeklyInclude,
   // evaluated against the CURRENT week's end) so the dropdowns never offer a
   // choice that can't produce a result in this report, and are derived
@@ -98,6 +107,17 @@ export default async function WeeklyPage({
             ))}
           </div>
         )}
+
+        {futureGroups.length > 0 ? (
+          <div>
+            <h2 className="mb-2 text-[13px] font-semibold tracking-tight text-fg">Looking Ahead</h2>
+            <div className="space-y-4">
+              {futureGroups.map((g) => (
+                <WeekSection key={g.index} group={g} epicNames={epicNames} />
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <footer className="flex flex-col items-start justify-between gap-2 border-t border-border/60 pt-4 text-[11px] text-faint sm:flex-row sm:items-center">
           <span>
