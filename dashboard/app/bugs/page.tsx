@@ -31,6 +31,7 @@ export default async function BugsPage() {
   // come from bugs.medium_by_state/low_by_state (state-breakdown.tsx never
   // recomputes those, only resolves "which tickets are in state X").
   const openBugs = bugs?.open_bugs ?? [];
+  const highOpenBugs = openBugs.filter((b) => b.priority === "High" || b.priority === "Urgent");
   const mediumOpenBugs = openBugs.filter((b) => b.priority === "Medium");
   const lowOpenBugs = openBugs.filter((b) => b.priority === "Low");
 
@@ -93,11 +94,18 @@ export default async function BugsPage() {
             </Section>
 
             <Section
-              title="Medium & Low by State"
+              title="High/Urgent, Medium & Low by State"
               tone="warn"
-              count={bugs.kpi.open_medium + bugs.kpi.open_low}
+              count={bugs.kpi.open_high + bugs.kpi.open_medium + bugs.kpi.open_low}
             >
               <div className="space-y-6 p-4">
+                <StateBreakdown
+                  title="High & Urgent"
+                  rows={bugs.high_by_state ?? []}
+                  tone="danger"
+                  bugs={highOpenBugs}
+                  tz={tz}
+                />
                 <StateBreakdown
                   title="Medium"
                   rows={bugs.medium_by_state}

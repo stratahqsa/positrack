@@ -198,6 +198,7 @@ def build_bugs(ctx, yt, cfg, now_ms):
         "window": {"start_ms": w["start_ms"], "end_ms": w["end_ms"], "label": w["label"]},
         "new_in_window": by_prio,
         "open_high_older": old_high,
+        "high_by_state": state_breakdown(q2),   # High+Urgent combined (q2 already folds Urgent into High)
         "medium_by_state": state_breakdown(q3),
         "low_by_state": state_breakdown(q4),
         "module_insights": modules,
