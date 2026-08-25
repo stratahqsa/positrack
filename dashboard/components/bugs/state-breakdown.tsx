@@ -8,9 +8,10 @@ import type { Bug, StateBreakdownRow } from "@/lib/types";
 import { stateVariant } from "@/components/weekly/badge-tone";
 import { BugTable } from "@/components/bugs/bug-table";
 
-type Tone = "info" | "good";
+type Tone = "danger" | "info" | "good";
 
 const BAR_FILL: Record<Tone, string> = {
+  danger: "bg-danger",
   info: "bg-info",
   good: "bg-good",
 };
@@ -96,10 +97,12 @@ function Th({
  * proportional to the panel's max count · percentage of this priority's
  * open total. `row.bar` (0..1) and `row.pct` arrive pre-computed from the
  * snapshot (Plan 1) — this just renders them. `tone` picks the bar fill
- * color: `info` for the Medium panel, `good` for Low, matching the same
- * priority -> color mapping bug-kpi.tsx uses (via priorityVariant's
- * High/Medium/Low -> warn/info/good convention) so the same hue means the
- * same priority everywhere on the page.
+ * color: `danger` for High/Urgent, `info` for Medium, `good` for Low,
+ * matching the same priority -> color mapping bug-kpi.tsx uses (via
+ * priorityVariant's High/Medium/Low -> warn/info/good convention -- danger
+ * here is one notch hotter than priorityVariant's own "warn" for High,
+ * since this panel's High row is combined with Urgent) so the same hue
+ * means the same priority everywhere on the page.
  *
  * State and Count headers are clickable (same re-sort-the-array pattern as
  * weekly/story-table.tsx / bugs/bug-table.tsx). Bar/Percentage stay

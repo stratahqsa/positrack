@@ -8,8 +8,8 @@ def test_bugs_block_shape():
     class FakeYT:
         def get_issues(self, *a, **k): return []
     b = bugs.build_bugs(ctx=None, yt=FakeYT(), cfg=cfg, now_ms=1752035640000)
-    assert set(b) == {"window", "new_in_window", "open_high_older", "medium_by_state",
-                      "low_by_state", "module_insights", "module_insights_open",
+    assert set(b) == {"window", "new_in_window", "open_high_older", "high_by_state",
+                      "medium_by_state", "low_by_state", "module_insights", "module_insights_open",
                       "module_insights_high_urgent", "aging_high_urgent", "aging_medium",
                       "seven_day_bugs", "open_bugs", "kpi"}
     assert set(b["new_in_window"]) == {"High", "Medium", "Low"}
@@ -54,3 +54,6 @@ def test_urgent_folds_into_high_everywhere():
     # 1 Urgent among the open/older High bugs.
     assert b["kpi"]["new_urgent"] == 1
     assert b["kpi"]["open_urgent"] == 1
+    # high_by_state (Bug Analysis's High & Urgent by-state bars, 2026-08):
+    # both open High and open Urgent bugs are OPEN state, folded into one row.
+    assert b["high_by_state"] == [{"state": "OPEN", "count": 2, "bar": 1.0, "pct": 100.0}]

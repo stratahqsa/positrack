@@ -545,6 +545,10 @@ export interface BugsBlock {
   window: { start_ms: number; end_ms: number; label: string };
   new_in_window: { High: Bug[]; Medium: Bug[]; Low: Bug[] };
   open_high_older: Bug[];
+  // Optional for the same deploy-order reason as seven_day_bugs/open_bugs
+  // below: the live snapshot is regenerated independently of a dashboard
+  // deploy, so code reading this before the next snapshot run must not crash.
+  high_by_state?: StateBreakdownRow[];
   medium_by_state: StateBreakdownRow[];
   low_by_state: StateBreakdownRow[];
   module_insights: ModuleInsight[];
