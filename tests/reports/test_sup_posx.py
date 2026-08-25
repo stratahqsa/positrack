@@ -59,7 +59,7 @@ def test_build_sup_posx_query_excludes_solved_and_closed():
     yt = FakeYT([])
     sup_posx.build_sup_posx(ctx=None, yt=yt, now_ms=1745100000000)
     assert "project: SUP" in yt.last_query
-    assert "Type: {POS X}" in yt.last_query
+    assert "Product: {POS X}" in yt.last_query
     assert "State: -Solved" in yt.last_query
     assert "State: -Closed" in yt.last_query
 

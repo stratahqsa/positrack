@@ -26,7 +26,7 @@ export default async function SupportTicketsPage() {
         <div>
           <h1 className="text-[15px] font-semibold tracking-tight text-fg">Support Tickets Report</h1>
           <p className="mt-0.5 text-[12px] text-muted">
-            SUP project · Type: POS X · pending (excludes Solved/Closed)
+            SUP project · Product: POS X · pending (excludes Solved/Closed)
           </p>
         </div>
 

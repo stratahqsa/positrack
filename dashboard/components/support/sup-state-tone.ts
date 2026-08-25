@@ -2,7 +2,7 @@ import type { BadgeVariant } from "@/components/weekly/badge-tone";
 import { categoricalVariant } from "../../lib/categorical-color";
 
 /**
- * PM-confirmed priority tiers for SUP/Type:POS X ticket states (2026-08-08):
+ * PM-confirmed priority tiers for SUP/Product:POS X ticket states (2026-08-08):
  *  - "Escalated": top priority, needs the most attention -> danger (red)
  *  - "New", "On hold": medium priority, needs to be attended to -> warn (amber)
  *  - "X Dev Ticket Created": positive/low priority, already handed off to

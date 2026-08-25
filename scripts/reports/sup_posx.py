@@ -1,11 +1,18 @@
 # scripts/reports/sup_posx.py
 """Support Tickets data block (SUP project). SUP is a separate YouTrack
-project from PXB1 with its own schema -- "Type" (not PXB1's "TaskType") is
-the field that carries "POS X" as one of many enum values. Pending = Type:
-POS X, State not in (Solved, Closed) -- YouTrack's built-in #Unresolved flag
-is NOT equivalent here (it still included 21 already-"Solved" tickets when
-checked live 2026-08-01), so the exclusion is explicit rather than relying
-on that shortcut."""
+project from PXB1 with its own schema -- "Product" (not PXB1's "TaskType",
+and not SUP's own "Type" field, which the report used before 2026-08) is
+the field that carries "POS X" as one of many enum values. Pending =
+Product: POS X, State not in (Solved, Closed) -- YouTrack's built-in
+#Unresolved flag is NOT equivalent here (it still included 21 already-
+"Solved" tickets when checked live 2026-08-01), so the exclusion is
+explicit rather than relying on that shortcut.
+
+Switched from Type to Product 2026-08 (PM-confirmed): every ticket with
+Product: POS X also has Type: POS X, so Product is the narrower/more
+correct field -- Type: POS X alone also matched at least one ticket whose
+Product was simply never filled in (SUP-22467), which the PM confirmed
+should NOT count as a POS X ticket until someone sets Product on it."""
 from collections import Counter
 from . import parse
 
@@ -59,7 +66,7 @@ def build_sup_posx(ctx, yt, now_ms):
     baselines when it doesn't."""
     F = "id,idReadable,summary,created,reporter(fullName,login),customFields(name,value(name,text))"
     state_excl = "".join(" State: -%s" % s for s in EXCLUDED_STATES)
-    query = "project: %s Type: {POS X}%s" % (SUP_PROJECT, state_excl)
+    query = "project: %s Product: {POS X}%s" % (SUP_PROJECT, state_excl)
     tickets = [parse_ticket(r) for r in yt.get_issues(ctx, query, fields=F)]
     for t in tickets:
         t["age_days"] = _age_days(t, now_ms)

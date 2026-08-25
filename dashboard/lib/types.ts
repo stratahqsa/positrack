@@ -329,7 +329,7 @@ export interface Snapshot {
   /** Bug Blocker Dashboard data block (RE-OPEN dev tickets + linked bugs).
    *  Optional: absent on snapshots that predate the feature. */
   bug_blocker?: BugBlockerBlock;
-  /** Support Tickets data block (SUP project, Type: POS X, pending only).
+  /** Support Tickets data block (SUP project, Product: POS X, pending only).
    *  Optional: absent on snapshots that predate the feature. */
   sup_posx?: SupPosxBlock;
   /** Android Status Report data block (PXB1-3295 "POS (Android)" epic --
@@ -352,7 +352,7 @@ export interface SupTicket {
   age_days: number | null;
 }
 
-/** Support Tickets data block: every currently-pending SUP/Type:POS X
+/** Support Tickets data block: every currently-pending SUP/Product:POS X
  *  ticket (State not in Solved/Closed), plus By State / By Location
  *  breakdowns (same {state,count,bar,pct} shape as BugsBlock's
  *  medium_by_state/low_by_state -- reused as-is for the Location panel too,
