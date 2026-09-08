@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-ssr
+*.local
+.vercel
+tsconfig.tsbuildinfo
+.DS_Store
+*.log
+npm-debug.log*

@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Design Style: Interactive Prototype Documentation
+  - Warm off-white background for approachability
+  - Posibolt brand blue as primary
+  - Typography: DM Sans (headings), Source Sans 3 (body), JetBrains Mono (code)
+  - Light theme only.
+*/
+
+:root {
+  /* Posibolt Brand Colors */
+  --primary: oklch(0.488 0.200 264);
+  --primary-foreground: oklch(0.985 0 0);
+
+  /* Chart colors - brand aligned */
+  --chart-1: oklch(0.488 0.200 264);
+  --chart-2: oklch(0.696 0.170 162);
+  --chart-3: oklch(0.769 0.188 70);
+  --chart-4: oklch(0.704 0.191 22);
+  --chart-5: oklch(0.645 0.246 16);
+
+  --radius: 0.75rem;
+
+  /* Warm off-white background */
+  --background: oklch(0.985 0.002 90);
+  --foreground: oklch(0.205 0.015 60);
+
+  /* Cards with subtle warmth */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.205 0.015 60);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.205 0.015 60);
+
+  /* Secondary - warm gray */
+  --secondary: oklch(0.968 0.003 90);
+  --secondary-foreground: oklch(0.405 0.015 60);
+
+  /* Muted - subtle warm tones */
+  --muted: oklch(0.955 0.005 90);
+  --muted-foreground: oklch(0.505 0.015 60);
+
+  /* Accent - teal for positive flows */
+  --accent: oklch(0.696 0.170 162);
+  --accent-foreground: oklch(0.985 0 0);
+
+  /* Destructive - coral for warnings */
+  --destructive: oklch(0.704 0.191 22);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  /* Borders */
+  --border: oklch(0.915 0.005 90);
+  --input: oklch(0.915 0.005 90);
+  --ring: oklch(0.488 0.200 264);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Source Sans 3", system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "DM Sans", system-ui, sans-serif;
+    font-weight: 600;
+  }
+  code, pre {
+    font-family: "JetBrains Mono", monospace;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      max-width: 1400px;
+    }
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: oklch(0.7 0 0 / 0.3);
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.5 0 0 / 0.5);
+  }
+
+  /* Gradient text utility */
+  .gradient-text {
+    background: linear-gradient(135deg, oklch(0.488 0.200 264), oklch(0.696 0.170 162));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Flow diagram node styles */
+  .flow-node {
+    @apply bg-white rounded-xl shadow-lg border border-border p-4 transition-all duration-300;
+  }
+  .flow-node:hover {
+    @apply shadow-xl -translate-y-1;
+  }
+  .flow-node-active {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
+
+  /* Device frame styles */
+  .device-frame {
+    @apply bg-slate-800 rounded-2xl p-2 shadow-2xl;
+  }
+  .device-frame-inner {
+    @apply bg-white rounded-xl overflow-hidden;
+  }
+
+  /* Section divider */
+  .section-divider {
+    @apply h-px bg-gradient-to-r from-transparent via-border to-transparent;
+  }
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Animation keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes flow-arrow {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-flow-arrow {
+  stroke-dasharray: 10 5;
+  animation: flow-arrow 1s linear infinite;
+}
