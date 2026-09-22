@@ -171,7 +171,7 @@ def field_values(ctx, short, field):
     return []
 
 # ---------- issue I/O ----------
-ISSUE_FIELDS = ("idReadable,summary,created,resolved,updated,"
+ISSUE_FIELDS = ("idReadable,summary,description,created,resolved,updated,"
                 "reporter(login,fullName),project(shortName),"
                 "customFields(name,value(name,login,fullName,minutes,presentation,text))")
 
