@@ -361,11 +361,12 @@ def search_query(query, project="", location=""):
     """The exact scoped query string a search will display/use (pure)."""
     return (scope_clause(project, location) + query).strip()
 
-def get_issue(ctx, iid):
+def get_issue(ctx, iid, comments_limit=8):
     base = GET(ctx, f"/api/issues/{iid}?fields={urllib.parse.quote(ISSUE_FIELDS)}")
     links = GET(ctx, f"/api/issues/{iid}/links?fields=direction,linkType(name,sourceToTarget,targetToSource),"
                      f"issues(idReadable,summary,resolved)")
-    comments = GET(ctx, f"/api/issues/{iid}/comments?fields=text,created,author(login)&$top=8")
+    top = min(int(comments_limit), 100)
+    comments = GET(ctx, f"/api/issues/{iid}/comments?fields=text,created,author(login)&$top={top}")
     return {"base": base, "links": links, "comments": comments}
 
 def _issue_block(query, columns, issues):
@@ -1375,11 +1376,34 @@ def reassign(ctx, from_user, to_user, project="", comment="", commit=False, inst
         out["reassigned"] = len(ids)
     return out
 
+# ---------- visibility helper ----------
+def _build_visibility(permitted_groups=None, permitted_users=None):
+    """Build a YouTrack visibility payload, or None when both params are empty.
+    permitted_groups: comma-separated group names.
+    permitted_users: comma-separated logins."""
+    groups = [g.strip() for g in (permitted_groups or "").split(",") if g.strip()]
+    users = [u.strip() for u in (permitted_users or "").split(",") if u.strip()]
+    if not groups and not users:
+        return None
+    vis = {"$type": "LimitedVisibility"}
+    if groups:
+        vis["permittedGroups"] = [{"name": g, "$type": "UserGroup"} for g in groups]
+    if users:
+        vis["permittedUsers"] = [{"login": u, "$type": "User"} for u in users]
+    return vis
+
 # ---------- writes (preview by default) ----------
-def create(ctx, project, summary, description="", fields=None, commit=False):
+def create(ctx, project, summary, description="", fields=None, commit=False,
+           is_draft=False, visibility=None):
+    """Create an issue. is_draft=True creates a draft (requires YT 2023.3+).
+    visibility is an optional dict from _build_visibility()."""
     payload = {"project": {"id": project_id(ctx, project)}, "summary": summary}
     if description:
         payload["description"] = description
+    if is_draft:
+        payload["isDraft"] = True
+    if visibility:
+        payload["visibility"] = visibility
     cfs = build_cf(ctx, project, fields or {})
     if cfs:
         payload["customFields"] = cfs
@@ -1405,10 +1429,14 @@ def update(ctx, issue, summary="", description="", fields=None, commit=False):
         out["updated"] = POST(ctx, f"/api/issues/{issue}?fields=idReadable", payload).get("idReadable")
     return out
 
-def comment(ctx, issue, text, commit=False):
-    out = {"label": f"comment on {issue}", "payload": {"text": text}, "committed": bool(commit)}
+def comment(ctx, issue, text, commit=False, visibility=None):
+    """Post a comment. visibility is an optional dict from _build_visibility()."""
+    payload = {"text": text}
+    if visibility:
+        payload["visibility"] = visibility
+    out = {"label": f"comment on {issue}", "payload": payload, "committed": bool(commit)}
     if commit:
-        POST(ctx, f"/api/issues/{issue}/comments?fields=id", {"text": text})
+        POST(ctx, f"/api/issues/{issue}/comments?fields=id", payload)
         out["commented"] = issue
     return out
 
@@ -1468,13 +1496,39 @@ def articles(ctx, query="", limit=40):
 def article(ctx, aid):
     return GET(ctx, f"/api/articles/{aid}?fields=idReadable,summary,content,project(shortName),reporter(login)")
 
-def article_create(ctx, project, summary, content="", commit=False):
+def article_create(ctx, project, summary, content="", commit=False, visibility=None):
+    """Create a KB article. visibility is an optional dict from _build_visibility()."""
     payload = {"summary": summary, "content": content, "project": {"id": project_id(ctx, project)}}
+    if visibility:
+        payload["visibility"] = visibility
     out = {"label": f"create KB article in {project}", "payload": payload, "committed": bool(commit)}
     if commit:
         r = POST(ctx, "/api/articles?fields=idReadable,summary", payload)
         out["created"] = {"idReadable": r.get("idReadable"), "summary": r.get("summary")}
     return out
+
+def article_update(ctx, aid, summary="", content="", commit=False):
+    """Update a KB article's summary and/or content."""
+    payload = {}
+    if summary:
+        payload["summary"] = summary
+    if content:
+        payload["content"] = content
+    if not payload:
+        raise YTError(None, "nothing to update — provide summary or content")
+    out = {"label": f"update article {aid}", "payload": payload, "committed": bool(commit)}
+    if commit:
+        out["updated"] = POST(ctx, f"/api/articles/{aid}?fields=idReadable", payload).get("idReadable")
+    return out
+
+def groups(ctx, limit=100):
+    """User groups visible to the caller's token."""
+    return GET(ctx, f"/api/groups?fields=id,name,allUsers(id)&$top={min(limit, 100)}")
+
+def group_members(ctx, group_id, limit=100):
+    """Members of a single user group by group id."""
+    return GET(ctx, f"/api/groups/{group_id}?fields=id,name,"
+               f"allUsers(login,fullName,banned,userType(name))&$top={min(limit, 100)}")
 
 def tags(ctx):
     return GET(ctx, "/api/tags?fields=name,owner(login)&$top=300")
