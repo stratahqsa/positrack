@@ -192,17 +192,20 @@ def _resolve_ctx():
         pass  # no auth context (legacy header path or stdio)
     # 2. Raw bearer header. get_http_headers() filters out Authorization by
     # default, so read the request directly (Starlette headers are case-insensitive).
+    is_remote = False
     if not token:
         try:
             from fastmcp.server.dependencies import get_http_request
             request = get_http_request()
+            is_remote = True
             auth = request.headers.get("authorization")
             if auth and auth.strip().lower().startswith("bearer "):
                 token = auth.strip()[7:].strip()
         except Exception:
             pass  # not in an HTTP request context (e.g. stdio)
-    # 3. Local stdio.
-    if not token:
+    # 3. Local stdio only — $YT_TOKEN is a single shared identity so it must
+    #    never be used on a remote transport where callers expect per-user auth.
+    if not token and not is_remote:
         env = os.environ.get("YT_TOKEN")
         token = env.strip() if env else None
     if not token:
