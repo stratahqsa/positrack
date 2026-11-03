@@ -1,10 +1,30 @@
 {
   "project": "PXB1",
-  "scope": "PHASE 1",
-  "exclude_ids": ["PXB1-3295"],
+  "scope": "PHASE 2",
+  "exclude_ids": [
+    "PXB1-3295"
+  ],
+  "include_epic_ids": [
+    "PXB1-1787",
+    "PXB1-3205",
+    "PXB1-3274",
+    "PXB1-3546",
+    "PXB1-3977",
+    "PXB1-4846",
+    "PXB1-4847",
+    "PXB1-4848",
+    "PXB1-5104",
+    "PXB1-9430",
+    "PXB1-9999",
+    "PXB1-10000",
+    "PXB1-10171",
+    "PXB1-10305",
+    "PXB1-10316"
+  ],
   "man_day_minutes": 480,
-  "jun29_cutoff_iso": "2026-06-29T10:30:00Z",
-  "mtg_cutoff_iso": "2026-07-03T10:30:00Z",
-  "week1_anchor": "2026-06-30",
-  "youtrack_base": "https://support.posibolt.com"
+  "jun29_cutoff_iso": "2026-10-06T00:00:00Z",
+  "mtg_cutoff_iso": "2026-10-16T10:30:00Z",
+  "week1_anchor": "2026-10-06",
+  "youtrack_base": "https://support.posibolt.com",
+  "release_mode": "monthly"
 }

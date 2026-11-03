@@ -58,7 +58,7 @@ def fetch_epic_ids(ctx, yt, cfg):
     merged = {}
     for r in yt.get_issues(ctx, qa, fields=F) + yt.get_issues(ctx, qb, fields=F):
         rid = r.get("idReadable")
-        if rid and rid not in cfg.exclude_ids:
+        if rid and rid not in cfg.exclude_ids and (not cfg.include_epic_ids or rid in cfg.include_epic_ids):
             merged[r.get("id")] = r     # de-dupe by internal id
     return {r["idReadable"]: r for r in merged.values()}
 
@@ -79,6 +79,9 @@ def build_schedule(ctx, yt, cfg):
     matched, orphans = match_epics(stories, epics.keys())
     for s in stories:
         s["epicId"] = matched.get(s["storyId"])
+    if cfg.include_epic_ids:        # working-epic mode: drop stories outside the tracked epics
+        stories = [s for s in stories if s["epicId"]]
+        orphans = []
     return {
         "epics": [{"id": rid, "summary": e.get("summary"), "resolved": e.get("resolved"),
                    "created": e.get("created")} for rid, e in epics.items()],

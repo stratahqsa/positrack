@@ -180,6 +180,9 @@ export interface EffortSpend {
 }
 
 export interface Effort {
+  /** Phase the report was built for (e.g. "PHASE 2") — `effort_report(scope=...)`.
+   *  Optional: absent on older snapshots, which were all PHASE 1. */
+  scope?: string;
   counts: EffortCounts;
   sections: EffortSections;
   totals: EffortTotals;
@@ -481,6 +484,10 @@ export interface ReportsConfigBlock {
   project: string;
   scope: string;
   exclude_ids: string[];
+  /** Non-empty = the snapshot tracks only these epics (working-epic mode). Absent on older snapshots. */
+  include_epic_ids?: string[];
+  /** "monthly" = month-end releases from Sprint / QA deadline; absent/"milestone" = Phase 1 behaviour. */
+  release_mode?: "milestone" | "monthly";
   man_day_minutes: number;
   jun29_cutoff_iso: string;
   mtg_cutoff_iso: string;

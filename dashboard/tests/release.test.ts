@@ -5,6 +5,7 @@ import {
   epicBadge,
   grandTotals,
   groupByMilestone,
+  storyReleaseMs,
 } from "../lib/release";
 import { baseSnapshot, baseStory } from "./fixtures";
 import type { Epic, Rollup, ScheduleEpic } from "../lib/types";
@@ -649,5 +650,61 @@ describe("grandTotals (Examples_2 §9, T16)", () => {
     const groups = groupByMilestone([noDate], DISPLAY_CUTOFF, Date.UTC(2026, 6, 9));
 
     expect(grandTotals(groups).finalMs).toBeNull();
+  });
+});
+
+
+describe("monthly release mode", () => {
+  const NOON = (iso: string) => Date.parse(`${iso}T12:00:00Z`);
+  const EPIC: ScheduleEpic = { id: "PXB1-1", summary: "E", resolved: null, created: 1 };
+  const NOW = NOON("2026-11-03");
+
+  it("storyReleaseMs: sprint month-end wins over QA deadline", () => {
+    expect(storyReleaseMs(baseStory({ sprint: "beta2-Oct26", qaTs: NOON("2026-12-10") }))).toBe(NOON("2026-10-31"));
+    expect(storyReleaseMs(baseStory({ sprint: "beta2-Nov26" }))).toBe(NOON("2026-11-30"));
+    expect(storyReleaseMs(baseStory({ sprint: "beta2-Dec26" }))).toBe(NOON("2026-12-31"));
+  });
+
+  it("storyReleaseMs: falls back to QA-deadline month, else null", () => {
+    expect(storyReleaseMs(baseStory({ sprint: "", qaTs: NOON("2026-11-14") }))).toBe(NOON("2026-11-30"));
+    expect(storyReleaseMs(baseStory({ sprint: "beta1-26", qaTs: NOON("2026-02-10") }))).toBe(NOON("2026-02-28"));
+    expect(storyReleaseMs(baseStory({ sprint: "", qaTs: null }))).toBeNull();
+  });
+
+  it("epic release = latest release among PENDING stories; unscheduled pending -> null", () => {
+    const oct = baseStory({ storyId: "S1", done: false, sprint: "beta2-Oct26" });
+    const nov = baseStory({ storyId: "S2", done: false, sprint: "beta2-Nov26" });
+    const doneDec = baseStory({ storyId: "S3", done: true, state: "DONE", sprint: "beta2-Dec26", resolved: NOW });
+    const v = buildEpicView(EPIC, [oct, nov, doneDec], "A", MTG_CUTOFF, JUN29_CUTOFF, NOW, "monthly");
+    expect(v.milestoneMs).toBe(NOON("2026-11-30"));
+    const unscheduled = baseStory({ storyId: "S4", done: false, sprint: "", qaTs: null });
+    const v2 = buildEpicView(EPIC, [doneDec, unscheduled], "A", MTG_CUTOFF, JUN29_CUTOFF, NOW, "monthly");
+    expect(v2.milestoneMs).toBeNull();
+  });
+
+  it("groups by month-end, flags a past release with pending work as missed", () => {
+    const e1: ScheduleEpic = { id: "PXB1-1", summary: "Oct epic", resolved: null, created: 1 };
+    const e2: ScheduleEpic = { id: "PXB1-2", summary: "Nov epic", resolved: null, created: 1 };
+    const e3: ScheduleEpic = { id: "PXB1-3", summary: "Done Oct epic", resolved: null, created: 1 };
+    const views = [
+      buildEpicView(e1, [baseStory({ storyId: "A", done: false, sprint: "beta2-Oct26" })], "", MTG_CUTOFF, JUN29_CUTOFF, NOW, "monthly"),
+      buildEpicView(e2, [baseStory({ storyId: "B", done: false, sprint: "beta2-Nov26" })], "", MTG_CUTOFF, JUN29_CUTOFF, NOW, "monthly"),
+      buildEpicView(e3, [baseStory({ storyId: "C", done: true, state: "DONE", sprint: "beta2-Oct26", resolved: NOON("2026-10-20") })], "", MTG_CUTOFF, JUN29_CUTOFF, NOW, "monthly"),
+    ];
+    const groups = groupByMilestone(views, 0, NOW, "monthly");
+    expect(groups.map((g) => g.label)).toEqual(["31 Oct release", "30 Nov release"]);
+    const oct = groups[0];
+    expect(oct.epics.map((e) => e.id).sort()).toEqual(["PXB1-1", "PXB1-3"]);
+    expect(oct.missed).toBe(true);
+    expect(oct.urgency).toBe("overdue");
+    expect(groups[1].missed).toBe(false);
+  });
+
+  it("milestone mode is unchanged (no missed flag, plain date labels)", () => {
+    const v = buildEpicView(EPIC, [baseStory({ done: false, ddTs: NOON("2026-07-10"), qaTs: NOON("2026-07-14") })], "", MTG_CUTOFF, JUN29_CUTOFF, NOW);
+    expect(v.milestoneMs).toBe(NOON("2026-07-14"));
+    const g = groupByMilestone([v], DISPLAY_CUTOFF, NOW)[0];
+    expect(g.missed).toBe(false);
+    expect(g.label).not.toContain("release");
   });
 });

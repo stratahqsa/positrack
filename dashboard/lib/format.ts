@@ -141,3 +141,14 @@ export function verdictVsQa(
   }
   return { label: `${diffDays}d early`, late: false };
 }
+
+/** "PHASE 2" -> "Phase 2" (UI label for the snapshot's scope). */
+export function phaseLabel(scope: string | null | undefined): string {
+  const t = (scope ?? "PHASE 1").trim().toLowerCase();
+  return t.replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+}
+
+/** Baseline cutoff as "29 Jun" / "6 Oct" in IST, for section titles. */
+export function baselineLabel(ms: number): string {
+  return new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+}

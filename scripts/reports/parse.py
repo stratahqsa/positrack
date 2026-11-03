@@ -43,14 +43,20 @@ def cf_date_ms(issue, name):
         return int(v["timestamp"])
     return None
 
+_MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+
 def sprint_max(value):
-    """Max sprint name by trailing numeric suffix (Examples_4 §4 gotcha 3)."""
+    """Latest sprint name: monthly sprints ("beta2-Oct26") rank by (year, month);
+    otherwise by trailing numeric suffix (Examples_4 §4 gotcha 3)."""
     names = [s.get("name") for s in (value or []) if s and s.get("name")]
     if not names:
         return ""
     def key(n):
+        mo = re.search(r"-([A-Za-z]{3})(\d{2})\s*$", n)
+        if mo and mo.group(1).lower() in _MONTHS:
+            return (1, 2000 + int(mo.group(2)), _MONTHS.index(mo.group(1).lower()))
         m = re.search(r"(\d+)\s*$", n)
-        return int(m.group(1)) if m else -1
+        return (0, int(m.group(1)) if m else -1, 0)
     return max(names, key=key)
 
 def is_done(state):

@@ -120,3 +120,9 @@ def test_cf_readers_handle_all_value_shapes():
     assert parse.cf_date_ms(issue, "Deadline Date") == 1751932800000
     assert parse.cf_name(issue, "Assignee") == ""           # null → ""
     assert parse.cf_minutes(issue, "UI Estimation") == 0     # absent → 0
+
+
+def test_sprint_max_monthly_sprints_rank_by_year_then_month():
+    assert parse.sprint_max([{"name": "beta2-Oct26"}, {"name": "beta2-Nov26"}]) == "beta2-Nov26"
+    assert parse.sprint_max([{"name": "beta2-Nov26"}, {"name": "beta2-Oct26"}]) == "beta2-Nov26"
+    assert parse.sprint_max([{"name": "beta2-Dec26"}, {"name": "beta2-Jan27"}]) == "beta2-Jan27"

@@ -111,7 +111,7 @@ def test_build_schedule_drops_children_of_excluded_epic():
     # PXB1-3295 (POS Android), leaking in as orphans. The exclusion must apply at
     # the data layer so no view sees them and orphan_count means "truly unlinked".
     from reports.config import ReportsConfig
-    cfg = ReportsConfig()  # excludes PXB1-3295 by default
+    cfg = ReportsConfig(include_epic_ids=[])  # excludes PXB1-3295 by default; no working-epic filter
     good = _raw_story("PXB1-3412", "OPEN", None, "2026-07-08", "2026-07-14", 960, 0, 240)
     good["links"] = [{"direction": "INWARD", "linkType": {"name": "Subtask"},
                       "issues": [{"id": "2-41200", "idReadable": "PXB1-3101"}]}]
@@ -132,3 +132,26 @@ def test_build_schedule_drops_children_of_excluded_epic():
     assert "PXB1-3412" in ids
     assert "PXB1-9000" not in ids       # child of excluded PXB1-3295 dropped at data layer
     assert block["orphan_count"] == 0   # the remaining story matched its epic
+
+
+def test_build_schedule_working_epic_mode_keeps_only_included_epics_and_their_stories():
+    from reports.config import ReportsConfig
+    cfg = ReportsConfig(include_epic_ids=["PXB1-3101"])
+    in_story = _raw_story("PXB1-5001", "OPEN", None, "2026-10-10", "2026-10-14", 960, 0, 240)
+    in_story["links"] = [{"direction": "INWARD", "linkType": {"name": "Subtask"}, "issues": [{"id": "2-1", "idReadable": "PXB1-3101"}]}]
+    other_story = _raw_story("PXB1-5002", "OPEN", None, "2026-10-10", "2026-10-14", 960, 0, 240)
+    other_story["links"] = [{"direction": "INWARD", "linkType": {"name": "Subtask"}, "issues": [{"id": "2-2", "idReadable": "PXB1-4000"}]}]
+    unlinked = _raw_story("PXB1-5003", "OPEN", None, "2026-10-10", "2026-10-14", 960, 0, 240)
+    e1 = {"id": "2-1", "idReadable": "PXB1-3101", "summary": "Working epic", "resolved": None, "created": 1}
+    e2 = {"id": "2-2", "idReadable": "PXB1-4000", "summary": "Other P2 epic", "resolved": None, "created": 1}
+    class FakeYT:
+        def get_issues(self, ctx, query, fields=None, **k):
+            if "TaskType: Epic" in query:
+                return [e1, e2] if "#Unresolved" in query else []
+            if "TaskType: Story" in query:
+                return [in_story, other_story, unlinked]
+            return []
+    block = schedule.build_schedule(ctx=None, yt=FakeYT(), cfg=cfg)
+    assert [e["id"] for e in block["epics"]] == ["PXB1-3101"]
+    assert [s["storyId"] for s in block["stories"]] == ["PXB1-5001"]
+    assert block["orphan_count"] == 0

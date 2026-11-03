@@ -1,7 +1,7 @@
 import { AlertTriangle, Layers } from "lucide-react";
 import { loadSnapshot } from "@/lib/data";
 import { hasP2Count, missingEstCount, readyToMoveCount, watchList } from "@/lib/effort";
-import { fmtHours, fmtMd } from "@/lib/format";
+import { baselineLabel, fmtHours, fmtMd, phaseLabel } from "@/lib/format";
 import { Header } from "@/components/shell/header";
 import { Nav } from "@/components/shell/nav";
 import { Section } from "@/components/effort/section";
@@ -25,6 +25,8 @@ export default async function EffortPage() {
   const snap = await loadSnapshot();
   const { meta, effort, config } = snap;
   const jun29Ms = Date.parse(config?.jun29_cutoff_iso ?? DEFAULT_JUN29_CUTOFF_ISO);
+  const phase = phaseLabel(effort?.scope ?? meta.scope);
+  const baseline = baselineLabel(jun29Ms);
 
   // `effort` is a required field on Snapshot's type, but this guard stays
   // defensive against a stale/malformed snapshot on disk predating it —
@@ -46,7 +48,7 @@ export default async function EffortPage() {
       <Nav />
       <main className="mx-auto max-w-[1400px] space-y-5 px-4 py-6 sm:px-6">
         <div>
-          <h1 className="text-[15px] font-semibold tracking-tight text-fg">PXB1 Phase 1 — Effort Report</h1>
+          <h1 className="text-[15px] font-semibold tracking-tight text-fg">PXB1 {phase} — Effort Report</h1>
           <p className="mt-0.5 text-[12px] text-muted">
             {effort
               ? `${effort.counts.epics_discovered.toLocaleString()} epics · Done since baseline · Man-day = 8h`
@@ -86,31 +88,31 @@ export default async function EffortPage() {
               </div>
             ) : null}
 
-            <EffortKpi effort={effort} hasP2Count={hasP2} />
+            <EffortKpi effort={effort} hasP2Count={hasP2} phase={phase} baseline={baseline} />
 
             <div className="space-y-4">
-              <Section title="✓ Completed since 29 Jun" tone="good" count={effort.counts.done}>
+              <Section title={`✓ Completed since ${baseline}`} tone="good" count={effort.counts.done}>
                 <EpicEffortTable epics={effort.sections.done} variant="done" cutoffMs={jun29Ms} />
               </Section>
 
               <Section title="📋 Has Stories · All Pending" tone="warn" count={effort.counts.pending}>
-                <EpicEffortTable epics={effort.sections.pending} variant="pending" />
+                <EpicEffortTable epics={effort.sections.pending} variant="pending" scope={effort.scope} />
               </Section>
 
               <Section title="⚡ Mixed (Some Done)" tone="info" count={effort.counts.mixed}>
-                <EpicEffortTable epics={effort.sections.mixed} variant="mixed" />
+                <EpicEffortTable epics={effort.sections.mixed} variant="mixed" scope={effort.scope} />
               </Section>
 
               <Section title="🚫 No Stories" tone="outline" count={effort.counts.no_stories}>
                 <NoStoriesTable epics={effort.sections.no_stories} />
               </Section>
 
-              <Section title="📁 P2/P3 Backlog (moved after 29 Jun)" tone="violet" count={effort.counts.p2_backlog}>
+              <Section title={`📁 Later-phase Backlog (moved after ${baseline})`} tone="violet" count={effort.counts.p2_backlog}>
                 <P2Backlog items={effort.sections.p2_backlog} />
               </Section>
 
-              <Section title="👀 Watch List: P1 Epics with P2/P3 Stories" tone="violet" count={watch.length}>
-                <WatchList items={watch} />
+              <Section title={`👀 Watch List: ${phase} Epics with Later-phase Stories`} tone="violet" count={watch.length}>
+                <WatchList items={watch} phase={phase} />
               </Section>
             </div>
 

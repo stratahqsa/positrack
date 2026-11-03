@@ -41,6 +41,7 @@ export default async function SchedulePage({
   const mtgCutoffMs = Date.parse(config?.mtg_cutoff_iso ?? DEFAULT_MTG_CUTOFF_ISO);
   const jun29Ms = Date.parse(config?.jun29_cutoff_iso ?? DEFAULT_JUN29_CUTOFF_ISO);
 
+  const releaseMode = config?.release_mode === "monthly" ? "monthly" : "milestone";
   const stories = schedule?.stories ?? [];
   const epics = schedule?.epics ?? [];
   const epicNames = Object.fromEntries(epics.map((e) => [e.id, e.summary]));
@@ -64,11 +65,11 @@ export default async function SchedulePage({
 
   const views: EpicView[] = epics
     .map((epic) =>
-      buildEpicView(epic, storiesByEpic.get(epic.id) ?? [], assignees[epic.id] ?? "", mtgCutoffMs, jun29Ms, nowMs),
+      buildEpicView(epic, storiesByEpic.get(epic.id) ?? [], assignees[epic.id] ?? "", mtgCutoffMs, jun29Ms, nowMs, releaseMode),
     )
     .filter((v) => v.stories.length > 0 || !hasActiveFilter);
 
-  const groups = groupByMilestone(views, DISPLAY_CUTOFF_MS, nowMs);
+  const groups = groupByMilestone(views, DISPLAY_CUTOFF_MS, nowMs, releaseMode);
   const totals = grandTotals(groups);
   // KPI mirrors weekly/kpi-cards.tsx's "matches the visible rows" convention:
   // epics dropped by the display cutoff (T10) don't count toward it either.
@@ -95,8 +96,10 @@ export default async function SchedulePage({
         <div>
           <h1 className="text-[15px] font-semibold tracking-tight text-fg">Release Schedule Tracker</h1>
           <p className="mt-0.5 text-[12px] text-muted">
-            {meta.project} · {meta.scope} · epics grouped by release milestone, DONE vs NOT-DONE against the
-            meeting baseline — drill down to stories and open bugs.
+            {meta.project} · {meta.scope} ·{" "}
+            {releaseMode === "monthly"
+              ? "epics grouped by monthly release (story Sprint, else QA deadline month), DONE vs NOT-DONE — past releases with pending work show as missed. Drill down to stories and open bugs."
+              : "epics grouped by release milestone, DONE vs NOT-DONE against the meeting baseline — drill down to stories and open bugs."}
           </p>
         </div>
 

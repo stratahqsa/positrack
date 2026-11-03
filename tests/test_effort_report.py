@@ -543,3 +543,60 @@ def test_effort_golden_live():
             gmd = round(got[field] / 480.0, 1)
             assert abs(gmd - wmd) <= 1.0, \
                 "totals_md[%s][%s]: got %.1f want %.1f (+/-1)" % (sec, field, gmd, wmd)
+
+
+# ---------- scope-generic (Phase 2 re-baseline) ----------
+def test_deferred_phases_follow_current_scope():
+    assert yt._deferred_phases("PHASE 1") == ("PHASE 2", "PHASE 3")
+    assert yt._deferred_phases("PHASE 2") == ("PHASE 3",)
+    assert yt._deferred_phases("PHASE 3") == ()
+    assert yt._deferred_phases("NOT A PHASE") == ()
+
+
+def test_phase2_scope_counts_phase2_stories_in_rollup():
+    e = _epic("E", "OPEN", stories=[_story("S1", "OPEN", scope="PHASE 2", server=480, ui=0, testing=240)])
+    rec = yt.categorize_epic(e, scope="PHASE 2")
+    assert rec["rollup"] == {"server": 480, "ui": 0, "testing": 240}
+    assert rec["p1_pending"] == 1 and rec["p2_stories"] == 0
+
+
+def test_phase2_scope_treats_phase3_story_as_deferred_and_phase1_as_out_of_scope():
+    e = _epic("E", "OPEN", stories=[
+        _story("S1", "OPEN", scope="PHASE 2", server=480),
+        _story("S2", "OPEN", scope="PHASE 3", server=960),
+        _story("S3", "OPEN", scope="PHASE 1", server=1920),
+    ])
+    rec = yt.categorize_epic(e, scope="PHASE 2")
+    assert rec["rollup"]["server"] == 480      # only the PHASE 2 story
+    assert rec["p2_stories"] == 1              # the PHASE 3 story is the deferral
+
+
+def test_default_scope_is_unchanged_phase1_behaviour():
+    e = _epic("E", "OPEN", stories=[_story("S1", "OPEN", scope="PHASE 1", server=480),
+                                    _story("S2", "OPEN", scope="PHASE 2", server=960)])
+    assert yt.categorize_epic(e)["rollup"]["server"] == 480
+    assert yt.categorize_epic(e)["p2_stories"] == 1
+
+
+def test_overshoot_spend_respects_scope():
+    stories = [_norm_story("S1", "OPEN", scope="PHASE 2", spent=100),
+               _norm_story("S2", "OPEN", scope="PHASE 1", spent=999)]
+    assert yt._overshoot_spend(stories, 0, "PHASE 2") == 100
+    assert yt._overshoot_spend(stories, 0) == 999
+
+
+def test_effort_report_include_ids_limits_epic_discovery(monkeypatch):
+    seen = {}
+    def fake_get_issues(ctx, q, fields=None, top=None):
+        if "Scope: {PHASE 2}" in q and "#Unresolved" in q and "TaskType: EPIC" in q and "PHASE 3" not in q:
+            return [{"idReadable": "PXB1-1"}, {"idReadable": "PXB1-2"}]
+        return []
+    def fake_by_ids(ctx, ids, sf):
+        seen["ids"] = list(ids); return []
+    monkeypatch.setattr(yt, "get_issues", fake_get_issues)
+    monkeypatch.setattr(yt, "get_issues_by_ids", fake_by_ids)
+    monkeypatch.setattr(yt, "_child_parent_map", lambda *a, **k: {})
+    monkeypatch.setattr(yt, "_attribute_spend", lambda *a, **k: ({}, 0))
+    pool = {"items": [], "scope": "x", "dropped": []}
+    yt.effort_report(None, scope="PHASE 2", pool=pool, include_ids={"PXB1-2"})
+    assert seen["ids"] == ["PXB1-2"]

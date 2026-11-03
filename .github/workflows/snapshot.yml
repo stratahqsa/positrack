@@ -69,9 +69,9 @@ on:
         required: false
         default: "PXB1"
       scope:
-        description: "Scope (e.g. PHASE 1)"
+        description: "Scope override (e.g. PHASE 2). Blank = web/config/reports.json"
         required: false
-        default: "PHASE 1"
+        default: ""
       sprint:
         description: "Sprint override for timespent (blank = latest active)"
         required: false
@@ -157,7 +157,7 @@ jobs:
             exit 1
           fi
           PROJECT="${IN_PROJECT:-PXB1}"
-          SCOPE="${IN_SCOPE:-PHASE 1}"
+          SCOPE="${IN_SCOPE:-}"   # empty -> scripts/snapshot.py uses web/config/reports.json
           if [ -n "${IN_SPRINT}" ]; then
             python3 scripts/snapshot.py --project "$PROJECT" --scope "$SCOPE" --sprint "$IN_SPRINT"
           else

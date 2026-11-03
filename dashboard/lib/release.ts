@@ -21,6 +21,11 @@ const DAY_MS = 86_400_000;
  *  real dd/qa/resolved timestamps are all far larger than 0. */
 const NO_DATE_MS = 0;
 
+/** "milestone" = Phase 1 behaviour (epic milestone = latest dev/QA deadline day).
+ *  "monthly"   = month-end releases: a story's release is its Sprint month
+ *  (e.g. beta2-Oct26 -> 31 Oct), falling back to the month of its QA deadline. */
+export type ReleaseMode = "milestone" | "monthly";
+
 export type EpicBadge = "DONE" | "NOT_DONE" | "NO_STORIES" | string; // string = the single story's state
 
 export interface EpicView {
@@ -41,6 +46,8 @@ export interface EpicView {
 export interface MilestoneGroup {
   ms: number;
   label: string;
+  /** True for a past month-end release that still has pending epics (monthly mode only). */
+  missed?: boolean;
   daysFromNow: number;
   urgency: "overdue" | "d3" | "d7" | "d14" | "far" | "alldone";
   epics: EpicView[];
@@ -59,6 +66,45 @@ function maxDeadlineMs(stories: ScheduleStory[]): number | null {
     for (const v of [s.ddTs, s.qaTs]) {
       if (v != null && (max == null || v > max)) max = v;
     }
+  }
+  return max;
+}
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/** Noon-UTC on the last day of `monthIdx` (0-11) — the same time-of-day deadlines use. */
+function monthEndMs(year: number, monthIdx: number): number {
+  return Date.UTC(year, monthIdx + 1, 0, 12);
+}
+
+/**
+ * Monthly release a story belongs to: its Sprint month-end ("beta2-Oct26" ->
+ * 31 Oct 2026), else the month-end of its QA deadline, else null (unscheduled).
+ * Numeric-only Phase 1 sprints ("beta1-26") don't parse and fall through.
+ */
+export function storyReleaseMs(s: ScheduleStory): number | null {
+  const m = /-([A-Za-z]{3})(\d{2})$/.exec((s.sprint ?? "").trim());
+  if (m) {
+    const idx = MONTHS.indexOf(m[1].toLowerCase());
+    if (idx >= 0) return monthEndMs(2000 + Number(m[2]), idx);
+  }
+  if (s.qaTs != null) {
+    const d = new Date(s.qaTs);
+    return monthEndMs(d.getUTCFullYear(), d.getUTCMonth());
+  }
+  return null;
+}
+
+/** Epic release in monthly mode: the latest release among its PENDING stories;
+ *  null when it has pending stories but none is scheduled (-> "No date");
+ *  with no pending stories, the latest release among all its stories. */
+function epicReleaseMs(stories: ScheduleStory[]): number | null {
+  const pending = stories.filter((s) => !s.done);
+  const pool = pending.length > 0 ? pending : stories;
+  let max: number | null = null;
+  for (const s of pool) {
+    const r = storyReleaseMs(s);
+    if (r != null && (max == null || r > max)) max = r;
   }
   return max;
 }
@@ -127,6 +173,7 @@ export function buildEpicView(
   mtgCutoffMs: number,
   jun29Ms: number,
   nowMs: number,
+  releaseMode: ReleaseMode = "milestone",
 ): EpicView {
   void nowMs;
 
@@ -153,7 +200,8 @@ export function buildEpicView(
 
   // Milestone (Examples_2 §5): max(ddTs, qaTs) across ALL stories; fallback to
   // the epic's own resolved date; null (no-date group) when neither exists.
-  const milestoneMs = maxDeadlineMs(stories) ?? epic.resolved;
+  const milestoneMs =
+    releaseMode === "monthly" ? (epicReleaseMs(stories) ?? (stories.length === 0 ? epic.resolved : null)) : (maxDeadlineMs(stories) ?? epic.resolved);
 
   // Resolved date (Examples_2 §6): max resolved date across ALL stories. No
   // fallback to epic.resolved here (unlike milestone) -- a DONE-via-override
@@ -203,7 +251,7 @@ function urgencyForDays(days: number): MilestoneGroup["urgency"] {
   return "far";
 }
 
-function buildGroup(ms: number, label: string, epics: EpicView[], nowMs: number): MilestoneGroup {
+function buildGroup(ms: number, label: string, epics: EpicView[], nowMs: number, monthly = false): MilestoneGroup {
   const isNoDate = ms === NO_DATE_MS;
   const allDone = epics.every((e) => e.done);
   const days = isNoDate ? Infinity : daysFromNow(ms, nowMs);
@@ -232,6 +280,7 @@ function buildGroup(ms: number, label: string, epics: EpicView[], nowMs: number)
   return {
     ms,
     label,
+    missed: monthly && !isNoDate && !allDone && days < 0,
     daysFromNow: days,
     urgency,
     epics,
@@ -252,7 +301,9 @@ export function groupByMilestone(
   views: EpicView[],
   displayCutoffMs: number,
   nowMs: number,
+  releaseMode: ReleaseMode = "milestone",
 ): MilestoneGroup[] {
+  const monthly = releaseMode === "monthly";
   const dated = new Map<number, EpicView[]>();
   const noDate: EpicView[] = [];
 
@@ -270,11 +321,11 @@ export function groupByMilestone(
   const sortedMs = Array.from(dated.keys()).sort((a, b) => a - b);
   for (const ms of sortedMs) {
     if (ms < displayCutoffMs) continue;
-    groups.push(buildGroup(ms, fmtDate(ms), dated.get(ms)!, nowMs));
+    groups.push(buildGroup(ms, monthly ? `${fmtDate(ms)} release` : fmtDate(ms), dated.get(ms)!, nowMs, monthly));
   }
 
   if (noDate.length > 0) {
-    groups.push(buildGroup(NO_DATE_MS, "No date", noDate, nowMs));
+    groups.push(buildGroup(NO_DATE_MS, monthly ? "Unscheduled (no sprint or QA deadline)" : "No date", noDate, nowMs, monthly));
   }
 
   return groups;
