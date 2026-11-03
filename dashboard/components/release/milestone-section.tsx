@@ -32,7 +32,7 @@ function urgencyLabel(g: MilestoneGroup): string {
   if (g.urgency === "alldone") return "All done";
   if (!Number.isFinite(g.daysFromNow)) return "No date";
   if (g.daysFromNow === 0) return "Due today";
-  if (g.daysFromNow < 0) return `${Math.abs(g.daysFromNow)}d overdue`;
+  if (g.daysFromNow < 0) return g.missed ? `Missed · ${Math.abs(g.daysFromNow)}d ago` : `${Math.abs(g.daysFromNow)}d overdue`;
   return `in ${g.daysFromNow}d`;
 }
 
@@ -71,7 +71,7 @@ export function MilestoneSection({ group }: { group: MilestoneGroup }) {
           </Badge>
         ) : group.urgency === "overdue" ? (
           <Badge variant="danger" size="sm">
-            OVERDUE
+            {group.missed ? "MISSED" : "OVERDUE"}
           </Badge>
         ) : null}
 

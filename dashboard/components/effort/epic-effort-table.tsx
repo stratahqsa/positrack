@@ -113,7 +113,7 @@ function rollupEffort(r: Rollup): { dev: number; ui: number; qa: number } {
   return { dev: r.server, ui: r.ui, qa: r.testing };
 }
 
-function rowEffort(epic: Epic, variant: EpicTableVariant, cutoffMs?: number): RowEffort {
+function rowEffort(epic: Epic, variant: EpicTableVariant, cutoffMs?: number, scope?: string): RowEffort {
   if (variant === "done") {
     const stories = subStories(epic, variant, cutoffMs);
     const dev = stories.reduce((t, s) => t + s.est.server, 0);
@@ -123,7 +123,7 @@ function rowEffort(epic: Epic, variant: EpicTableVariant, cutoffMs?: number): Ro
     return { dev, ui, qa, total: dev + ui + qa, spent };
   }
   const r = rollupEffort(epic.rollup);
-  return { ...r, total: epic.total, spent: pendingP1Spent(epic) };
+  return { ...r, total: epic.total, spent: pendingP1Spent(epic, scope) };
 }
 
 function sortValue(
@@ -131,6 +131,7 @@ function sortValue(
   key: SortKey,
   variant: EpicTableVariant,
   cutoffMs?: number,
+  scope?: string,
 ): string | number | null {
   switch (key) {
     case "id":
@@ -144,15 +145,15 @@ function sortValue(
     case "resolved":
       return epic.resolved;
     case "dev":
-      return rowEffort(epic, variant, cutoffMs).dev;
+      return rowEffort(epic, variant, cutoffMs, scope).dev;
     case "ui":
-      return rowEffort(epic, variant, cutoffMs).ui;
+      return rowEffort(epic, variant, cutoffMs, scope).ui;
     case "qa":
-      return rowEffort(epic, variant, cutoffMs).qa;
+      return rowEffort(epic, variant, cutoffMs, scope).qa;
     case "total":
-      return rowEffort(epic, variant, cutoffMs).total;
+      return rowEffort(epic, variant, cutoffMs, scope).total;
     case "spent":
-      return rowEffort(epic, variant, cutoffMs).spent;
+      return rowEffort(epic, variant, cutoffMs, scope).spent;
   }
 }
 
@@ -165,19 +166,19 @@ function compare(a: string | number | null, b: string | number | null): number {
   return a - b;
 }
 
-function sortEpics(epics: Epic[], sort: SortState, variant: EpicTableVariant, cutoffMs?: number): Epic[] {
+function sortEpics(epics: Epic[], sort: SortState, variant: EpicTableVariant, cutoffMs?: number, scope?: string): Epic[] {
   const sign = sort.dir === "asc" ? 1 : -1;
   return [...epics].sort((a, b) => {
-    const cmp = compare(sortValue(a, sort.key, variant, cutoffMs), sortValue(b, sort.key, variant, cutoffMs));
+    const cmp = compare(sortValue(a, sort.key, variant, cutoffMs, scope), sortValue(b, sort.key, variant, cutoffMs, scope));
     // Stable tie-break by epic ID, matching weekly/story-table.tsx's convention.
     return cmp !== 0 ? sign * cmp : a.id.localeCompare(b.id);
   });
 }
 
-function computeTotals(epics: Epic[], variant: EpicTableVariant, cutoffMs?: number): RowEffort {
+function computeTotals(epics: Epic[], variant: EpicTableVariant, cutoffMs?: number, scope?: string): RowEffort {
   return epics.reduce<RowEffort>(
     (acc, epic) => {
-      const eff = rowEffort(epic, variant, cutoffMs);
+      const eff = rowEffort(epic, variant, cutoffMs, scope);
       return {
         dev: acc.dev + eff.dev,
         ui: acc.ui + eff.ui,
@@ -264,6 +265,7 @@ function EpicDataRow({
   epic,
   variant,
   cutoffMs,
+  scope,
   subCount,
   expanded,
   onToggle,
@@ -271,11 +273,12 @@ function EpicDataRow({
   epic: Epic;
   variant: EpicTableVariant;
   cutoffMs?: number;
+  scope?: string;
   subCount: number;
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const eff = rowEffort(epic, variant, cutoffMs);
+  const eff = rowEffort(epic, variant, cutoffMs, scope);
   const canExpand = subCount > 0;
   const doneCount = epic.stories.length - subCount; // only meaningful for "mixed" (subCount = pending count there)
 
@@ -417,19 +420,22 @@ export function EpicEffortTable({
   epics,
   variant,
   cutoffMs,
+  scope,
 }: {
   epics: Epic[];
   variant: EpicTableVariant;
   /** "done" variant only: stories/effort scoped to `resolved > cutoffMs` — see file doc. */
   cutoffMs?: number;
+  /** `snapshot.effort.scope` — which phase counts as in-scope for the Spent rollup. */
+  scope?: string;
 }) {
   const defaultSort = DEFAULT_SORT[variant];
   const [sort, setSort] = React.useState<SortState>(defaultSort);
-  const [rows, setRows] = React.useState<Epic[]>(() => sortEpics(epics, defaultSort, variant, cutoffMs));
+  const [rows, setRows] = React.useState<Epic[]>(() => sortEpics(epics, defaultSort, variant, cutoffMs, scope));
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
 
   React.useEffect(() => {
-    setRows(sortEpics(epics, sort, variant, cutoffMs));
+    setRows(sortEpics(epics, sort, variant, cutoffMs, scope));
     // Intentionally NOT depending on `sort` — mirrors weekly/story-table.tsx:
     // sort changes are applied directly in handleSort below, and re-running
     // this effect on every header click would just redundantly re-sort. This
@@ -438,13 +444,13 @@ export function EpicEffortTable({
     // reused architecture and protects against `epics` changing for any
     // future reason.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [epics, variant, cutoffMs]);
+  }, [epics, variant, cutoffMs, scope]);
 
   function handleSort(key: SortKey) {
     const dir: SortDir = sort.key === key && sort.dir === "asc" ? "desc" : "asc";
     const next: SortState = { key, dir };
     setSort(next);
-    setRows((prev) => sortEpics(prev, next, variant, cutoffMs));
+    setRows((prev) => sortEpics(prev, next, variant, cutoffMs, scope));
   }
 
   function toggleExpanded(id: string) {
@@ -456,7 +462,7 @@ export function EpicEffortTable({
     });
   }
 
-  const totals = React.useMemo(() => computeTotals(epics, variant, cutoffMs), [epics, variant, cutoffMs]);
+  const totals = React.useMemo(() => computeTotals(epics, variant, cutoffMs, scope), [epics, variant, cutoffMs, scope]);
   const columnCount = COLUMN_KEYS[variant].length + (variant === "pending" ? 1 : 0);
 
   if (epics.length === 0) {
@@ -493,6 +499,7 @@ export function EpicEffortTable({
                   epic={epic}
                   variant={variant}
                   cutoffMs={cutoffMs}
+                  scope={scope}
                   subCount={subs.length}
                   expanded={isExpanded}
                   onToggle={() => toggleExpanded(epic.id)}

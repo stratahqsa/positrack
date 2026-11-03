@@ -67,7 +67,7 @@ function WatchStoryRow({ story }: { story: Story }) {
  * the watch list is short enough that sorting wasn't asked for and would be
  * over-building.
  */
-export function WatchList({ items }: { items: WatchListItem[] }) {
+export function WatchList({ items, phase = "Phase 1" }: { items: WatchListItem[]; phase?: string }) {
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
 
   function toggleExpanded(epicId: string) {
@@ -82,7 +82,7 @@ export function WatchList({ items }: { items: WatchListItem[] }) {
   if (items.length === 0) {
     return (
       <div className="px-4 py-6 text-center text-[12px] text-faint">
-        No Phase 1 epics currently contain Phase 2/3 stories.
+        No {phase} epics currently contain later-phase stories.
       </div>
     );
   }

@@ -15,12 +15,14 @@ _DEFAULT_PATH = os.path.join(_ROOT, "web", "config", "reports.json")
 @dataclass
 class ReportsConfig:
     project: str = "PXB1"
-    scope: str = "PHASE 1"
+    scope: str = "PHASE 2"
     exclude_ids: list = field(default_factory=lambda: ["PXB1-3295"])
+    include_epic_ids: list = field(default_factory=lambda: ["PXB1-%s" % x for x in "1787 3205 3274 3546 3977 4846 4847 4848 5104 9430 9999 10000 10171 10305 10316".split()])   # non-empty = track ONLY these epics
     man_day_minutes: int = 480
-    jun29_cutoff_iso: str = "2026-06-29T10:30:00Z"   # 29 Jun 2026 4:00 PM IST
-    mtg_cutoff_iso: str = "2026-07-03T10:30:00Z"     # 3 Jul 2026 4:00 PM IST
-    week1_anchor: str = "2026-06-30"                 # Tue→Mon week 1 start
+    release_mode: str = "monthly"   # "monthly" = month-end releases from Sprint / QA deadline; "milestone" = Phase 1 behaviour
+    jun29_cutoff_iso: str = "2026-10-06T00:00:00Z"   # Phase 2 baseline (Phase 1 was 29 Jun 2026)
+    mtg_cutoff_iso: str = "2026-10-16T10:30:00Z"     # Phase 2 release to QA (Phase 1 was 3 Jul)
+    week1_anchor: str = "2026-10-06"                 # Tue→Mon week 1 start (Phase 1: 2026-06-30)
     youtrack_base: str = "https://support.posibolt.com"
 
 def load_config(path=_DEFAULT_PATH):

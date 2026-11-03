@@ -27,7 +27,17 @@ const TONE_TEXT: Record<Tone, string> = {
  * `.toLocaleString()` with no sub-label, same as those two files' non-effort
  * stats. A plain server component: pure render from props, no interactivity.
  */
-export function EffortKpi({ effort, hasP2Count }: { effort: Effort; hasP2Count: number }) {
+export function EffortKpi({
+  effort,
+  hasP2Count,
+  phase = "Phase 1",
+  baseline = "29 Jun",
+}: {
+  effort: Effort;
+  hasP2Count: number;
+  phase?: string;
+  baseline?: string;
+}) {
   const { counts, totals } = effort;
   const pending = totals.pending;
   const grand = totals.grand_total;
@@ -37,7 +47,7 @@ export function EffortKpi({ effort, hasP2Count }: { effort: Effort; hasP2Count: 
       label: "Done",
       value: counts.done.toLocaleString(),
       tone: counts.done > 0 ? "good" : undefined,
-      title: "Epics resolved since the 29 Jun baseline",
+      title: `Epics resolved since the ${baseline} baseline`,
     },
     { label: "Pending", value: counts.pending.toLocaleString(), tone: counts.pending > 0 ? "warn" : undefined },
     { label: "Dev", value: fmtHours(pending.server), sub: fmtMd(pending.server), title: "Pending (S1) Dev estimate" },
@@ -46,12 +56,12 @@ export function EffortKpi({ effort, hasP2Count }: { effort: Effort; hasP2Count: 
     { label: "Pending Total", value: fmtHours(pending.total), sub: fmtMd(pending.total), tone: "danger" },
     { label: "Mixed", value: counts.mixed.toLocaleString(), tone: counts.mixed > 0 ? "warn" : undefined, title: "Mixed (P1): some done, some pending" },
     { label: "No Stories", value: counts.no_stories.toLocaleString() },
-    { label: "P2/P3 Backlog", value: counts.p2_backlog.toLocaleString(), tone: "violet" },
+    { label: "Later-phase Backlog", value: counts.p2_backlog.toLocaleString(), tone: "violet" },
     {
-      label: "Has P2/P3",
+      label: "Has Later-phase",
       value: hasP2Count.toLocaleString(),
       tone: hasP2Count > 0 ? "violet" : undefined,
-      title: "Phase 1 epics containing at least one Phase 2 or Phase 3 story",
+      title: `${phase} epics containing at least one later-phase story`,
     },
     { label: "Grand Total", value: fmtHours(grand.total), sub: fmtMd(grand.total), tone: "accent" },
   ];

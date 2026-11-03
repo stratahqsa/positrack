@@ -21,9 +21,10 @@ export function isDoneState(state: string | null | undefined): boolean {
 }
 
 /** Mirrors core/ytcore.py's `p1p` filter exactly: pending (not done) AND
- *  in-scope for Phase 1 (no scope set, or scope contains "PHASE 1"). */
-export function isPendingPhase1(story: Story): boolean {
-  return !isDoneState(story.state) && (!story.scope || story.scope.toUpperCase().includes("PHASE 1"));
+ *  in-scope for the report's current phase (no scope set, or scope contains
+ *  `scope` — `snapshot.effort.scope`, "PHASE 1" for older callers). */
+export function isPendingPhase1(story: Story, scope = "PHASE 1"): boolean {
+  return !isDoneState(story.state) && (!story.scope || story.scope.toUpperCase().includes(scope.toUpperCase()));
 }
 
 /** Sum of each pending-Phase-1 story's own `spent` (its "Spent time" field —
@@ -31,8 +32,8 @@ export function isPendingPhase1(story: Story): boolean {
  *  table.tsx uses to scope a MIXED epic's Spent column to just its pending
  *  stories. `spent` is optional (older snapshots predate it) and defaults
  *  to 0. */
-export function pendingP1Spent(epic: Epic): number {
-  return epic.stories.filter(isPendingPhase1).reduce((total, s) => total + (s.spent ?? 0), 0);
+export function pendingP1Spent(epic: Epic, scope = "PHASE 1"): number {
+  return epic.stories.filter((s) => isPendingPhase1(s, scope)).reduce((total, s) => total + (s.spent ?? 0), 0);
 }
 
 /**
@@ -58,8 +59,8 @@ export function pendingP1Spent(epic: Epic): number {
  * type, a small residual gap remained. Reading the story's own field
  * sidesteps re-implementing YouTrack's propagation logic at all.
  */
-export function epicRemainingSpent(epic: Epic): number {
-  return epic.stories.length > 0 ? pendingP1Spent(epic) : epic.spent;
+export function epicRemainingSpent(epic: Epic, scope = "PHASE 1"): number {
+  return epic.stories.length > 0 ? pendingP1Spent(epic, scope) : epic.spent;
 }
 
 export type WatchSource = "S1" | "S2";

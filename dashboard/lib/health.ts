@@ -175,7 +175,7 @@ export function remainingEffort(s: Snapshot): {
   let spentMin = 0;
   let netMin = 0;
   for (const e of openEpics(s)) {
-    const spent = epicRemainingSpent(e);
+    const spent = epicRemainingSpent(e, s.effort.scope);
     totalMin += e.total;
     spentMin += spent;
     netMin += Math.max(0, e.total - spent);

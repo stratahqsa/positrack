@@ -506,7 +506,10 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     pool = yt.work_item_pool(ctx, project=project)
 
     # 1) effort — the full report, spend joined from the shared pool.
-    effort = yt.effort_report(ctx, project=project, scope=scope, pool=pool)
+    rcfg = load_config()
+    effort = yt.effort_report(ctx, project=project, scope=scope, pool=pool,
+                              cutoff_iso=rcfg.jun29_cutoff_iso, exclude_ids=rcfg.exclude_ids,
+                              include_ids=set(rcfg.include_epic_ids) or None)
     # Owner-accountability flags for the UI: a role/system placeholder (e.g. "Dev Lead")
     # owning an epic means no individual is accountable -> treat as needs_owner.
     for _sec in ("pending", "mixed", "no_stories", "done", "p2_backlog"):
@@ -553,7 +556,6 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     insights = build_insights(effort, project, scope, today_date=now.strftime("%Y-%m-%d"))
 
     # 6) reports data foundation (Bug Analysis + schedule for Release/Weekly views)
-    rcfg = load_config()
     bugs_block = rbugs.build_bugs(ctx, yt, rcfg, now_ms)
     schedule_block = rsched.build_schedule(ctx, yt, rcfg)
     rdrill.attach_drilldown(ctx, yt, schedule_block["stories"])
@@ -567,6 +569,8 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     android_block = randroid.build_android(ctx, yt)
     config_block = {
         "project": rcfg.project, "scope": rcfg.scope, "exclude_ids": rcfg.exclude_ids,
+        "include_epic_ids": rcfg.include_epic_ids,
+        "release_mode": rcfg.release_mode,
         "man_day_minutes": rcfg.man_day_minutes, "jun29_cutoff_iso": rcfg.jun29_cutoff_iso,
         "mtg_cutoff_iso": rcfg.mtg_cutoff_iso, "week1_anchor": rcfg.week1_anchor,
     }
@@ -642,11 +646,13 @@ def write_snapshot(snapshot):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="POSX Control Tower snapshot producer")
     ap.add_argument("--project", default="PXB1")
-    ap.add_argument("--scope", default="PHASE 1")
+    ap.add_argument("--scope", default="",
+                    help="override the phase scope (default: web/config/reports.json `scope`)")
     ap.add_argument("--sprint", default="", help="override the sprint for timespent "
                                                  "(default: latest active, fallback %s)" % FALLBACK_SPRINT)
     ap.add_argument("--base", default="", help="YouTrack base URL override")
     a = ap.parse_args(argv)
+    a.scope = a.scope or load_config().scope
 
     token = os.environ.get("YT_TOKEN", "").strip()
     if not token:

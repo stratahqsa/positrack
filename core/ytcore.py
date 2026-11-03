@@ -404,16 +404,30 @@ def _cf_str(issue, name):
         return v.get("name") or ""
     return v or ""
 
-# Any phase after Phase 1 counts as "deferred out of Phase 1 scope" — a story
-# or epic scoped here no longer belongs in Phase-1 P1-pending/rollup figures.
-# Extend this tuple, not the call sites, if a Phase 4 is ever introduced.
-_DEFERRED_PHASES = ("PHASE 2", "PHASE 3")
+# Ordered phase ladder. Any phase AFTER the report's current scope counts as
+# "deferred out of scope" — a story or epic scoped there no longer belongs in
+# the current phase's pending/rollup figures. Extend this tuple, not the call
+# sites, if a Phase 4 is ever introduced.
+_PHASES = ("PHASE 1", "PHASE 2", "PHASE 3")
+_DEFAULT_SCOPE = "PHASE 1"
 
-def _is_deferred_scope(scope):
+def _deferred_phases(scope=_DEFAULT_SCOPE):
+    """Phases strictly after `scope` on the ladder (() if `scope` is the last
+    rung or is not on the ladder)."""
+    sc = (scope or "").upper()
+    return _PHASES[_PHASES.index(sc) + 1:] if sc in _PHASES else ()
+
+def _is_deferred_scope(scope, current=_DEFAULT_SCOPE):
     """True if `scope` (a raw Scope string) names a later-phase deferral —
-    i.e. moved out of Phase 1, regardless of which later phase it landed in."""
+    i.e. moved out of the `current` phase, regardless of which later phase it
+    landed in."""
     s = (scope or "").upper()
-    return any(p in s for p in _DEFERRED_PHASES)
+    return any(p in s for p in _deferred_phases(current))
+
+def _in_scope(story_scope, current=_DEFAULT_SCOPE):
+    """True if a story belongs to the `current` phase: no scope set, or its
+    scope contains the phase name."""
+    return (not story_scope) or (current.upper() in story_scope.upper())
 
 def _epic_stories(epic):
     """Extract the Subtask/OUTWARD child stories of a recipe-shaped epic dict as a
@@ -449,7 +463,7 @@ def _epic_stories(epic):
                 })
     return stories
 
-def categorize_epic(epic):
+def categorize_epic(epic, scope=_DEFAULT_SCOPE):
     """PURE port of recipe Step 4. Given one recipe-shaped epic dict (idReadable,
     summary, created, resolved, assignee(name), customFields, links), return a
     categorized record: category (DONE/PENDING/MIXED/NO_STORIES), the pending-P1
@@ -464,9 +478,9 @@ def categorize_epic(epic):
     # tower should surface as a watch item regardless of which later phase the
     # story landed in. Field name `p2_stories` is kept as-is (wire-format
     # stability) even though it now also counts Phase 3.
-    p2_stories = sum(1 for s in stories if _is_deferred_scope(s.get("scope")))
+    p2_stories = sum(1 for s in stories if _is_deferred_scope(s.get("scope"), scope))
     p1_pending = sum(1 for s in stories
-                     if not _is_deferred_scope(s.get("scope"))
+                     if not _is_deferred_scope(s.get("scope"), scope)
                      and not is_done_state(s.get("state")))
     epic_state = _cf_str(epic, "State")
     epic_est = {"server": _cf_minutes(epic, "Server Estimation"),
@@ -492,7 +506,7 @@ def categorize_epic(epic):
     done_s = [s for s in stories if is_done_state(s["state"])]
     pend_s = [s for s in stories if not is_done_state(s["state"])]
     # pending & (no scope OR Phase-1) stories drive the estimate rollup
-    p1p = [s for s in pend_s if (not s["scope"]) or ("PHASE 1" in s["scope"].upper())]
+    p1p = [s for s in pend_s if _in_scope(s["scope"], scope)]
     rollup = {"server": sum(s["est"]["server"] for s in p1p),
               "ui": sum(s["est"]["ui"] for s in p1p),
               "testing": sum(s["est"]["testing"] for s in p1p)}
@@ -525,7 +539,7 @@ def categorize_epic(epic):
     rec["missing_est"] = (rollup["server"] == 0 and rollup["ui"] == 0) or (rollup["testing"] == 0)
     return rec
 
-def _overshoot_spend(stories, cutoff_ms):
+def _overshoot_spend(stories, cutoff_ms, scope=_DEFAULT_SCOPE):
     """Spend figure the `overshoot` flag compares against `total` (the Phase-1
     PENDING estimate rollup, see categorize_epic above) — Phase 1 stories that
     are either still pending OR were closed AFTER `cutoff_ms`. Deliberately
@@ -540,7 +554,7 @@ def _overshoot_spend(stories, cutoff_ms):
     MIXED-epic Spent figure."""
     relevant = [
         s for s in stories
-        if (not s["scope"] or "PHASE 1" in s["scope"].upper())
+        if _in_scope(s["scope"], scope)
         and (not is_done_state(s["state"]) or (s.get("resolved") and s["resolved"] > cutoff_ms))
     ]
     return sum(s["spent"] for s in relevant)
@@ -717,7 +731,7 @@ def _child_parent_map(ctx, parent_ids, chunk=80):
 
 def effort_report(ctx, project="PXB1", scope="PHASE 1",
                   cutoff_iso=EFFORT_CUTOFF_DEFAULT, exclude_ids=("PXB1-3295",),
-                  pool=None):
+                  pool=None, include_ids=None):
     """Port of Suhail's PXB1 Phase-1 Effort Report onto the engine (stdlib only).
 
     Discovers every open in-scope epic PLUS epics resolved after `cutoff_iso`,
@@ -767,7 +781,7 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     seen, epic_ids = set(), []
     for e in list(open_epics) + list(done_epics):
         iid = e.get("idReadable")
-        if iid and iid not in seen and iid not in exclude:
+        if iid and iid not in seen and iid not in exclude and (not include_ids or iid in include_ids):
             seen.add(iid)
             epic_ids.append(iid)
 
@@ -777,7 +791,7 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
                "links(direction,linkType(name),issues(idReadable,summary,created,resolved,"
                "assignee(name),customFields(name,value(name,minutes))))")
     # Chunked bulk fetch (same order as epic_ids) — was one GET per epic (N+1).
-    cats = [categorize_epic(raw)
+    cats = [categorize_epic(raw, scope)
             for raw in get_issues_by_ids(ctx, epic_ids, epic_sf)]
 
     # --- true spend: ONE phase-wide work-item sweep, joined story->epic (Rev #2) ---
@@ -802,7 +816,7 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
         r = rec["rollup"]
         rec["total"] = r["server"] + r["ui"] + r["testing"]
         rec["spent"] = spend_by_epic.get(rec["id"], 0)
-        rec["overshoot_spent"] = _overshoot_spend(rec["stories"], cutoff_ms)
+        rec["overshoot_spent"] = _overshoot_spend(rec["stories"], cutoff_ms, scope)
         rec["overshoot"] = rec["total"] > 0 and rec["overshoot_spent"] > rec["total"]
 
     done = [r for r in cats if r["category"] == "DONE"]
@@ -844,23 +858,26 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     # format stability) even though the set now also includes Phase 3 moves;
     # `phase`/`stories` are new, additive fields — older snapshots simply lack
     # them.
-    p2_candidates = get_issues(ctx, "project: %s TaskType: EPIC Scope: {PHASE 2}, {PHASE 3} #Unresolved" % project,
+    deferred = _deferred_phases(scope)
+    deferred_q = ", ".join("{%s}" % p for p in deferred)
+    p2_candidates = (get_issues(ctx, "project: %s TaskType: EPIC Scope: %s #Unresolved" % (project, deferred_q),
                                fields="idReadable,summary,created,"
                                       "customFields(name,value(name,minutes)),"
                                       "links(direction,linkType(name),issues(idReadable,summary,created,"
                                       "customFields(name,value(name,minutes))))", top=300)
+                     if deferred else [])
     p2_backlog = []
     for e in p2_candidates:
         pid = e.get("idReadable")
         if not pid or pid in exclude:
             continue
         current_phase = _cf_str(e, "Scope")
-        if current_phase not in _DEFERRED_PHASES:
+        if current_phase not in deferred:
             continue  # defensive: the query matched, but never trust a stray row
         act = GET(ctx, "/api/issues/%s/activities?categories=CustomFieldCategory"
                        "&fields=timestamp,added(name),removed(name),field(name)" % pid)
         acts = act if isinstance(act, list) else []
-        if _scope_at_or_before(acts, cutoff_ms) != "PHASE 1":
+        if _scope_at_or_before(acts, cutoff_ms) != scope.upper():
             continue
         changed_at = _scope_arrived_at_after_cutoff(acts, cutoff_ms, current_phase)
         if changed_at is not None:
