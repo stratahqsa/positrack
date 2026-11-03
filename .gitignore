@@ -47,3 +47,6 @@ web/data/
 # Claude Code local project config (personal tooling; the committed web/.claude/ is
 # separate and unaffected by this root-anchored rule).
 /.claude/
+
+# Evaluation report — contains user lists and security findings. Do not commit.
+REPORT-youtrack-positrack-eval.md

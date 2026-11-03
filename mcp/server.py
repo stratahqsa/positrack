@@ -192,17 +192,20 @@ def _resolve_ctx():
         pass  # no auth context (legacy header path or stdio)
     # 2. Raw bearer header. get_http_headers() filters out Authorization by
     # default, so read the request directly (Starlette headers are case-insensitive).
+    is_remote = False
     if not token:
         try:
             from fastmcp.server.dependencies import get_http_request
             request = get_http_request()
+            is_remote = True
             auth = request.headers.get("authorization")
             if auth and auth.strip().lower().startswith("bearer "):
                 token = auth.strip()[7:].strip()
         except Exception:
             pass  # not in an HTTP request context (e.g. stdio)
-    # 3. Local stdio.
-    if not token:
+    # 3. Local stdio only — $YT_TOKEN is a single shared identity so it must
+    #    never be used on a remote transport where callers expect per-user auth.
+    if not token and not is_remote:
         env = os.environ.get("YT_TOKEN")
         token = env.strip() if env else None
     if not token:
@@ -350,10 +353,11 @@ def _project_row(it, cols):
 
 
 @mcp.tool
-def yt_get(issue: str) -> dict:
+def yt_get(issue: str, comments_limit: int = 8) -> dict:
     """Get one Posibolt YouTrack ticket by id (e.g. PXB1-1189, IS-184): fields, links,
-    recent comments, age, estimate-vs-spent. Use for "show me / how far is <ticket>"."""
-    return _run(lambda: core.get_issue(_resolve_ctx(), issue))
+    recent comments, age, estimate-vs-spent. Use for "show me / how far is <ticket>".
+    comments_limit controls how many comments to fetch (default 8, max 100)."""
+    return _run(lambda: core.get_issue(_resolve_ctx(), issue, comments_limit=comments_limit))
 
 
 @mcp.tool
@@ -482,14 +486,31 @@ def yt_saved() -> dict:
     return _run(lambda: {"saved": core.saved(_resolve_ctx())})
 
 
+@mcp.tool
+def yt_groups(limit: int = 100) -> dict:
+    """List user groups visible to the caller (id, name, member count)."""
+    return _run(lambda: {"groups": core.groups(_resolve_ctx(), limit)})
+
+
+@mcp.tool
+def yt_group_members(group_id: str, limit: int = 100) -> dict:
+    """List members of a user group by group id (login, fullName, banned, userType)."""
+    return _run(lambda: core.group_members(_resolve_ctx(), group_id, limit))
+
+
 # ---------- write tools (commit=False previews; show preview & confirm first) ----------
 @mcp.tool
 def yt_create(project: str, summary: str, description: str = "", fields: dict | None = None,
-              commit: bool = False) -> dict:
+              commit: bool = False, is_draft: bool = False,
+              visibility_groups: str = "", visibility_users: str = "") -> dict:
     """Create an issue. `fields` is {name: value}, auto-typed from the project schema.
     commit=False returns a PREVIEW of the exact payload without creating anything;
-    show it to the user, get confirmation, then call again with commit=True."""
-    return _run(lambda: core.create(_resolve_ctx(), project, summary, description, fields or {}, commit))
+    show it to the user, get confirmation, then call again with commit=True.
+    is_draft=True creates a draft issue (requires YouTrack 2023.3+).
+    visibility_groups/visibility_users restrict who can see it (comma-separated names/logins)."""
+    vis = core._build_visibility(visibility_groups or None, visibility_users or None)
+    return _run(lambda: core.create(_resolve_ctx(), project, summary, description,
+                                    fields or {}, commit, is_draft=is_draft, visibility=vis))
 
 
 @mcp.tool
@@ -510,9 +531,12 @@ def yt_cmd(issues: str, command: str, comment: str = "", commit: bool = False) -
 
 
 @mcp.tool
-def yt_comment(issue: str, text: str, commit: bool = False) -> dict:
-    """Post a comment on an issue. commit=False previews; confirm before commit=True."""
-    return _run(lambda: core.comment(_resolve_ctx(), issue, text, commit))
+def yt_comment(issue: str, text: str, commit: bool = False,
+               visibility_groups: str = "", visibility_users: str = "") -> dict:
+    """Post a comment on an issue. commit=False previews; confirm before commit=True.
+    visibility_groups/visibility_users restrict who can see the comment (comma-separated)."""
+    vis = core._build_visibility(visibility_groups or None, visibility_users or None)
+    return _run(lambda: core.comment(_resolve_ctx(), issue, text, commit, visibility=vis))
 
 
 @mcp.tool
@@ -547,9 +571,19 @@ def yt_reassign(from_user: str, to_user: str, project: str = "", comment: str = 
 
 
 @mcp.tool
-def yt_article_create(project: str, summary: str, content: str = "", commit: bool = False) -> dict:
-    """Create a Knowledge Base article. commit=False previews; confirm before commit=True."""
-    return _run(lambda: core.article_create(_resolve_ctx(), project, summary, content, commit))
+def yt_article_create(project: str, summary: str, content: str = "", commit: bool = False,
+                      visibility_groups: str = "", visibility_users: str = "") -> dict:
+    """Create a Knowledge Base article. commit=False previews; confirm before commit=True.
+    visibility_groups/visibility_users restrict who can see it (comma-separated)."""
+    vis = core._build_visibility(visibility_groups or None, visibility_users or None)
+    return _run(lambda: core.article_create(_resolve_ctx(), project, summary, content, commit, visibility=vis))
+
+
+@mcp.tool
+def yt_article_update(id: str, summary: str = "", content: str = "", commit: bool = False) -> dict:
+    """Update a Knowledge Base article's summary and/or content. commit=False previews;
+    confirm before commit=True."""
+    return _run(lambda: core.article_update(_resolve_ctx(), id, summary, content, commit))
 
 
 # ---------- project context (git-controlled, local file) ----------
