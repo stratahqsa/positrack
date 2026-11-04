@@ -44,6 +44,22 @@ export function fmtDate(ms: number | null): string {
 }
 
 /**
+ * Elapsed time since `sinceMs` as "3d 8h" (days + hours), "5h 20m" under a
+ * day, "20m" under an hour; null/future -> "—". Used for the Bug Blocker
+ * "ready to close for …" aging.
+ */
+export function fmtAge(sinceMs: number | null | undefined, nowMs: number): string {
+  if (sinceMs == null || nowMs < sinceMs) return "—";
+  const totalMin = Math.floor((nowMs - sinceMs) / 60_000);
+  const days = Math.floor(totalMin / 1440);
+  const hours = Math.floor((totalMin % 1440) / 60);
+  const mins = totalMin % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
+
+/**
  * Epoch ms -> "DD Mon YYYY, h:mm AM/PM" rendered in IST (e.g. bug `created`
  * 1783941449646 -> "13 Jul 2026, 4:47 PM"); null -> "—". Adds the fixed
  * +5:30 IST offset to the ms value up front, then reads UTC calendar/clock
