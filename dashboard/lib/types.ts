@@ -384,19 +384,23 @@ export interface BlockerBug {
 /** A RE-OPEN development ticket (TaskType: Development) with its linked bugs split
  *  into blocking (Urgent/High/Medium, unresolved) vs low-priority
  *  (unresolved but non-blocking) — `status` is "blocked" whenever
- *  `blockingBugs` is non-empty, "ready" otherwise. */
+ *  `blockingBugs` is non-empty, "awaiting_bugs" when no bug is linked at all
+ *  (QA has yet to raise one), "ready" otherwise. `readySince` (epoch ms) is
+ *  set only for "ready" tickets: the later of entering RE-OPEN and the last
+ *  linked bug's resolution; absent on snapshots that predate it. */
 export interface BlockerTicket {
   id: string;
   summary: string;
   state: string;
   blockingBugs: BlockerBug[];
   lowPriorityBugs: BlockerBug[];
-  status: "blocked" | "ready";
+  status: "blocked" | "ready" | "awaiting_bugs";
+  readySince?: number | null;
 }
 
 export interface BugBlockerBlock {
   tickets: BlockerTicket[];
-  kpi: { total: number; blocked: number; ready: number };
+  kpi: { total: number; blocked: number; ready: number; awaiting_bugs?: number };
 }
 
 /**

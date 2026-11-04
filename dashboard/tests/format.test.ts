@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtDate, fmtDateTime, fmtDateTimeIst, fmtHours, fmtMd, fmtTimeShort, tzLabel, verdictVsQa } from "../lib/format";
+import { fmtAge, fmtDate, fmtDateTime, fmtDateTimeIst, fmtHours, fmtMd, fmtTimeShort, tzLabel, verdictVsQa } from "../lib/format";
 
 /**
  * Display/format helpers. Cases lifted from docs/reports-dashboard/reference/specs/
@@ -161,5 +161,23 @@ describe("fmtTimeShort / tzLabel", () => {
     expect(tzLabel("Asia/Kolkata")).toBe("IST");
     expect(tzLabel("Africa/Johannesburg")).toBe("SAST");
     expect(typeof tzLabel("Asia/Dubai")).toBe("string");
+  });
+});
+
+
+describe("fmtAge", () => {
+  const H = 3_600_000;
+  it("days and hours", () => {
+    expect(fmtAge(0, 3 * 24 * H + 8 * H + 5 * 60_000)).toBe("3d 8h");
+  });
+  it("hours and minutes under a day", () => {
+    expect(fmtAge(0, 5 * H + 20 * 60_000)).toBe("5h 20m");
+  });
+  it("minutes under an hour", () => {
+    expect(fmtAge(0, 20 * 60_000)).toBe("20m");
+  });
+  it("null or future -> em dash", () => {
+    expect(fmtAge(null, 1000)).toBe("—");
+    expect(fmtAge(5000, 1000)).toBe("—");
   });
 });
