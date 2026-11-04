@@ -1453,7 +1453,8 @@ def comment(ctx, issue, text, commit=False, visibility=None):
         payload["visibility"] = visibility
     out = {"label": f"comment on {issue}", "payload": payload, "committed": bool(commit)}
     if commit:
-        POST(ctx, f"/api/issues/{issue}/comments?fields=id", payload)
+        kind = "articles" if is_article_id(issue) else "issues"
+        POST(ctx, f"/api/{kind}/{issue}/comments?fields=id", payload)
         out["commented"] = issue
     return out
 
@@ -1510,8 +1511,14 @@ def articles(ctx, query="", limit=40):
         arts = [x for x in arts if ql in (x.get("summary") or "").lower()]
     return {"total": len(arts), "query": query, "articles": arts[:limit]}
 
-def article(ctx, aid):
-    return GET(ctx, f"/api/articles/{aid}?fields=idReadable,summary,content,project(shortName),reporter(login)")
+def is_article_id(iid):
+    return bool(re.match(r"^[A-Za-z0-9_]+-A-\d+$", str(iid).strip()))
+
+def article(ctx, aid, comments_limit=8):
+    base = GET(ctx, f"/api/articles/{aid}?fields=idReadable,summary,content,project(shortName),reporter(login)")
+    top = min(int(comments_limit), 100)
+    base["comments"] = GET(ctx, f"/api/articles/{aid}/comments?fields=text,created,author(login)&$top={top}")
+    return base
 
 def article_create(ctx, project, summary, content="", commit=False, visibility=None):
     """Create a KB article. visibility is an optional dict from _build_visibility()."""
