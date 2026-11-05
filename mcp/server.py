@@ -469,9 +469,9 @@ def yt_articles(query: str = "", limit: int = 40) -> dict:
 
 
 @mcp.tool
-def yt_article(id: str) -> dict:
-    """Read one Knowledge Base article's content by id."""
-    return _run(lambda: core.article(_resolve_ctx(), id))
+def yt_article(id: str, comments_limit: int = 8) -> dict:
+    """Read one Knowledge Base article's content and latest comments by id."""
+    return _run(lambda: core.article(_resolve_ctx(), id, comments_limit))
 
 
 @mcp.tool
@@ -533,7 +533,8 @@ def yt_cmd(issues: str, command: str, comment: str = "", commit: bool = False) -
 @mcp.tool
 def yt_comment(issue: str, text: str, commit: bool = False,
                visibility_groups: str = "", visibility_users: str = "") -> dict:
-    """Post a comment on an issue. commit=False previews; confirm before commit=True.
+    """Post a comment on an issue or a Knowledge Base article (id like PXB-A-229).
+    commit=False previews; confirm before commit=True.
     visibility_groups/visibility_users restrict who can see the comment (comma-separated)."""
     vis = core._build_visibility(visibility_groups or None, visibility_users or None)
     return _run(lambda: core.comment(_resolve_ctx(), issue, text, commit, visibility=vis))
