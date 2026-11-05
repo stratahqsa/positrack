@@ -563,10 +563,11 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     # Support Tickets (SUP project, Type: POS X) -- unrelated to PXB1's
     # project/scope config, so no rcfg passed through (see sup_posx.py).
     sup_posx_block = rsup.build_sup_posx(ctx, yt, now_ms)
-    # Android Status Report (PXB1-3295 "POS (Android)" epic) -- deliberately
-    # EXCLUDED from schedule_block above via rcfg.exclude_ids, so it's fetched
-    # as its own separate slice here (see android.py).
-    android_block = randroid.build_android(ctx, yt)
+    # Android Status Report (rcfg.android_epic_ids: PXB1-3295 "POS (Android)"
+    # plus any added epics, merged into one list) -- PXB1-3295 is deliberately
+    # EXCLUDED from schedule_block above via rcfg.exclude_ids, so these are
+    # fetched as their own separate slice here (see android.py).
+    android_block = randroid.build_android(ctx, yt, rcfg.android_epic_ids)
     config_block = {
         "project": rcfg.project, "scope": rcfg.scope, "exclude_ids": rcfg.exclude_ids,
         "include_epic_ids": rcfg.include_epic_ids,

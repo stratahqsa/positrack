@@ -26,7 +26,10 @@ export default async function AndroidPage() {
         <div>
           <h1 className="text-[15px] font-semibold tracking-tight text-fg">Android Status Report</h1>
           <p className="mt-0.5 text-[12px] text-muted">
-            PXB1-3295 · POS (Android) · direct-subtask stories with linked open bugs (APP project)
+            {android?.epics?.length
+              ? android.epics.map((e) => `${e.epicId} · ${e.epicName}`).join(" + ")
+              : "PXB1-3295 · POS (Android)"}{" "}
+            · direct-subtask stories with linked open bugs (APP project)
           </p>
         </div>
 

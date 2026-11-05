@@ -20,16 +20,25 @@ import { cn } from "@/lib/utils";
  * any one story. `StoryTable` is reused verbatim from Weekly Deadline --
  * Android's story shape is `ScheduleStory` already (scripts/reports/
  * android.py reuses schedule.py's parse_story()), and every row shares the
- * same one epic (PXB1-3295), so `epicNames` is a single-entry map built
- * from the block's own `epicId`/`epicName`.
+ * one merged list across every Android epic (the story table's Epic column
+ * tells them apart), so `epicNames` maps each epic id to its name from the
+ * block's `epics` (falling back to the single `epicId`/`epicName` on older
+ * snapshots).
  */
 export function AndroidView({ block, tz }: { block: AndroidBlock; tz: string }) {
   const [showDone, setShowDone] = React.useState(false);
 
   const epicNames = React.useMemo(
-    () => ({ [block.epicId]: block.epicName }),
-    [block.epicId, block.epicName],
+    () =>
+      Object.fromEntries(
+        (block.epics?.length ? block.epics : [{ epicId: block.epicId, epicName: block.epicName }]).map((e) => [
+          e.epicId,
+          e.epicName,
+        ]),
+      ),
+    [block.epics, block.epicId, block.epicName],
   );
+  const sectionTitle = block.epics && block.epics.length > 1 ? block.epics.map((e) => e.epicName).join(" + ") : block.epicName;
 
   const visible = React.useMemo(
     () => (showDone ? block.stories : block.stories.filter((s) => !s.done)),
@@ -65,7 +74,7 @@ export function AndroidView({ block, tz }: { block: AndroidBlock; tz: string }) 
         </div>
       </Card>
 
-      <Section title={block.epicName} tone="violet" count={visible.length}>
+      <Section title={sectionTitle} tone="violet" count={visible.length}>
         <StoryTable
           stories={visible}
           epicNames={epicNames}

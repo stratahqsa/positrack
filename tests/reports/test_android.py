@@ -68,16 +68,17 @@ BUG_CLOSED = {
 
 
 class FakeYT:
-    def __init__(self, epic, stories, bugs):
+    def __init__(self, epic, stories, bugs, extra_epics=()):
         self.epic = epic
+        self.epics = {e["idReadable"]: e for e in [epic, *extra_epics]}
         self.stories = {s["idReadable"]: s for s in stories}
         self.bugs = {b["idReadable"]: b for b in bugs}
         self.queries = []
 
     def get_issues(self, ctx, query, fields=None, top=None, limit=None):
         self.queries.append(query)
-        if query == "issue ID: %s" % self.epic["idReadable"]:
-            return [self.epic]
+        if query.startswith("issue ID: ") and query[len("issue ID: "):] in self.epics:
+            return [self.epics[query[len("issue ID: "):]]]
         ids = query[len("issue ID: "):].split(", ")
         out = []
         for i in ids:
@@ -160,3 +161,43 @@ def test_no_stories_returns_empty_block_no_crash():
     block = android.build_android(ctx=None, yt=yt)
     assert block["stories"] == []
     assert block["kpi"] == {"total_stories": 0, "done_stories": 0, "open_stories": 0, "open_bugs": 0}
+
+
+EPIC2_RAW = {
+    "id": "82-200", "idReadable": "PXB1-6372", "summary": "Stock Take App",
+    "links": [
+        {"direction": "OUTWARD", "linkType": {"name": "Subtask"}, "issues": [
+            {"idReadable": "PXB1-10354"},
+        ]},
+    ],
+}
+
+STORY_EPIC2 = {
+    "idReadable": "PXB1-10354", "summary": "Stock Take App Initial Setup & Authentication",
+    "created": 1710000000000, "resolved": None,
+    "customFields": [
+        {"name": "State", "value": {"name": "OPEN"}},
+        {"name": "Assignee", "value": {"name": "Amina"}},
+    ],
+    "links": [
+        {"direction": "INWARD", "linkType": {"name": "Subtask"}, "issues": [
+            {"idReadable": "PXB1-6372"},
+        ]},
+    ],
+}
+
+
+def test_build_android_merges_stories_from_every_epic_into_one_list():
+    yt = FakeYT(EPIC_RAW, [STORY_OPEN, STORY_DONE, STORY_EPIC2], [BUG_OPEN, BUG_CLOSED],
+                extra_epics=[EPIC2_RAW])
+    block = android.build_android(ctx=None, yt=yt, epic_ids=["PXB1-3295", "PXB1-6372"])
+    assert [e["epicId"] for e in block["epics"]] == ["PXB1-3295", "PXB1-6372"]
+    assert block["epics"][1]["epicName"] == "Stock Take App"
+    by_id = {s["storyId"]: s for s in block["stories"]}
+    assert set(by_id) == {"PXB1-3776", "PXB1-3773", "PXB1-10354"}
+    assert by_id["PXB1-10354"]["epicId"] == "PXB1-6372"
+    assert by_id["PXB1-3776"]["epicId"] == "PXB1-3295"
+    assert block["kpi"]["total_stories"] == 3
+    assert block["kpi"]["open_stories"] == 2
+    # first epic kept as epicId/epicName for readers that predate `epics`
+    assert block["epicId"] == "PXB1-3295" and block["epicName"] == "POS (Android)"

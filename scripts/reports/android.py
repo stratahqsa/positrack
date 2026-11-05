@@ -1,8 +1,9 @@
 # scripts/reports/android.py
-"""Android Status Report data block (PXB1-3295 "POS (Android)" epic --
-deliberately EXCLUDED from every other PXB1 Phase-1 report via
-ReportsConfig.exclude_ids, since Android has its own separate cadence/scope
-from the rest of Phase 1). Every direct-subtask story under that one epic,
+"""Android Status Report data block (the Android epics -- PXB1-3295 "POS
+(Android)" plus any others in ReportsConfig.android_epic_ids; PXB1-3295 is
+deliberately EXCLUDED from every other PXB1 report via
+ReportsConfig.exclude_ids, since Android has its own separate cadence/scope).
+Every direct-subtask story under those epics, merged into ONE list,
 each with ALL of its linked bugs (open AND resolved/done -- same as the
 standalone skill report this mirrors, unlike Weekly Deadline's RE-OPEN
 drill-down which keeps open-only) attached via the SAME Subtask -> "Bugs
@@ -14,7 +15,8 @@ from . import parse
 from .schedule import parse_story
 from .drilldown import bug_candidates
 
-ANDROID_EPIC_ID = "PXB1-3295"
+ANDROID_EPIC_IDS = ["PXB1-3295"]   # default; the live list is ReportsConfig.android_epic_ids
+ANDROID_EPIC_ID = ANDROID_EPIC_IDS[0]
 
 
 def _bulk(ctx, yt, ids, fields, chunk):
@@ -51,23 +53,27 @@ def _resolve_all_bugs(candidates, fetch_bug):
     return out
 
 
-def build_android(ctx, yt, chunk=40):
+def build_android(ctx, yt, epic_ids=None, chunk=40):
     """Run the underlying queries and shape the block. `yt` is the ytcore
-    module. Deliberately does NOT take a `cfg` (ReportsConfig) -- the
-    Android epic is a single hardcoded id, not driven by the PXB1 Phase-1
-    project/scope baseline every other report module reads cfg from."""
+    module. `epic_ids` is ReportsConfig.android_epic_ids (default: just
+    PXB1-3295) -- the Android epics are NOT driven by the PXB1 phase/scope
+    baseline every other report module reads cfg from. Stories from every
+    epic are merged into one list, each keeping its own epicId."""
     EF = "id,idReadable,summary,links(direction,linkType(name),issues(id,idReadable))"
-    epic_raw = yt.get_issues(ctx, "issue ID: %s" % ANDROID_EPIC_ID, fields=EF, top=1)
-    epic = epic_raw[0] if epic_raw else {}
-    epic_name = epic.get("summary") or ANDROID_EPIC_ID
+    epic_ids = list(epic_ids or ANDROID_EPIC_IDS)
 
-    story_ids = []
-    for lk in (epic.get("links") or []):
-        if (lk.get("linkType") or {}).get("name") == "Subtask" and lk.get("direction") == "OUTWARD":
-            for it in (lk.get("issues") or []):
-                sid = it.get("idReadable") or it.get("id")
-                if sid:
-                    story_ids.append(sid)
+    epics, story_ids, epic_of = [], [], {}
+    for eid in epic_ids:
+        epic_raw = yt.get_issues(ctx, "issue ID: %s" % eid, fields=EF, top=1)
+        epic = epic_raw[0] if epic_raw else {}
+        epics.append({"epicId": eid, "epicName": epic.get("summary") or eid})
+        for lk in (epic.get("links") or []):
+            if (lk.get("linkType") or {}).get("name") == "Subtask" and lk.get("direction") == "OUTWARD":
+                for it in (lk.get("issues") or []):
+                    sid = it.get("idReadable") or it.get("id")
+                    if sid and sid not in epic_of:
+                        epic_of[sid] = eid
+                        story_ids.append(sid)
 
     SF = ("id,idReadable,summary,created,resolved,"
           "customFields(name,value(name,text,minutes,id)),"
@@ -79,11 +85,11 @@ def build_android(ctx, yt, chunk=40):
     stories_raw = _bulk(ctx, yt, story_ids, SF, chunk)
     stories = [parse_story(stories_raw[sid]) for sid in story_ids if sid in stories_raw]
     for s in stories:
-        # These stories were fetched as PXB1-3295's own direct Subtask-OUTWARD
-        # children, so epicId is the epic itself by construction; parentId is
-        # kept as the fallback in case a story's own INWARD link ever
-        # disagrees (mirrors schedule.py's epicId/parentId split).
-        s["epicId"] = s["parentId"] or ANDROID_EPIC_ID
+        # These stories were fetched as an Android epic's own direct
+        # Subtask-OUTWARD children, so epicId is that epic by construction;
+        # parentId is kept as the fallback in case a story's own INWARD link
+        # ever disagrees (mirrors schedule.py's epicId/parentId split).
+        s["epicId"] = s["parentId"] or epic_of.get(s["storyId"])
 
     links_by_story = _bulk(ctx, yt, story_ids, LF, chunk)
     candidates_by_story = {sid: bug_candidates(links_by_story.get(sid) or {}) for sid in story_ids}
@@ -100,8 +106,9 @@ def build_android(ctx, yt, chunk=40):
     open_bug_count = sum(1 for s in stories for b in s["bugs"] if not b["done"])
 
     return {
-        "epicId": ANDROID_EPIC_ID,
-        "epicName": epic_name,
+        "epicId": epics[0]["epicId"],      # first epic -- kept for snapshots/readers that predate `epics`
+        "epicName": epics[0]["epicName"],
+        "epics": epics,
         "stories": stories,
         "kpi": {
             "total_stories": len(stories),

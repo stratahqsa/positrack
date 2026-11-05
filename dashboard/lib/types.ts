@@ -661,15 +661,20 @@ export interface ScheduleBlock {
 }
 
 /** Android Status Report data block (scripts/reports/android.py::build_android)
- *  -- every direct-subtask story under the PXB1-3295 "POS (Android)" epic,
- *  each with its own open bugs (APP project) attached via the same
+ *  -- every direct-subtask story under the Android epics (PXB1-3295
+ *  "POS (Android)" plus any others in android_epic_ids), merged into one
+ *  list, each with its own open bugs (APP project) attached via the same
  *  Subtask -> "Bugs Reported" drill-down as Weekly Deadline's RE-OPEN
  *  stories, applied here to every story instead of just RE-OPEN ones. Story
- *  rows reuse `ScheduleStory` as-is -- same shape, just always scoped to one
- *  epic. */
+ *  rows reuse `ScheduleStory` as-is -- same shape, each carrying its own
+ *  epicId. */
 export interface AndroidBlock {
+  /** First Android epic -- kept for snapshots that predate `epics`. */
   epicId: string;
   epicName: string;
+  /** Every Android epic merged into `stories` (ReportsConfig.android_epic_ids);
+   *  absent on snapshots that predate multi-epic support. */
+  epics?: { epicId: string; epicName: string }[];
   stories: ScheduleStory[];
   kpi: {
     total_stories: number;

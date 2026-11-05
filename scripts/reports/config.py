@@ -18,6 +18,7 @@ class ReportsConfig:
     scope: str = "PHASE 2"
     exclude_ids: list = field(default_factory=lambda: ["PXB1-3295"])
     include_epic_ids: list = field(default_factory=lambda: ["PXB1-%s" % x for x in "1787 3205 3274 3546 3977 4846 4847 4848 5104 9430 9999 10000 10171 10305 10316".split()])   # non-empty = track ONLY these epics
+    android_epic_ids: list = field(default_factory=lambda: ["PXB1-3295", "PXB1-6372"])   # Android Status Report epics, merged into one list
     man_day_minutes: int = 480
     release_mode: str = "monthly"   # "monthly" = month-end releases from Sprint / QA deadline; "milestone" = Phase 1 behaviour
     jun29_cutoff_iso: str = "2026-10-06T00:00:00Z"   # Phase 2 baseline (Phase 1 was 29 Jun 2026)
