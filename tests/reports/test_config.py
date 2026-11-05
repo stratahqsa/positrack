@@ -27,3 +27,7 @@ def test_include_epic_ids_default_is_the_working_epic_list():
 
 def test_release_mode_defaults_to_monthly():
     assert load_config(path="/nonexistent.json").release_mode == "monthly"
+
+
+def test_android_epic_ids_default_includes_stock_take():
+    assert ReportsConfig().android_epic_ids == ["PXB1-3295", "PXB1-6372"]
