@@ -169,46 +169,41 @@ describe("epicBadge (Examples_2 §3 — all four cases, plus the override)", () 
   });
 });
 
-describe("buildEpicView -- story visibility (Examples_2 §4)", () => {
-  it("NOT_DONE epic (PXB1-3101 worked example): pending stories visible, done-after-mtg visible, done-before-mtg hidden (T6/T7)", () => {
+describe("buildEpicView -- story visibility (all stories)", () => {
+  it("unfinished epic lists EVERY story: pending, done-after-mtg AND done-before-mtg", () => {
     const epic = makeScheduleEpic({ id: "PXB1-3101" });
     const reopen = baseStory({ storyId: "PXB1-3412", state: "RE-OPEN", done: false });
     const open = baseStory({ storyId: "PXB1-3415", state: "OPEN", done: false });
-    const doneAfterMtg = baseStory({
-      storyId: "PXB1-3390",
-      state: "Fixed",
-      done: true,
-      resolved: Date.UTC(2026, 6, 5), // 5 Jul > mtg 3 Jul
-    });
-    const doneBeforeMtg = baseStory({
-      storyId: "PXB1-3388",
-      state: "Fixed",
-      done: true,
-      resolved: Date.UTC(2026, 6, 1), // 1 Jul < mtg 3 Jul
-    });
+    const doneAfterMtg = baseStory({ storyId: "PXB1-3390", state: "Fixed", done: true, resolved: Date.UTC(2026, 6, 5) });
+    const doneBeforeMtg = baseStory({ storyId: "PXB1-3388", state: "Fixed", done: true, resolved: Date.UTC(2026, 6, 1) });
     const stories = [reopen, open, doneAfterMtg, doneBeforeMtg];
 
     const view = buildEpicView(epic, stories, "Anjali R", MTG_CUTOFF, JUN29_CUTOFF, 0);
 
     expect(view.badge).toBe("NOT_DONE");
-    expect(view.visibleStories.map((s) => s.storyId).sort()).toEqual(
-      ["PXB1-3412", "PXB1-3415", "PXB1-3390"].sort(),
-    );
-    expect(view.visibleStories.map((s) => s.storyId)).not.toContain("PXB1-3388");
+    expect(view.visibleStories.map((s) => s.storyId)).toEqual(["PXB1-3412", "PXB1-3415", "PXB1-3390", "PXB1-3388"]);
   });
 
-  it("DONE epic (PXB1-3120 worked example): stories resolved 30 Jun & 2 Jul visible (> jun29); 27 Jun hidden (T8)", () => {
+  it("a story finished the day BEFORE the meeting cutoff still shows (PXB1-10565 under PXB1-10305)", () => {
+    const epic = makeScheduleEpic({ id: "PXB1-10305" });
+    const pending = baseStory({ storyId: "PXB1-10527", state: "DEVELOPMENT", done: false });
+    const done = baseStory({ storyId: "PXB1-10565", state: "DONE", done: true, resolved: MTG_CUTOFF - 24 * 3600 * 1000, ddTs: null, qaTs: null, devEst: 0, uiEst: 0 });
+
+    const view = buildEpicView(epic, [pending, done], "X", MTG_CUTOFF, JUN29_CUTOFF, 0);
+
+    expect(view.visibleStories.map((s) => s.storyId)).toContain("PXB1-10565");
+  });
+
+  it("DONE epic lists every story too, including ones resolved before the baseline", () => {
     const epic = makeScheduleEpic({ id: "PXB1-3120" });
     const s30jun = baseStory({ storyId: "PXB1-s1", state: "Verified", done: true, resolved: Date.UTC(2026, 5, 30) });
     const s2jul = baseStory({ storyId: "PXB1-s2", state: "Verified", done: true, resolved: Date.UTC(2026, 6, 2) });
     const s27jun = baseStory({ storyId: "PXB1-s3", state: "Verified", done: true, resolved: Date.UTC(2026, 5, 27) });
-    const stories = [s30jun, s2jul, s27jun];
 
-    const view = buildEpicView(epic, stories, "Someone", MTG_CUTOFF, JUN29_CUTOFF, 0);
+    const view = buildEpicView(epic, [s30jun, s2jul, s27jun], "Someone", MTG_CUTOFF, JUN29_CUTOFF, 0);
 
     expect(view.badge).toBe("DONE");
-    expect(view.visibleStories.map((s) => s.storyId).sort()).toEqual(["PXB1-s1", "PXB1-s2"].sort());
-    expect(view.visibleStories.map((s) => s.storyId)).not.toContain("PXB1-s3");
+    expect(view.visibleStories.map((s) => s.storyId)).toEqual(["PXB1-s1", "PXB1-s2", "PXB1-s3"]);
   });
 });
 

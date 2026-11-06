@@ -36,7 +36,7 @@ export interface EpicView {
   badge: EpicBadge;
   done: boolean;
   stories: ScheduleStory[]; // ALL stories (for badge/milestone math)
-  visibleStories: ScheduleStory[]; // per visibility rule (Examples_2 §4)
+  visibleStories: ScheduleStory[]; // every story of the epic (Phase 2 shows them all)
   /** Stories not yet done, out of `stories.length` (the "1/3" on the epic line). */
   pendingCount: number;
   /** Dev/UI/QA/Spent summed over ALL of the epic's stories (done and pending). */
@@ -198,12 +198,14 @@ export function buildEpicView(
   const badge = epicBadge(stories, epic.resolved, mtgCutoffMs);
   const done = badge === "DONE";
 
-  // Visibility (Examples_2 §4): NOT_DONE -> pending ∪ (done & resolved>mtg);
-  // DONE -> resolved>jun29. Applied uniformly to DONE-via-override epics too --
-  // the PRD's truth table doesn't carve out an exception for the override case.
-  const visibleStories = done
-    ? stories.filter((s) => s.resolved != null && s.resolved > jun29Ms)
-    : stories.filter((s) => !s.done || (s.resolved != null && s.resolved > mtgCutoffMs));
+  // Visibility: ALL of the epic's stories (Phase 2). The Phase 1 rule
+  // (Examples_2 §4: NOT_DONE -> pending ∪ done-after-meeting; DONE ->
+  // resolved-after-baseline) hid stories finished before the meeting cutoff
+  // even though the epic totals and the pending/total count include them
+  // (PXB1-10565 under PXB1-10305, 2026-11-06). `jun29Ms` is kept in the
+  // signature for parity but no longer drives anything.
+  void jun29Ms;
+  const visibleStories = stories;
 
   // Rollup: ALL of the epic's stories, done and pending (Phase 2 -- the team
   // aims to finish every story under an epic in one release, so the epic line
