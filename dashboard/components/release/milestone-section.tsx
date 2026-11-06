@@ -8,6 +8,8 @@ import { fmtHours, fmtMd } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EpicRow } from "@/components/release/epic-row";
+import { ColumnHeader, MIN_WIDTH_CLASS } from "@/components/release/columns";
+import { sortEpics, type ReleaseSortState } from "@/lib/release-sort";
 
 /**
  * Urgency -> left-rail/header treatment. The token palette only has one
@@ -48,6 +50,8 @@ function urgencyLabel(g: MilestoneGroup): string {
  */
 export function MilestoneSection({ group }: { group: MilestoneGroup }) {
   const [open, setOpen] = React.useState(true);
+  const [epicSort, setEpicSort] = React.useState<ReleaseSortState>(null);
+  const epics = React.useMemo(() => sortEpics(group.epics, epicSort), [group.epics, epicSort]);
   const style = URGENCY_STYLE[group.urgency];
   const totalEffort = group.totals.dev + group.totals.ui + group.totals.qa;
 
@@ -101,10 +105,13 @@ export function MilestoneSection({ group }: { group: MilestoneGroup }) {
         group.epics.length === 0 ? (
           <div className="px-4 py-6 text-center text-[12px] text-faint">No epics in this milestone.</div>
         ) : (
-          <div>
-            {group.epics.map((epic) => (
-              <EpicRow key={epic.id} epic={epic} />
-            ))}
+          <div className="overflow-x-auto">
+            <div className={MIN_WIDTH_CLASS}>
+              <ColumnHeader sort={epicSort} onSort={setEpicSort} />
+              {epics.map((epic) => (
+                <EpicRow key={epic.id} epic={epic} />
+              ))}
+            </div>
           </div>
         )
       ) : null}

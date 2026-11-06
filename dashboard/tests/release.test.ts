@@ -194,38 +194,51 @@ describe("buildEpicView -- story visibility (Examples_2 §4)", () => {
   });
 });
 
-describe("buildEpicView -- rollup (Examples_2 §4)", () => {
-  it("NOT_DONE epic: rollup sums ONLY pending stories, excluding the done-since-mtg one shown for visibility", () => {
+describe("buildEpicView -- rollup (all stories)", () => {
+  it("NOT_DONE epic: rollup sums ALL stories, pending and done alike", () => {
     const epic = makeScheduleEpic({ id: "PXB1-3101" });
     const reopen = baseStory({ storyId: "PXB1-3412", state: "RE-OPEN", done: false, devEst: 960, uiEst: 480, qaEst: 240, spent: 1110 });
     const open = baseStory({ storyId: "PXB1-3415", state: "OPEN", done: false, devEst: 240, uiEst: 0, qaEst: 120, spent: 60 });
     const doneAfterMtg = baseStory({
-      storyId: "PXB1-3390",
-      state: "Fixed",
-      done: true,
-      resolved: Date.UTC(2026, 6, 5),
-      devEst: 5000,
-      uiEst: 5000,
-      qaEst: 5000,
-      spent: 5000, // large decoys to prove this story is excluded from the sum
+      storyId: "PXB1-3390", state: "Fixed", done: true, resolved: Date.UTC(2026, 6, 5),
+      devEst: 100, uiEst: 50, qaEst: 20, spent: 300,
     });
     const stories = [reopen, open, doneAfterMtg];
 
     const view = buildEpicView(epic, stories, "Anjali R", MTG_CUTOFF, JUN29_CUTOFF, 0);
 
-    expect(view.rollup).toEqual({ dev: 1200, ui: 480, qa: 360, spent: 1170 });
+    expect(view.rollup).toEqual({ dev: 1300, ui: 530, qa: 380, spent: 1470 });
   });
 
-  it("DONE epic: rollup sums over the visible (resolved > jun29) stories, matching visibleStories exactly", () => {
+  it("DONE epic: rollup also sums every story, including ones resolved before the baseline", () => {
     const epic = makeScheduleEpic({ id: "PXB1-3120" });
     const s30jun = baseStory({ storyId: "PXB1-s1", state: "Verified", done: true, resolved: Date.UTC(2026, 5, 30), devEst: 100, uiEst: 0, qaEst: 0, spent: 100 });
     const s2jul = baseStory({ storyId: "PXB1-s2", state: "Verified", done: true, resolved: Date.UTC(2026, 6, 2), devEst: 200, uiEst: 0, qaEst: 0, spent: 200 });
-    const s27jun = baseStory({ storyId: "PXB1-s3", state: "Verified", done: true, resolved: Date.UTC(2026, 5, 27), devEst: 9999, uiEst: 0, qaEst: 0, spent: 9999 });
-    const stories = [s30jun, s2jul, s27jun];
+    const s27jun = baseStory({ storyId: "PXB1-s3", state: "Verified", done: true, resolved: Date.UTC(2026, 5, 27), devEst: 50, uiEst: 0, qaEst: 0, spent: 50 });
 
-    const view = buildEpicView(epic, stories, "Someone", MTG_CUTOFF, JUN29_CUTOFF, 0);
+    const view = buildEpicView(epic, [s30jun, s2jul, s27jun], "Someone", MTG_CUTOFF, JUN29_CUTOFF, 0);
 
-    expect(view.rollup).toEqual({ dev: 300, ui: 0, qa: 0, spent: 300 });
+    expect(view.rollup).toEqual({ dev: 350, ui: 0, qa: 0, spent: 350 });
+  });
+});
+
+describe("buildEpicView -- max deadlines", () => {
+  it("max Dev / QA deadline are taken separately across ALL stories, ignoring nulls", () => {
+    const epic = makeScheduleEpic({ id: "PXB1-3300" });
+    const a = baseStory({ storyId: "PXB1-a", done: true, ddTs: Date.UTC(2026, 9, 10, 12), qaTs: Date.UTC(2026, 9, 12, 12) });
+    const b = baseStory({ storyId: "PXB1-b", done: false, ddTs: Date.UTC(2026, 9, 20, 12), qaTs: null });
+    const c = baseStory({ storyId: "PXB1-c", done: false, ddTs: null, qaTs: Date.UTC(2026, 9, 25, 12) });
+
+    const view = buildEpicView(epic, [a, b, c], "X", MTG_CUTOFF, JUN29_CUTOFF, 0);
+
+    expect(view.maxDevDeadlineMs).toBe(Date.UTC(2026, 9, 20, 12));
+    expect(view.maxQaDeadlineMs).toBe(Date.UTC(2026, 9, 25, 12));
+  });
+
+  it("epic with no deadlines -> null / null", () => {
+    const view = buildEpicView(makeScheduleEpic(), [baseStory({ ddTs: null, qaTs: null })], "X", MTG_CUTOFF, JUN29_CUTOFF, 0);
+    expect(view.maxDevDeadlineMs).toBeNull();
+    expect(view.maxQaDeadlineMs).toBeNull();
   });
 });
 
