@@ -37,7 +37,11 @@ export interface EpicView {
   done: boolean;
   stories: ScheduleStory[]; // ALL stories (for badge/milestone math)
   visibleStories: ScheduleStory[]; // per visibility rule (Examples_2 §4)
+  /** Dev/UI/QA/Spent summed over ALL of the epic's stories (done and pending). */
   rollup: { dev: number; ui: number; qa: number; spent: number };
+  /** Latest Dev deadline / QA deadline across ALL of the epic's stories. */
+  maxDevDeadlineMs: number | null;
+  maxQaDeadlineMs: number | null;
   milestoneMs: number | null;
   resolvedMs: number | null;
   resolvedVerdict: { label: string; late: boolean } | null;
@@ -67,6 +71,12 @@ function maxDeadlineMs(stories: ScheduleStory[]): number | null {
       if (v != null && (max == null || v > max)) max = v;
     }
   }
+  return max;
+}
+
+function maxOf(values: (number | null)[]): number | null {
+  let max: number | null = null;
+  for (const v of values) if (v != null && (max == null || v > max)) max = v;
   return max;
 }
 
@@ -187,16 +197,18 @@ export function buildEpicView(
     ? stories.filter((s) => s.resolved != null && s.resolved > jun29Ms)
     : stories.filter((s) => !s.done || (s.resolved != null && s.resolved > mtgCutoffMs));
 
-  // Rollup (Examples_2 §4): NOT_DONE sums PENDING stories only (narrower than
-  // visibleStories -- the done-since-mtg story shown for visibility is
-  // deliberately excluded from the totals); DONE sums the visible set.
-  const rollupSource = done ? visibleStories : stories.filter((s) => !s.done);
+  // Rollup: ALL of the epic's stories, done and pending (Phase 2 -- the team
+  // aims to finish every story under an epic in one release, so the epic line
+  // reports the whole epic, not just what is still pending). The old
+  // Examples_2 §4 rule (pending-only / visible-only) no longer applies.
   const rollup = {
-    dev: sum(rollupSource, (s) => s.devEst),
-    ui: sum(rollupSource, (s) => s.uiEst),
-    qa: sum(rollupSource, (s) => s.qaEst),
-    spent: sum(rollupSource, (s) => s.spent),
+    dev: sum(stories, (s) => s.devEst),
+    ui: sum(stories, (s) => s.uiEst),
+    qa: sum(stories, (s) => s.qaEst),
+    spent: sum(stories, (s) => s.spent),
   };
+  const maxDevDeadlineMs = maxOf(stories.map((s) => s.ddTs));
+  const maxQaDeadlineMs = maxOf(stories.map((s) => s.qaTs));
 
   // Milestone (Examples_2 §5): max(ddTs, qaTs) across ALL stories; fallback to
   // the epic's own resolved date; null (no-date group) when neither exists.
@@ -223,6 +235,8 @@ export function buildEpicView(
     stories,
     visibleStories,
     rollup,
+    maxDevDeadlineMs,
+    maxQaDeadlineMs,
     milestoneMs,
     resolvedMs,
     resolvedVerdict,

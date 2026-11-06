@@ -7,6 +7,8 @@ import { fmtDate, fmtHours, verdictVsQa } from "@/lib/format";
 import type { DrillBug, ScheduleStory } from "@/lib/types";
 import type { EpicView } from "@/lib/release";
 import { Badge } from "@/components/ui/badge";
+import { ColumnHeader, GRID_CLASS } from "@/components/release/columns";
+import { sortStories, type ReleaseSortState } from "@/lib/release-sort";
 import { IssueLink } from "@/components/ui/issue-link";
 import { priorityVariant, stateVariant } from "@/components/weekly/badge-tone";
 
@@ -86,7 +88,8 @@ function StoryDrillRow({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 py-1.5 pl-10 pr-3 text-[12px] transition-colors",
+        GRID_CLASS,
+        "border-l-2 px-4 py-1.5 text-[12px] transition-colors",
         story.done
           ? "border-good/40 bg-good/[0.04]"
           : isReopen
@@ -94,44 +97,66 @@ function StoryDrillRow({
             : "border-border/50",
       )}
     >
-      {canExpandBugs ? (
-        <button
-          type="button"
-          onClick={onToggleBugs}
-          aria-expanded={bugsExpanded}
-          aria-label={`${bugsExpanded ? "Collapse" : "Expand"} ${story.bugs.length} open bug${story.bugs.length === 1 ? "" : "s"} for ${story.storyId}`}
-          className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-danger/90 transition-colors hover:bg-danger/10"
-        >
-          <Bug className="size-3.5" />
-          <span className="tabular text-[10.5px] font-semibold">{story.bugs.length}</span>
-          <ChevronRight className={cn("size-3 transition-transform", bugsExpanded && "rotate-90")} />
-        </button>
-      ) : null}
-
-      <IssueLink id={story.storyId} showIcon={false} />
-      <Badge variant={stateVariant(story.state, story.done)} size="sm">
-        {story.state || "—"}
-      </Badge>
-      <span className="min-w-[140px] max-w-[360px] flex-1 truncate text-fg/75">{story.summary}</span>
-      <span className="text-muted">{story.assignee || <span className="text-faint">—</span>}</span>
-      <span className="text-faint">{story.sprint || "—"}</span>
-      <span className="tabular text-[11px] text-faint">
-        Dev {fmtHours(story.devEst)} · UI {fmtHours(story.uiEst)} · QA {fmtHours(story.qaEst)} · Spent{" "}
-        {fmtHours(story.spent)}
+      <span aria-hidden="true" />
+      <span className="min-w-0 truncate pl-2">
+        <IssueLink id={story.storyId} showIcon={false} />
       </span>
-      <span className="text-faint">DD {fmtDate(story.ddTs)}</span>
-      <span className="text-faint">QA {fmtDate(story.qaTs)}</span>
-      {story.resolved != null ? (
-        <span className="inline-flex items-center gap-1.5">
-          <span className="text-fg/70">Resolved {fmtDate(story.resolved)}</span>
-          {verdict ? (
-            <Badge variant={verdict.late ? "danger" : "good"} size="sm">
-              {verdict.label}
-            </Badge>
+      <span className="min-w-0">
+        <Badge variant={stateVariant(story.state, story.done)} size="sm">
+          {story.state || "—"}
+        </Badge>
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-fg/75">{story.summary}</p>
+        <div className="flex flex-wrap items-center gap-x-2 text-[10.5px] text-faint">
+          {story.sprint ? <span>{story.sprint}</span> : null}
+          {story.resolved != null ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="text-fg/60">Resolved {fmtDate(story.resolved)}</span>
+              {verdict ? (
+                <Badge variant={verdict.late ? "danger" : "good"} size="sm">
+                  {verdict.label}
+                </Badge>
+              ) : null}
+            </span>
           ) : null}
-        </span>
-      ) : null}
+        </div>
+      </div>
+      <span className="min-w-0 truncate text-muted">{story.assignee || <span className="text-faint">—</span>}</span>
+      <Num v={fmtHours(story.devEst)} />
+      <Num v={fmtHours(story.uiEst)} />
+      <Num v={fmtHours(story.qaEst)} />
+      <Num v={fmtHours(story.devEst + story.uiEst + story.qaEst)} bold />
+      <Num v={fmtHours(story.spent)} />
+      <Num v={fmtDate(story.ddTs)} faint />
+      <Num v={fmtDate(story.qaTs)} faint />
+      <span className="flex justify-end">
+        {canExpandBugs ? (
+          <button
+            type="button"
+            onClick={onToggleBugs}
+            aria-expanded={bugsExpanded}
+            aria-label={`${bugsExpanded ? "Collapse" : "Expand"} ${story.bugs.length} open bug${story.bugs.length === 1 ? "" : "s"} for ${story.storyId}`}
+            className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-danger/90 transition-colors hover:bg-danger/10"
+          >
+            <Bug className="size-3.5" />
+            <span className="tabular text-[10.5px] font-semibold">{story.bugs.length}</span>
+            <ChevronRight className={cn("size-3 transition-transform", bugsExpanded && "rotate-90")} />
+          </button>
+        ) : (
+          <span className="text-faint">—</span>
+        )}
+      </span>
     </div>
+  );
+}
+
+/** Right-aligned numeric/date cell shared by epic and story lines. */
+function Num({ v, bold, faint }: { v: string; bold?: boolean; faint?: boolean }) {
+  return (
+    <span className={cn("tabular text-right text-[12px]", bold ? "font-semibold text-fg/85" : faint ? "text-faint" : "text-fg/70")}>
+      {v}
+    </span>
   );
 }
 
@@ -152,6 +177,7 @@ function StoryDrillRow({
 export function EpicRow({ epic }: { epic: EpicView }) {
   const [expanded, setExpanded] = React.useState(false);
   const [expandedStories, setExpandedStories] = React.useState<Set<string>>(() => new Set());
+  const [storySort, setStorySort] = React.useState<ReleaseSortState>(null);
 
   function toggleStoryBugs(storyId: string) {
     setExpandedStories((prev) => {
@@ -171,7 +197,7 @@ export function EpicRow({ epic }: { epic: EpicView }) {
         epic.done ? "bg-good/[0.05]" : epic.badge === "NOT_DONE" ? "bg-danger/[0.05]" : "",
       )}
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5">
+      <div className={cn(GRID_CLASS, "px-4 py-2.5")}>
         {canExpand ? (
           <button
             type="button"
@@ -186,43 +212,52 @@ export function EpicRow({ epic }: { epic: EpicView }) {
           <span className="inline-block size-4 shrink-0" aria-hidden="true" />
         )}
 
-        <IssueLink id={epic.id} />
-        <EpicBadge badge={epic.badge} />
-        {epic.isNew ? (
-          <Badge variant="violet" size="sm">
-            NEW
-          </Badge>
-        ) : null}
+        <span className="min-w-0 truncate">
+          <IssueLink id={epic.id} />
+        </span>
+        <span className="flex min-w-0 flex-wrap items-center gap-1">
+          <EpicBadge badge={epic.badge} />
+          {epic.isNew ? (
+            <Badge variant="violet" size="sm">
+              NEW
+            </Badge>
+          ) : null}
+        </span>
 
-        <span className="min-w-[160px] max-w-[420px] flex-1 truncate text-[13px] text-fg/85">{epic.summary}</span>
+        <div className="min-w-0">
+          <p className="truncate text-[13px] text-fg/85">{epic.summary}</p>
+          {epic.done && epic.resolvedMs != null ? (
+            <div className="flex flex-wrap items-center gap-1.5 text-[10.5px]">
+              <span className="text-fg/60">Resolved {fmtDate(epic.resolvedMs)}</span>
+              {epic.resolvedVerdict ? (
+                <Badge variant={epic.resolvedVerdict.late ? "danger" : "good"} size="sm">
+                  {epic.resolvedVerdict.label}
+                </Badge>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
-        <span className="text-[12px] text-muted">
+        <span className="min-w-0 truncate text-[12px] text-muted">
           {epic.assignee || <span className="text-faint">Unassigned</span>}
         </span>
 
-        <span className="tabular text-[11.5px] text-faint">
-          Dev {fmtHours(epic.rollup.dev)} · UI {fmtHours(epic.rollup.ui)} · QA {fmtHours(epic.rollup.qa)} · Spent{" "}
-          {fmtHours(epic.rollup.spent)}
-        </span>
-
-        {epic.done && epic.resolvedMs != null ? (
-          <span className="inline-flex items-center gap-1.5">
-            <span className="text-[11.5px] text-fg/70">Resolved {fmtDate(epic.resolvedMs)}</span>
-            {epic.resolvedVerdict ? (
-              <Badge variant={epic.resolvedVerdict.late ? "danger" : "good"} size="sm">
-                {epic.resolvedVerdict.label}
-              </Badge>
-            ) : null}
-          </span>
-        ) : null}
-
-        <span className="ml-auto shrink-0 text-[11px] text-faint">
-          {epic.visibleStories.length}/{epic.stories.length} stories
+        <Num v={fmtHours(epic.rollup.dev)} />
+        <Num v={fmtHours(epic.rollup.ui)} />
+        <Num v={fmtHours(epic.rollup.qa)} />
+        <Num v={fmtHours(epic.rollup.dev + epic.rollup.ui + epic.rollup.qa)} bold />
+        <Num v={fmtHours(epic.rollup.spent)} />
+        <Num v={fmtDate(epic.maxDevDeadlineMs)} faint />
+        <Num v={fmtDate(epic.maxQaDeadlineMs)} faint />
+        <span className="tabular text-right text-[11.5px] text-faint">
+          {epic.visibleStories.length}/{epic.stories.length}
         </span>
       </div>
 
-      {expanded
-        ? epic.visibleStories.map((story) => (
+      {expanded ? (
+        <>
+          <ColumnHeader sort={storySort} onSort={setStorySort} tone="story" />
+          {sortStories(epic.visibleStories, storySort).map((story) => (
             <React.Fragment key={story.storyId}>
               <StoryDrillRow
                 story={story}
@@ -233,8 +268,9 @@ export function EpicRow({ epic }: { epic: EpicView }) {
                 ? story.bugs.map((bug) => <BugDrillRow key={bug.bugId} bug={bug} />)
                 : null}
             </React.Fragment>
-          ))
-        : null}
+          ))}
+        </>
+      ) : null}
     </div>
   );
 }
