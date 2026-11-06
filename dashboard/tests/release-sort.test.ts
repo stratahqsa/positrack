@@ -6,7 +6,7 @@ import { baseStory } from "./fixtures";
 function epic(over: Partial<EpicView>): EpicView {
   return {
     id: "PXB1-1", summary: "s", assignee: "", isNew: false, badge: "NOT_DONE", done: false,
-    stories: [], visibleStories: [], rollup: { dev: 0, ui: 0, qa: 0, spent: 0 },
+    stories: [], visibleStories: [], pendingCount: 0, rollup: { dev: 0, ui: 0, qa: 0, spent: 0 },
     maxDevDeadlineMs: null, maxQaDeadlineMs: null, milestoneMs: null, resolvedMs: null, resolvedVerdict: null,
     ...over,
   };
@@ -52,6 +52,15 @@ describe("sortEpics", () => {
     const a = epic({ id: "PXB1-1", rollup: { dev: 5, ui: 0, qa: 0, spent: 0 } });
     const b = epic({ id: "PXB1-2", rollup: { dev: 5, ui: 0, qa: 0, spent: 0 } });
     expect(sortEpics([b, a], { key: "devEst", dir: "asc" }).map((e) => e.id)).toEqual(["PXB1-2", "PXB1-1"]);
+  });
+});
+
+describe("sortEpics -- count", () => {
+  const mk = (id: string, pending: number, total: number) =>
+    epic({ id, pendingCount: pending, stories: Array.from({ length: total }, () => baseStory({})) });
+  it("sorts by pending stories, with total breaking ties", () => {
+    const list = [mk("PXB1-1", 2, 2), mk("PXB1-2", 1, 5), mk("PXB1-3", 1, 3)];
+    expect(sortEpics(list, { key: "count", dir: "asc" }).map((e) => e.id)).toEqual(["PXB1-3", "PXB1-2", "PXB1-1"]);
   });
 });
 

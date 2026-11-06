@@ -12,10 +12,11 @@ import { nextSort, type ReleaseSortKey, type ReleaseSortState } from "@/lib/rele
  * sideways instead.
  */
 export const GRID_CLASS =
-  "grid grid-cols-[20px_104px_136px_minmax(220px,1fr)_128px_68px_68px_68px_76px_76px_84px_84px_104px] items-center gap-x-3";
-export const MIN_WIDTH_CLASS = "min-w-[1420px]";
+  "grid grid-cols-[84px_104px_136px_minmax(240px,1fr)_128px_68px_68px_68px_76px_76px_70px_70px] items-start gap-x-3";
+export const MIN_WIDTH_CLASS = "min-w-[1380px]";
 
 const COLUMNS: { key: ReleaseSortKey; label: string; right?: boolean; title?: string }[] = [
+  { key: "count", label: "Pending", title: "Epic: pending stories / total stories (1/3 = 1 of 3 still pending); click to expand its stories. Story: pending bugs; click the bug badge to expand them." },
   { key: "ticket", label: "Ticket" },
   { key: "state", label: "State" },
   { key: "description", label: "Description" },
@@ -25,9 +26,8 @@ const COLUMNS: { key: ReleaseSortKey; label: string; right?: boolean; title?: st
   { key: "qaEst", label: "QA est", right: true },
   { key: "totalEst", label: "Total est", right: true },
   { key: "spent", label: "Spent", right: true },
-  { key: "maxDevDl", label: "Max dev DL", right: true, title: "Epic: latest Dev deadline across all its stories. Story: its own Dev deadline." },
-  { key: "maxQaDl", label: "Max QA DL", right: true, title: "Epic: latest QA deadline across all its stories. Story: its own QA deadline." },
-  { key: "count", label: "Stories/Bugs", right: true, title: "Epic: stories shown / total. Story: open bugs (click the bug badge to expand)." },
+  { key: "maxDevDl", label: "Dev DL", right: true, title: "Epic: latest Dev deadline across all its stories. Story: its own Dev deadline." },
+  { key: "maxQaDl", label: "QA DL", right: true, title: "Epic: latest QA deadline across all its stories. Story: its own QA deadline." },
 ];
 
 export function ColumnHeader({
@@ -48,7 +48,6 @@ export function ColumnHeader({
         tone === "story" ? "bg-elevated/30 pl-4" : "bg-surface-2/40",
       )}
     >
-      <span aria-hidden="true" />
       {COLUMNS.map((c) => {
         const active = sort?.key === c.key;
         return (
