@@ -113,6 +113,24 @@ describe("epicBadge (Examples_2 §3 — all four cases, plus the override)", () 
     expect(epicBadge(stories, null, MTG_CUTOFF)).toBe("TESTING");
   });
 
+  it("done + unfinished stories that all share one state -> that state, not NOT_DONE", () => {
+    const stories = [
+      baseStory({ storyId: "PXB1-a", state: "Fixed", done: true, resolved: Date.UTC(2026, 6, 5) }),
+      baseStory({ storyId: "PXB1-b", state: "TESTING", done: false }),
+      baseStory({ storyId: "PXB1-c", state: "TESTING", done: false }),
+    ];
+    expect(epicBadge(stories, null, MTG_CUTOFF)).toBe("TESTING");
+  });
+
+  it("unfinished stories in DIFFERENT states -> NOT_DONE", () => {
+    const stories = [
+      baseStory({ storyId: "PXB1-a", state: "Fixed", done: true, resolved: Date.UTC(2026, 6, 5) }),
+      baseStory({ storyId: "PXB1-b", state: "TESTING", done: false }),
+      baseStory({ storyId: "PXB1-c", state: "OPEN", done: false }),
+    ];
+    expect(epicBadge(stories, null, MTG_CUTOFF)).toBe("NOT_DONE");
+  });
+
   it("PXB1-3155-style (T4/no-stories row): 0 stories -> NO_STORIES", () => {
     expect(epicBadge([], null, MTG_CUTOFF)).toBe("NO_STORIES");
   });
@@ -139,7 +157,7 @@ describe("epicBadge (Examples_2 §3 — all four cases, plus the override)", () 
   it("epic resolved BEFORE the cutoff with pending stories does NOT override -> normal rules apply", () => {
     const stories = [
       baseStory({ storyId: "PXB1-x", state: "OPEN", done: false }),
-      baseStory({ storyId: "PXB1-y", state: "OPEN", done: false }),
+      baseStory({ storyId: "PXB1-y", state: "TESTING", done: false }),
     ];
     const epicResolvedMs = Date.UTC(2026, 5, 20); // well before MTG_CUTOFF
     expect(epicBadge(stories, epicResolvedMs, MTG_CUTOFF)).toBe("NOT_DONE");
@@ -222,6 +240,19 @@ describe("buildEpicView -- rollup (all stories)", () => {
   });
 });
 
+describe("buildEpicView -- pendingCount", () => {
+  it("counts the stories that are not done, out of all stories", () => {
+    const stories = [
+      baseStory({ storyId: "PXB1-a", done: true, resolved: Date.UTC(2026, 6, 5) }),
+      baseStory({ storyId: "PXB1-b", done: false }),
+      baseStory({ storyId: "PXB1-c", done: false }),
+    ];
+    const view = buildEpicView(makeScheduleEpic(), stories, "X", MTG_CUTOFF, JUN29_CUTOFF, 0);
+    expect(view.pendingCount).toBe(2);
+    expect(view.stories.length).toBe(3);
+  });
+});
+
 describe("buildEpicView -- max deadlines", () => {
   it("max Dev / QA deadline are taken separately across ALL stories, ignoring nulls", () => {
     const epic = makeScheduleEpic({ id: "PXB1-3300" });
@@ -300,7 +331,7 @@ describe("buildEpicView -- resolved date + verdict (Examples_2 §6, T13)", () =>
     expect(view.resolvedVerdict).toEqual({ label: "+2d late", late: true });
   });
 
-  it("NOT_DONE epic: resolvedVerdict is null even if some story happens to have a resolved date", () => {
+  it("unfinished epic: resolvedVerdict is null even if some story happens to have a resolved date", () => {
     const epic = makeScheduleEpic({ id: "PXB1-mixed" });
     const stories = [
       baseStory({ storyId: "PXB1-a", done: true, resolved: Date.UTC(2026, 6, 5), ddTs: Date.UTC(2026, 6, 6), qaTs: null }),
@@ -309,7 +340,7 @@ describe("buildEpicView -- resolved date + verdict (Examples_2 §6, T13)", () =>
 
     const view = buildEpicView(epic, stories, "Someone", MTG_CUTOFF, JUN29_CUTOFF, 0);
 
-    expect(view.badge).toBe("NOT_DONE");
+    expect(view.done).toBe(false);
     expect(view.resolvedVerdict).toBeNull();
   });
 

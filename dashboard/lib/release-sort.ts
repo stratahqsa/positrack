@@ -68,7 +68,8 @@ function epicValue(e: EpicView, key: ReleaseSortKey): Sortable {
     case "maxQaDl":
       return e.maxQaDeadlineMs;
     case "count":
-      return e.stories.length;
+      // pending stories first; the total only breaks ties (1/3 before 1/5)
+      return e.pendingCount * 10_000 + e.stories.length;
   }
 }
 

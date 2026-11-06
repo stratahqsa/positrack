@@ -26,7 +26,7 @@ const NO_DATE_MS = 0;
  *  (e.g. beta2-Oct26 -> 31 Oct), falling back to the month of its QA deadline. */
 export type ReleaseMode = "milestone" | "monthly";
 
-export type EpicBadge = "DONE" | "NOT_DONE" | "NO_STORIES" | string; // string = the single story's state
+export type EpicBadge = "DONE" | "NOT_DONE" | "NO_STORIES" | string; // string = the state shared by every unfinished story
 
 export interface EpicView {
   id: string;
@@ -37,6 +37,8 @@ export interface EpicView {
   done: boolean;
   stories: ScheduleStory[]; // ALL stories (for badge/milestone math)
   visibleStories: ScheduleStory[]; // per visibility rule (Examples_2 §4)
+  /** Stories not yet done, out of `stories.length` (the "1/3" on the epic line). */
+  pendingCount: number;
   /** Dev/UI/QA/Spent summed over ALL of the epic's stories (done and pending). */
   rollup: { dev: number; ui: number; qa: number; spent: number };
   /** Latest Dev deadline / QA deadline across ALL of the epic's stories. */
@@ -150,9 +152,11 @@ export function assigneeByEpic(snap: Snapshot): Record<string, string> {
  *     `[].every(...)` is vacuously true in JS, so an empty array would
  *     otherwise misread as DONE (row PXB1-3155).
  *  3. All stories done -> DONE (row PXB1-3120).
- *  4. Exactly one (necessarily still-pending, by #3) story -> show its own
- *     state text, more informative than a blanket NOT_DONE (row PXB1-3140, T3).
- *  5. Otherwise, any pending story -> NOT_DONE (row PXB1-3101).
+ *  4. Every unfinished story shares one state (a lone pending story being the
+ *     simplest case, e.g. 2 done + 3 TESTING) -> show that state text, more
+ *     informative than a blanket NOT_DONE (row PXB1-3140, T3).
+ *  5. Otherwise (unfinished stories in different states) -> NOT_DONE
+ *     (row PXB1-3101).
  */
 export function epicBadge(
   stories: ScheduleStory[],
@@ -162,7 +166,11 @@ export function epicBadge(
   if (epicResolvedMs != null && epicResolvedMs > mtgCutoffMs) return "DONE";
   if (stories.length === 0) return "NO_STORIES";
   if (stories.every((s) => s.done)) return "DONE";
-  if (stories.length === 1) return stories[0].state;
+  const pendingStates = new Set(stories.filter((s) => !s.done).map((s) => (s.state ?? "").trim()));
+  if (pendingStates.size === 1) {
+    const [only] = pendingStates;
+    if (only) return only;
+  }
   return "NOT_DONE";
 }
 
@@ -234,6 +242,7 @@ export function buildEpicView(
     done,
     stories,
     visibleStories,
+    pendingCount: stories.filter((s) => !s.done).length,
     rollup,
     maxDevDeadlineMs,
     maxQaDeadlineMs,

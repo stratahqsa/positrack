@@ -15,7 +15,7 @@ import { priorityVariant, stateVariant } from "@/components/weekly/badge-tone";
 /**
  * Epic-level state badge (Examples_2 §3): DONE/NOT_DONE get a fixed green
  * check / red cross treatment; NO_STORIES is a neutral outline; anything else
- * is the single surviving story's own state text (T3), colored the same way
+ * is the state shared by every unfinished story (T3), colored the same way
  * story rows are via `stateVariant` so the vocabulary stays consistent with
  * the Weekly Deadline view.
  */
@@ -39,7 +39,11 @@ function EpicBadge({ badge }: { badge: EpicView["badge"] }) {
   if (badge === "NO_STORIES") {
     return <Badge variant="outline">NO STORIES</Badge>;
   }
-  return <Badge variant={stateVariant(badge, false)}>{badge}</Badge>;
+  return (
+    <Badge variant={stateVariant(badge, false)} className="whitespace-normal">
+      {badge}
+    </Badge>
+  );
 }
 
 /** 3rd-level row: one open bug surfaced by a RE-OPEN story's drill-down.
@@ -97,17 +101,33 @@ function StoryDrillRow({
             : "border-border/50",
       )}
     >
-      <span aria-hidden="true" />
-      <span className="min-w-0 truncate pl-2">
+      <span className="flex leading-5">
+        {canExpandBugs ? (
+          <button
+            type="button"
+            onClick={onToggleBugs}
+            aria-expanded={bugsExpanded}
+            aria-label={`${bugsExpanded ? "Collapse" : "Expand"} ${story.bugs.length} pending bug${story.bugs.length === 1 ? "" : "s"} for ${story.storyId}`}
+            className="ml-4 inline-flex items-center gap-0.5 rounded px-1 text-danger/90 transition-colors hover:bg-danger/10"
+          >
+            <Bug className="size-3.5" />
+            <span className="tabular text-[11.5px] font-semibold">{story.bugs.length}</span>
+            <ChevronRight className={cn("size-3 transition-transform", bugsExpanded && "rotate-90")} />
+          </button>
+        ) : (
+          <span className="ml-5 text-faint">—</span>
+        )}
+      </span>
+      <span className="min-w-0 truncate leading-5">
         <IssueLink id={story.storyId} showIcon={false} />
       </span>
       <span className="min-w-0">
-        <Badge variant={stateVariant(story.state, story.done)} size="sm">
+        <Badge variant={stateVariant(story.state, story.done)} size="sm" className="whitespace-normal">
           {story.state || "—"}
         </Badge>
       </span>
       <div className="min-w-0">
-        <p className="truncate text-fg/75">{story.summary}</p>
+        <p className="break-words leading-5 text-fg/75">{story.summary}</p>
         <div className="flex flex-wrap items-center gap-x-2 text-[10.5px] text-faint">
           {story.sprint ? <span>{story.sprint}</span> : null}
           {story.resolved != null ? (
@@ -122,7 +142,7 @@ function StoryDrillRow({
           ) : null}
         </div>
       </div>
-      <span className="min-w-0 truncate text-muted">{story.assignee || <span className="text-faint">—</span>}</span>
+      <span className="min-w-0 truncate leading-5 text-muted">{story.assignee || <span className="text-faint">—</span>}</span>
       <Num v={fmtHours(story.devEst)} />
       <Num v={fmtHours(story.uiEst)} />
       <Num v={fmtHours(story.qaEst)} />
@@ -130,23 +150,6 @@ function StoryDrillRow({
       <Num v={fmtHours(story.spent)} />
       <Num v={fmtDate(story.ddTs)} faint />
       <Num v={fmtDate(story.qaTs)} faint />
-      <span className="flex justify-end">
-        {canExpandBugs ? (
-          <button
-            type="button"
-            onClick={onToggleBugs}
-            aria-expanded={bugsExpanded}
-            aria-label={`${bugsExpanded ? "Collapse" : "Expand"} ${story.bugs.length} open bug${story.bugs.length === 1 ? "" : "s"} for ${story.storyId}`}
-            className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-danger/90 transition-colors hover:bg-danger/10"
-          >
-            <Bug className="size-3.5" />
-            <span className="tabular text-[10.5px] font-semibold">{story.bugs.length}</span>
-            <ChevronRight className={cn("size-3 transition-transform", bugsExpanded && "rotate-90")} />
-          </button>
-        ) : (
-          <span className="text-faint">—</span>
-        )}
-      </span>
     </div>
   );
 }
@@ -154,7 +157,7 @@ function StoryDrillRow({
 /** Right-aligned numeric/date cell shared by epic and story lines. */
 function Num({ v, bold, faint }: { v: string; bold?: boolean; faint?: boolean }) {
   return (
-    <span className={cn("tabular text-right text-[12px]", bold ? "font-semibold text-fg/85" : faint ? "text-faint" : "text-fg/70")}>
+    <span className={cn("tabular text-right text-[12px] leading-5", bold ? "font-semibold text-fg/85" : faint ? "text-faint" : "text-fg/70")}>
       {v}
     </span>
   );
@@ -204,15 +207,21 @@ export function EpicRow({ epic }: { epic: EpicView }) {
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
             aria-label={`${expanded ? "Collapse" : "Expand"} ${epic.visibleStories.length} stories for ${epic.id}`}
-            className="inline-flex shrink-0 items-center justify-center rounded p-0.5 text-faint transition-colors hover:bg-elevated/60 hover:text-fg"
+            title="Pending stories / total stories"
+            className="inline-flex items-center gap-0.5 self-start rounded px-0.5 leading-5 text-faint transition-colors hover:bg-elevated/60 hover:text-fg"
           >
-            <ChevronRight className={cn("size-4 transition-transform", expanded && "rotate-90")} />
+            <ChevronRight className={cn("size-4 shrink-0 transition-transform", expanded && "rotate-90")} />
+            <span className="tabular text-[12px] font-semibold text-fg/80">
+              {epic.pendingCount}/{epic.stories.length}
+            </span>
           </button>
         ) : (
-          <span className="inline-block size-4 shrink-0" aria-hidden="true" />
+          <span className="tabular pl-5 text-[12px] font-semibold leading-5 text-fg/80" title="Pending stories / total stories">
+            {epic.pendingCount}/{epic.stories.length}
+          </span>
         )}
 
-        <span className="min-w-0 truncate">
+        <span className="min-w-0 truncate leading-5">
           <IssueLink id={epic.id} />
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-1">
@@ -225,7 +234,7 @@ export function EpicRow({ epic }: { epic: EpicView }) {
         </span>
 
         <div className="min-w-0">
-          <p className="truncate text-[13px] text-fg/85">{epic.summary}</p>
+          <p className="break-words text-[13px] leading-5 text-fg/85">{epic.summary}</p>
           {epic.done && epic.resolvedMs != null ? (
             <div className="flex flex-wrap items-center gap-1.5 text-[10.5px]">
               <span className="text-fg/60">Resolved {fmtDate(epic.resolvedMs)}</span>
@@ -238,7 +247,7 @@ export function EpicRow({ epic }: { epic: EpicView }) {
           ) : null}
         </div>
 
-        <span className="min-w-0 truncate text-[12px] text-muted">
+        <span className="min-w-0 truncate text-[12px] leading-5 text-muted">
           {epic.assignee || <span className="text-faint">Unassigned</span>}
         </span>
 
@@ -249,9 +258,6 @@ export function EpicRow({ epic }: { epic: EpicView }) {
         <Num v={fmtHours(epic.rollup.spent)} />
         <Num v={fmtDate(epic.maxDevDeadlineMs)} faint />
         <Num v={fmtDate(epic.maxQaDeadlineMs)} faint />
-        <span className="tabular text-right text-[11.5px] text-faint">
-          {epic.visibleStories.length}/{epic.stories.length}
-        </span>
       </div>
 
       {expanded ? (
