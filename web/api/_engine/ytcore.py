@@ -540,25 +540,41 @@ def categorize_epic(epic, scope=_DEFAULT_SCOPE):
     rec["missing_est"] = (rollup["server"] == 0 and rollup["ui"] == 0) or (rollup["testing"] == 0)
     return rec
 
-def _overshoot_spend(stories, cutoff_ms, scope=_DEFAULT_SCOPE):
-    """Spend figure the `overshoot` flag compares against `total` (the Phase-1
-    PENDING estimate rollup, see categorize_epic above) — Phase 1 stories that
-    are either still pending OR were closed AFTER `cutoff_ms`. Deliberately
-    narrower than the epic-level `spent` field (whole-epic lifetime, used for
-    Done/Pending/grand-total display, and must stay that way): comparing the
-    pending estimate against the WHOLE lifetime spend flagged epics whose
-    remaining work was nowhere near its estimate, just because they'd already
-    logged a lot of now-irrelevant time on stories finished long before the
-    cutoff (verified live against PXB1-604/148/53/2724, 2026-07-25). Uses each
-    story's own "Spent time" field (story["spent"], from _epic_stories()) —
-    the same per-story field this module already trusts for the pending-P1
-    MIXED-epic Spent figure."""
-    relevant = [
+def _overshoot_stories(stories, cutoff_ms, scope=_DEFAULT_SCOPE):
+    """The stories the `overshoot` flag looks at: in-scope stories that are
+    either still pending OR were closed AFTER `cutoff_ms`. Both sides of the
+    comparison -- spend (_overshoot_spend) and estimate (_overshoot_estimate)
+    -- are summed over THIS SAME set, so the flag compares like with like."""
+    return [
         s for s in stories
         if _in_scope(s["scope"], scope)
         and (not is_done_state(s["state"]) or (s.get("resolved") and s["resolved"] > cutoff_ms))
     ]
-    return sum(s["spent"] for s in relevant)
+
+def _overshoot_spend(stories, cutoff_ms, scope=_DEFAULT_SCOPE):
+    """Spend side of the `overshoot` comparison -- the stories in
+    _overshoot_stories(), summed from each story's own "Spent time" field
+    (story["spent"], from _epic_stories()). Deliberately narrower than the
+    epic-level `spent` field (whole-epic lifetime, used for Done/Pending/
+    grand-total display, and must stay that way): comparing against the WHOLE
+    lifetime spend flagged epics whose remaining work was nowhere near its
+    estimate, just because they'd already logged a lot of now-irrelevant time
+    on stories finished long before the cutoff (verified live against
+    PXB1-604/148/53/2724, 2026-07-25)."""
+    return sum(s["spent"] for s in _overshoot_stories(stories, cutoff_ms, scope))
+
+def _overshoot_estimate(stories, cutoff_ms, scope=_DEFAULT_SCOPE):
+    """Estimate side of the `overshoot` comparison (minutes): Dev + UI + QA
+    over the SAME stories as _overshoot_spend. The epic's `total` is the
+    pending-only rollup, so comparing it with spend that also includes stories
+    closed after the cutoff counted that finished work's hours but not its
+    estimate -- PXB1-4848 read 151.7h spent vs a 64h estimate when its five
+    stories were estimated at 264h (2026-11-06)."""
+    return sum(
+        (s.get("est") or {}).get("server", 0) + (s.get("est") or {}).get("ui", 0)
+        + (s.get("est") or {}).get("testing", 0)
+        for s in _overshoot_stories(stories, cutoff_ms, scope)
+    )
 
 def _scope_at_or_before(activities, cutoff_ms):
     """Reconstructs the Scope value effective AT cutoff_ms from activity
@@ -764,8 +780,10 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
     Each epic record carries: id, summary, assignee, created, resolved, category,
     rollup {server,ui,testing} (minutes), total (minutes), spent (minutes,
     whole-epic lifetime — for Done/Pending/grand-total display), overshoot_spent
-    (minutes, Phase-1 pending-or-closed-after-cutoff — what `overshoot` actually
-    compares against `total`), overshoot (bool), missing_est (bool), stories [...].
+    and overshoot_total (minutes: spend and Dev+UI+QA estimate over the same
+    in-scope stories that are pending or closed after the cutoff — the two
+    figures `overshoot` compares), overshoot (bool), missing_est (bool),
+    stories [...].
     Grand Total counts PENDING + MIXED + NO_STORIES only (Done and P2 are
     separate, excluded from the grand total)."""
     exclude = set(exclude_ids or ())
@@ -818,7 +836,11 @@ def effort_report(ctx, project="PXB1", scope="PHASE 1",
         rec["total"] = r["server"] + r["ui"] + r["testing"]
         rec["spent"] = spend_by_epic.get(rec["id"], 0)
         rec["overshoot_spent"] = _overshoot_spend(rec["stories"], cutoff_ms, scope)
-        rec["overshoot"] = rec["total"] > 0 and rec["overshoot_spent"] > rec["total"]
+        rec["overshoot_total"] = _overshoot_estimate(rec["stories"], cutoff_ms, scope)
+        # Like with like: spend and estimate over the same stories. A DONE epic
+        # has no remaining work to overshoot (its `total` is 0), as before.
+        rec["overshoot"] = (rec["category"] != "DONE" and rec["overshoot_total"] > 0
+                            and rec["overshoot_spent"] > rec["overshoot_total"])
 
     done = [r for r in cats if r["category"] == "DONE"]
     pending = [r for r in cats if r["category"] == "PENDING"]

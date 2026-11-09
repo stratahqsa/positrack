@@ -151,9 +151,9 @@ def test_epic_stories_carry_own_spent_time_field():
 CUT = 1782729000000  # 2026-06-29T10:30:00Z
 
 
-def _norm_story(sid, state, scope="PHASE 1", spent=0, resolved=None):
+def _norm_story(sid, state, scope="PHASE 1", spent=0, resolved=None, est=None):
     return {"id": sid, "summary": sid, "state": state, "scope": scope, "spent": spent,
-            "resolved": resolved}
+            "resolved": resolved, "est": est or {"server": 0, "ui": 0, "testing": 0}}
 
 
 def test_overshoot_spend_excludes_stories_closed_before_cutoff():
@@ -184,6 +184,47 @@ def test_overshoot_spend_excludes_non_phase1_scope():
         _norm_story("S-p2", "OPEN", scope="PHASE 2", spent=999),
     ]
     assert yt._overshoot_spend(stories, CUT) == 10
+
+
+def test_overshoot_estimate_covers_the_same_stories_as_the_spend():
+    # PXB1-4848 shape (2026-11-06): 1 pending + 2 stories closed after the cutoff
+    # + 1 closed before it. Spend AND estimate use the same three stories.
+    e = lambda s, u, t: {"server": s, "ui": u, "testing": t}
+    stories = [
+        _norm_story("S-pending", "READY FOR TESTING", spent=33, est=e(48, 0, 16)),
+        _norm_story("S-recent1", "DONE", spent=56, resolved=CUT + 86400000, est=e(64, 0, 16)),
+        _norm_story("S-recent2", "DONE", spent=25, resolved=CUT + 2 * 86400000, est=e(32, 0, 16)),
+        _norm_story("S-old", "DONE", spent=999, resolved=CUT - 86400000, est=e(999, 0, 999)),
+    ]
+    assert yt._overshoot_spend(stories, CUT) == 33 + 56 + 25
+    assert yt._overshoot_estimate(stories, CUT) == (48 + 16) + (64 + 16) + (32 + 16)
+
+
+def test_overshoot_estimate_respects_scope():
+    stories = [
+        _norm_story("S-p1", "OPEN", scope="PHASE 1", est={"server": 10, "ui": 5, "testing": 5}),
+        _norm_story("S-p2", "OPEN", scope="PHASE 2", est={"server": 100, "ui": 0, "testing": 0}),
+    ]
+    assert yt._overshoot_estimate(stories, CUT) == 20
+    assert yt._overshoot_estimate(stories, 0, "PHASE 2") == 100
+
+
+def test_finished_work_no_longer_counts_as_overshoot_without_its_estimate():
+    # Spend of stories closed after the cutoff (151.7h-style) used to be compared
+    # with the pending-only estimate; now their estimates are in the comparison too.
+    ep = _epic("E-4848", "OPEN", stories=[
+        _story("S-pending", "READY FOR TESTING", server=48 * 60, testing=16 * 60, spent=33 * 60),
+        _story("S-done", "DONE", server=100 * 60, testing=20 * 60, spent=118 * 60, resolved=CUT + 86400000),
+    ])
+    rec = yt.categorize_epic(ep)
+    total = rec["rollup"]["server"] + rec["rollup"]["ui"] + rec["rollup"]["testing"]
+    spent = yt._overshoot_spend(rec["stories"], CUT)
+    est = yt._overshoot_estimate(rec["stories"], CUT)
+    assert total == 64 * 60                     # pending-only rollup, still what the page shows
+    assert spent == 151 * 60                    # pending + closed-after-cutoff spend
+    assert est == 184 * 60                      # same stories' estimate (64h pending + 120h done)
+    assert not (est > 0 and spent > est)        # like with like: no overshoot
+    assert spent > total                        # (the old comparison wrongly flagged it)
 
 
 def test_overshoot_flag_flips_false_when_old_spend_excluded():
