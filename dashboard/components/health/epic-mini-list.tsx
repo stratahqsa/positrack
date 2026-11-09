@@ -13,9 +13,10 @@ import type { Epic } from "@/lib/types";
  * lists don't need it, every row would repeat the same tag) (2026-07-24).
  * `showOvershoot`, when true (EffortTile's "N overshooting" list only — not
  * the mixed-reason "N total RED" list), adds Total Est / Total Spent /
- * Overspent, reading `overshoot_spent` (the Phase-1 pending-or-recent figure
- * the overshoot flag actually compares against `total`), not the
- * whole-epic-lifetime `spent` (2026-07-25).
+ * Overspent, reading `overshoot_spent` against `overshoot_total` (the
+ * pending-or-recent stories' spend and estimate -- the two figures the
+ * overshoot flag actually compares), not the whole-epic-lifetime `spent` or
+ * the pending-only `total` (2026-07-25, like-for-like 2026-11-06).
  */
 export function EpicMiniList({
   epics,
@@ -33,6 +34,7 @@ export function EpicMiniList({
     <div className="space-y-1.5">
       {epics.map((e) => {
         const spent = e.overshoot_spent ?? e.spent;
+        const est = e.overshoot_total ?? e.total;
         return (
           <div
             key={e.id}
@@ -43,9 +45,9 @@ export function EpicMiniList({
             <span className="text-faint">{e.assignee || "—"}</span>
             {showOvershoot ? (
               <span className="tabular flex items-center gap-2 text-faint">
-                <span>Est {fmtHours(e.total)}</span>
+                <span>Est {fmtHours(est)}</span>
                 <span>Spent {fmtHours(spent)}</span>
-                <span className="text-danger">+{fmtHours(spent - e.total)} over</span>
+                <span className="text-danger">+{fmtHours(spent - est)} over</span>
               </span>
             ) : null}
             {(reasonsById?.get(e.id) ?? []).map((r) => (

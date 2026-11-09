@@ -393,3 +393,35 @@ test("severityForEvidence: urgent_bug is always 'high', regardless of age", () =
   assert.equal(severityForEvidence({ kind: "urgent_bug", age_days: 0.1 }), "high");
   assert.equal(severityForEvidence({ kind: "urgent_bug", age_days: 90 }), "high");
 });
+
+
+test("effort_outlier: pairs overshoot_spent with overshoot_total (same stories), not the pending-only total", () => {
+  // PXB1-4848 shape: pending-only total 3840 (64h), but spend 9102 (151.7h) is over pending +
+  // closed-since-baseline stories whose estimate is 15840 (264h). The reported estimate must be 264h.
+  const snapshot = baseSnapshot({
+    effort: {
+      sections: {
+        pending: [],
+        mixed: [{ id: "PXB1-4848", overshoot: true, missing_est: false, total: 3840, spent: 9102, overshoot_spent: 9102, overshoot_total: 15840 }],
+        no_stories: [],
+      },
+    },
+  });
+  const [outlier] = effortOutliers(snapshot);
+  assert.equal(outlier.total_hours, 264);
+  assert.equal(outlier.spent_hours, 151.7);
+});
+
+test("effort_outlier: falls back to epic.total when overshoot_total is absent (older snapshot)", () => {
+  const snapshot = baseSnapshot({
+    effort: {
+      sections: {
+        pending: [],
+        mixed: [{ id: "PXB1-2724", overshoot: true, missing_est: false, total: 1860, spent: 8600, overshoot_spent: 1902 }],
+        no_stories: [],
+      },
+    },
+  });
+  const [outlier] = effortOutliers(snapshot);
+  assert.equal(outlier.total_hours, 31);
+});
