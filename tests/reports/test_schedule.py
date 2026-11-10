@@ -136,7 +136,7 @@ def test_build_schedule_drops_children_of_excluded_epic():
 
 def test_build_schedule_working_epic_mode_keeps_only_included_epics_and_their_stories():
     from reports.config import ReportsConfig
-    cfg = ReportsConfig(include_epic_ids=["PXB1-3101"])
+    cfg = ReportsConfig(include_epic_ids=["PXB1-3101"], auto_include_epics=False)
     in_story = _raw_story("PXB1-5001", "OPEN", None, "2026-10-10", "2026-10-14", 960, 0, 240)
     in_story["links"] = [{"direction": "INWARD", "linkType": {"name": "Subtask"}, "issues": [{"id": "2-1", "idReadable": "PXB1-3101"}]}]
     other_story = _raw_story("PXB1-5002", "OPEN", None, "2026-10-10", "2026-10-14", 960, 0, 240)
@@ -155,3 +155,58 @@ def test_build_schedule_working_epic_mode_keeps_only_included_epics_and_their_st
     assert [e["id"] for e in block["epics"]] == ["PXB1-3101"]
     assert [s["storyId"] for s in block["stories"]] == ["PXB1-5001"]
     assert block["orphan_count"] == 0
+
+
+def _linked(story, epic_internal, epic_readable):
+    story["links"] = [{"direction": "INWARD", "linkType": {"name": "Subtask"},
+                       "issues": [{"id": epic_internal, "idReadable": epic_readable}]}]
+    return story
+
+def _fake_yt(epics, stories):
+    class FakeYT:
+        def get_issues(self, ctx, query, fields=None, **k):
+            if "TaskType: Epic" in query:
+                return epics if "#Unresolved" in query else []
+            if "TaskType: Story" in query:
+                return stories
+            return []
+    return FakeYT()
+
+def _epic(n):
+    return {"id": "2-%s" % n, "idReadable": "PXB1-%s" % n, "summary": "Epic %s" % n, "resolved": None, "created": 1}
+
+def test_auto_include_adds_epics_with_a_story_that_has_estimate_and_deadline():
+    from reports.config import ReportsConfig
+    cfg = ReportsConfig(include_epic_ids=["PXB1-100"])           # pinned, no stories at all
+    ok = _linked(_raw_story("PXB1-5001", "OPEN", None, "2026-10-10", "2026-10-14", 960, 0, 240), "2-200", "PXB1-200")
+    no_dl = _linked(_raw_story("PXB1-5002", "OPEN", None, None, None, 960, 0, 240), "2-300", "PXB1-300")
+    no_est = _linked(_raw_story("PXB1-5003", "OPEN", None, "2026-10-10", "2026-10-14", 0, 0, 0), "2-400", "PXB1-400")
+    yt = _fake_yt([_epic(100), _epic(200), _epic(300), _epic(400), _epic(500)], [ok, no_dl, no_est])
+    d = schedule.discover(None, yt, cfg)
+    assert d["tracked"] == {"PXB1-100", "PXB1-200"}      # pinned + the one qualifying epic
+    assert d["auto_added"] == ["PXB1-200"]
+    block = schedule.build_schedule(None, yt, cfg, discovered=d)
+    assert sorted(e["id"] for e in block["epics"]) == ["PXB1-100", "PXB1-200"]
+    assert [s["storyId"] for s in block["stories"]] == ["PXB1-5001"]
+
+def test_auto_included_epic_shows_all_its_stories_even_without_deadline():
+    from reports.config import ReportsConfig
+    cfg = ReportsConfig(include_epic_ids=[])
+    a = _linked(_raw_story("PXB1-5001", "OPEN", None, "2026-10-10", "2026-10-14", 960, 0, 240), "2-200", "PXB1-200")
+    b = _linked(_raw_story("PXB1-5002", "OPEN", None, None, None, 0, 0, 0), "2-200", "PXB1-200")
+    block = schedule.build_schedule(None, _fake_yt([_epic(200)], [a, b]), cfg)
+    assert sorted(s["storyId"] for s in block["stories"]) == ["PXB1-5001", "PXB1-5002"]
+
+def test_auto_include_never_adds_android_or_excluded_epics():
+    from reports.config import ReportsConfig
+    cfg = ReportsConfig(include_epic_ids=[])
+    st = _linked(_raw_story("PXB1-5001", "OPEN", None, "2026-10-10", "2026-10-14", 960, 0, 240), "2-6372", "PXB1-6372")
+    d = schedule.discover(None, _fake_yt([_epic(6372)], [st]), cfg)
+    assert d["tracked"] == set()                        # Stock Take lives in the Android report
+
+def test_auto_include_off_keeps_pinned_only():
+    from reports.config import ReportsConfig
+    cfg = ReportsConfig(include_epic_ids=["PXB1-100"], auto_include_epics=False)
+    st = _linked(_raw_story("PXB1-5001", "OPEN", None, "2026-10-10", "2026-10-14", 960, 0, 240), "2-200", "PXB1-200")
+    d = schedule.discover(None, _fake_yt([_epic(100), _epic(200)], [st]), cfg)
+    assert d["tracked"] == {"PXB1-100"}

@@ -17,7 +17,8 @@ class ReportsConfig:
     project: str = "PXB1"
     scope: str = "PHASE 2"
     exclude_ids: list = field(default_factory=lambda: ["PXB1-3295"])
-    include_epic_ids: list = field(default_factory=lambda: ["PXB1-%s" % x for x in "1787 3205 3274 3546 3977 4846 4847 4848 5104 9430 9999 10000 10171 10305 10316".split()])   # non-empty = track ONLY these epics
+    include_epic_ids: list = field(default_factory=lambda: ["PXB1-%s" % x for x in "1787 3205 3274 3546 3977 4846 4847 4848 5104 9430 9999 10000 10171 10305 10316".split()])   # PINNED epics: always tracked (even before they have estimates/deadlines)
+    auto_include_epics: bool = True   # also track every PHASE 2 epic that has a story with an estimate AND a deadline (android_epic_ids are never auto-added)
     android_epic_ids: list = field(default_factory=lambda: ["PXB1-3295", "PXB1-6372"])   # Android Status Report epics, merged into one list
     man_day_minutes: int = 480
     release_mode: str = "monthly"   # "monthly" = month-end releases from Sprint / QA deadline; "milestone" = Phase 1 behaviour

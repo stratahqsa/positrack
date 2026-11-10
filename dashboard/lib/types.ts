@@ -492,8 +492,11 @@ export interface ReportsConfigBlock {
   project: string;
   scope: string;
   exclude_ids: string[];
-  /** Non-empty = the snapshot tracks only these epics (working-epic mode). Absent on older snapshots. */
+  /** PINNED epics — always tracked. With `auto_include_epics` the snapshot also tracks every Phase 2 epic that has a story with estimates and deadlines. Absent on older snapshots. */
   include_epic_ids?: string[];
+  auto_include_epics?: boolean;
+  /** Epics tracked automatically (not in the pinned list). */
+  auto_added_epic_ids?: string[];
   /** "monthly" = month-end releases from Sprint / QA deadline; absent/"milestone" = Phase 1 behaviour. */
   release_mode?: "milestone" | "monthly";
   man_day_minutes: number;

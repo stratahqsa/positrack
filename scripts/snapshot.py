@@ -507,9 +507,12 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
 
     # 1) effort — the full report, spend joined from the shared pool.
     rcfg = load_config()
+    # Which epics are tracked: pinned list + every Phase 2 epic with a story that
+    # has estimates AND deadlines (decided once; effort + schedule share it).
+    disc = rsched.discover(ctx, yt, rcfg)
     effort = yt.effort_report(ctx, project=project, scope=scope, pool=pool,
                               cutoff_iso=rcfg.jun29_cutoff_iso, exclude_ids=rcfg.exclude_ids,
-                              include_ids=set(rcfg.include_epic_ids) or None)
+                              include_ids=disc["tracked"] or None)
     # Owner-accountability flags for the UI: a role/system placeholder (e.g. "Dev Lead")
     # owning an epic means no individual is accountable -> treat as needs_owner.
     for _sec in ("pending", "mixed", "no_stories", "done", "p2_backlog"):
@@ -557,7 +560,7 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
 
     # 6) reports data foundation (Bug Analysis + schedule for Release/Weekly views)
     bugs_block = rbugs.build_bugs(ctx, yt, rcfg, now_ms)
-    schedule_block = rsched.build_schedule(ctx, yt, rcfg)
+    schedule_block = rsched.build_schedule(ctx, yt, rcfg, discovered=disc)
     rdrill.attach_drilldown(ctx, yt, schedule_block["stories"])
     bug_blocker_block = rblocker.build_bug_blocker(ctx, yt, rcfg)
     # Support Tickets (SUP project, Type: POS X) -- unrelated to PXB1's
@@ -571,6 +574,8 @@ def build_snapshot(ctx, project, scope, sprint=None, roster=None):
     config_block = {
         "project": rcfg.project, "scope": rcfg.scope, "exclude_ids": rcfg.exclude_ids,
         "include_epic_ids": rcfg.include_epic_ids,
+        "auto_include_epics": rcfg.auto_include_epics,
+        "auto_added_epic_ids": disc["auto_added"],
         "release_mode": rcfg.release_mode,
         "man_day_minutes": rcfg.man_day_minutes, "jun29_cutoff_iso": rcfg.jun29_cutoff_iso,
         "mtg_cutoff_iso": rcfg.mtg_cutoff_iso, "week1_anchor": rcfg.week1_anchor,
