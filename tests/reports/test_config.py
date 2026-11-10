@@ -31,3 +31,7 @@ def test_release_mode_defaults_to_monthly():
 
 def test_android_epic_ids_default_includes_stock_take():
     assert ReportsConfig().android_epic_ids == ["PXB1-3295", "PXB1-6372"]
+
+
+def test_auto_include_epics_defaults_on():
+    assert ReportsConfig().auto_include_epics is True
